@@ -1,7 +1,6 @@
 package com.cover.time2gather.domain.meeting;
 
 import com.cover.time2gather.domain.common.BaseEntity;
-import com.cover.time2gather.domain.user.User;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -30,9 +29,8 @@ public class Meeting extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_user_id", nullable = false)
-    private User host;
+    @Column(name = "host_user_id", nullable = false)
+    private Long hostUserId;
 
     @Column(length = 50)
     private String timezone = "Asia/Seoul";
@@ -52,7 +50,7 @@ public class Meeting extends BaseEntity {
             String meetingCode,
             String title,
             String description,
-            User host,
+            Long hostUserId,
             String timezone,
             Map<String, int[]> availableDates
     ) {
@@ -60,11 +58,10 @@ public class Meeting extends BaseEntity {
         meeting.meetingCode = meetingCode;
         meeting.title = title;
         meeting.description = description;
-        meeting.host = host;
+        meeting.hostUserId = hostUserId;
         meeting.timezone = timezone != null ? timezone : "Asia/Seoul";
         meeting.availableDates = availableDates;
         meeting.isActive = true;
         return meeting;
     }
 }
-

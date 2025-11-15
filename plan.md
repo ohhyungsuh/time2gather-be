@@ -114,6 +114,75 @@ Prefer functional programming style over imperative style in Rust. Use Option an
 
 Do not use relationship like @oneToMany. We have to use only unique identifier as a reference key
 
+# LAYERED ARCHITECTURE PRINCIPLES
+
+## Layer Responsibilities
+
+### Controller Layer (Presentation)
+- **Role**: HTTP 요청/응답 처리
+- **Responsibilities**:
+  - HTTP 요청 수신 및 검증
+  - DTO ↔ 도메인 모델 변환
+  - Service 계층 호출
+  - HTTP 응답 생성 (성공/실패)
+- **Rules**:
+  - ❌ 비즈니스 로직 금지
+  - ❌ 도메인 모델 직접 조작 금지
+  - ❌ Repository 직접 호출 금지
+  - ✅ Service 호출만 허용
+  - ✅ DTO만 사용
+
+### Service Layer (Business Logic)
+- **Role**: 비즈니스 로직 처리
+- **Responsibilities**:
+  - 핵심 비즈니스 규칙 구현
+  - 트랜잭션 관리
+  - 도메인 모델 조작
+  - Repository 계층 호출
+  - 도메인 이벤트 발생
+- **Rules**:
+  - ❌ DTO 의존성 금지 (presentation DTO 사용 불가)
+  - ❌ HTTP 관련 코드 금지
+  - ✅ 도메인 모델만 사용
+  - ✅ Repository만 호출
+  - ✅ 순수한 Java/Kotlin 객체만 반환
+
+### Repository Layer (Data Access)
+- **Role**: 데이터 영속성 관리
+- **Responsibilities**:
+  - 엔티티 CRUD
+  - 쿼리 실행
+  - 데이터베이스 접근
+- **Rules**:
+  - ✅ 엔티티만 반환
+  - ❌ 비즈니스 로직 금지
+
+## Data Flow
+
+```
+Request → Controller (DTO) → Service (Domain) → Repository (Entity)
+                   ↓              ↓                    ↓
+Response ← Controller (DTO) ← Service (Domain) ← Repository (Entity)
+```
+
+## Key Principles
+
+1. **DTO는 Controller에서만 사용**
+   - Service는 DTO를 모름
+   - Domain 모델과 DTO는 완전히 분리
+
+2. **비즈니스 로직은 Service에만**
+   - Controller는 얇게 유지
+   - 복잡한 계산, 집계, 검증은 모두 Service로
+
+3. **변환은 경계에서만**
+   - Controller: DTO ↔ Domain
+   - Repository: Domain ↔ Entity
+
+4. **의존성 방향**
+   - Controller → Service → Repository
+   - 역방향 의존성 절대 금지
+
 # TEST PLAN
 
 ## Phase 1: OAuth2/OIDC Authentication (Kakao + Extensible)
@@ -254,7 +323,28 @@ Do not use relationship like @oneToMany. We have to use only unique identifier a
 - [ ] PUT /api/v1/meetings/{meetingCode}/selections - 시간 선택/수정
 
 ### 현재 진행 상태
-- [ ] Phase 3 시작 전 - 기존 구현 코드 삭제 완료, TDD로 재시작
+- [x] Phase 3 완료!
+- [x] JPA 연관관계 제거 완료 (ID 참조로 변경)
+  - Meeting: @ManyToOne User → Long hostUserId
+  - MeetingUserSelection: @ManyToOne Meeting/User → Long meetingId/userId
+  - Repository 메서드 시그니처 변경
+  - Service 레이어 수정 (엔티티 조회 최소화)
+  - Controller에서 필요시 별도 조회
+
+### ✅ Phase 3 완료!
+
+**Meeting(모임) 관리 기능 구현 완료**
+- Meeting 생성/조회 API
+- 사용자별 시간 선택 관리
+- 30분 단위 시간 슬롯 시스템 (slotIndex ↔ "HH:mm")
+- 모임 상세 정보 및 참여자 통계
+- **모든 엔티티가 ID 참조만 사용** (JPA 관계 제거)
+
+구현된 API:
+- POST /api/v1/meetings - 모임 생성
+- GET /api/v1/meetings/{meetingCode} - 상세 조회
+- GET /api/v1/meetings/{meetingCode}/selections - 내 선택 조회
+- PUT /api/v1/meetings/{meetingCode}/selections - 시간 선택/수정
 
 ---
 

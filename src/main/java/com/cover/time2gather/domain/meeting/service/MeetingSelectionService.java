@@ -1,9 +1,9 @@
 package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
+import com.cover.time2gather.domain.meeting.MeetingRepository;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.MeetingUserSelectionRepository;
-import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,28 +18,33 @@ public class MeetingSelectionService {
 
     private final MeetingUserSelectionRepository selectionRepository;
     private final UserRepository userRepository;
+    private final MeetingRepository meetingRepository;
 
-    public Map<String, int[]> getUserSelections(Meeting meeting, Long userId) {
-        return selectionRepository.findByMeetingAndUserId(meeting, userId)
+    public Map<String, int[]> getUserSelections(Long meetingId, Long userId) {
+        return selectionRepository.findByMeetingIdAndUserId(meetingId, userId)
                 .map(MeetingUserSelection::getSelections)
                 .orElse(Collections.emptyMap());
     }
 
     @Transactional
-    public void upsertUserSelections(Meeting meeting, Long userId, Map<String, int[]> selections) {
-        // 선택한 시간이 모임의 available_dates 내에 있는지 검증
+    public void upsertUserSelections(Long meetingId, Long userId, Map<String, int[]> selections) {
+        // 사용자가 존재하는지 검증
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("User not found");
+        }
+
+        // 모임이 존재하는지 검증 및 선택한 시간이 모임의 available_dates 내에 있는지 검증
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
         validateSelections(meeting, selections);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
         MeetingUserSelection selection = selectionRepository
-                .findByMeetingAndUserId(meeting, userId)
+                .findByMeetingIdAndUserId(meetingId, userId)
                 .orElse(null);
 
         if (selection == null) {
             // 새로 생성
-            selection = MeetingUserSelection.create(meeting, user, selections);
+            selection = MeetingUserSelection.create(meetingId, userId, selections);
             selectionRepository.save(selection);
         } else {
             // 업데이트
@@ -75,8 +80,7 @@ public class MeetingSelectionService {
         }
     }
 
-    public List<MeetingUserSelection> getAllSelections(Meeting meeting) {
-        return selectionRepository.findAllByMeeting(meeting);
+    public List<MeetingUserSelection> getAllSelections(Long meetingId) {
+        return selectionRepository.findAllByMeetingId(meetingId);
     }
 }
-

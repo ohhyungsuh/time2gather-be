@@ -4,9 +4,11 @@ import com.cover.time2gather.api.common.ApiResponse;
 import com.cover.time2gather.api.meeting.dto.*;
 import com.cover.time2gather.config.security.JwtAuthentication;
 import com.cover.time2gather.domain.meeting.Meeting;
+import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
+import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.util.TimeSlotConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,9 +35,10 @@ public class MeetingController {
             @AuthenticationPrincipal JwtAuthentication authentication,
             @Valid @RequestBody CreateMeetingRequest request
     ) {
-        // API의 "HH:mm" 문자열을 slotIndex로 변환
+        // DTO → 도메인 모델 변환
         Map<String, int[]> availableDates = convertTimeStringsToSlotIndexes(request.getAvailableDates());
 
+        // Service 호출 (비즈니스 로직)
         Meeting meeting = meetingService.createMeeting(
                 authentication.getUserId(),
                 request.getTitle(),
@@ -44,10 +47,11 @@ public class MeetingController {
                 availableDates
         );
 
+        // 도메인 모델 → DTO 변환
         CreateMeetingResponse response = new CreateMeetingResponse(
                 meeting.getId(),
                 meeting.getMeetingCode(),
-                "https://when2meet.com/" + meeting.getMeetingCode() // TODO: 실제 도메인으로 변경
+                "https://time2gather.org/" + meeting.getMeetingCode()
         );
 
         return ApiResponse.success(response);
@@ -58,54 +62,11 @@ public class MeetingController {
     public ApiResponse<MeetingDetailResponse> getMeetingDetail(
             @PathVariable String meetingCode
     ) {
-        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
-        List<MeetingUserSelection> selections = selectionService.getAllSelections(meeting);
+        // Service 호출 (비즈니스 로직)
+        MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode);
 
-        // 참여자 목록 구성
-        Set<Long> participantIds = selections.stream()
-                .map(s -> s.getUser().getId())
-                .collect(Collectors.toSet());
-
-        Map<Long, MeetingDetailResponse.ParticipantInfo> participantMap = selections.stream()
-                .collect(Collectors.toMap(
-                        s -> s.getUser().getId(),
-                        s -> new MeetingDetailResponse.ParticipantInfo(
-                                s.getUser().getId(),
-                                s.getUser().getUsername(),
-                                s.getUser().getProfileImageUrl()
-                        ),
-                        (existing, replacement) -> existing
-                ));
-
-        List<MeetingDetailResponse.ParticipantInfo> participants = new ArrayList<>(participantMap.values());
-
-        // schedule 구성: 날짜 -> 시간 -> 유저 목록
-        Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> schedule = buildSchedule(selections);
-
-        // summary 구성
-        MeetingDetailResponse.SummaryInfo summary = buildSummary(selections, participantIds.size());
-
-        // meeting 정보 구성
-        MeetingDetailResponse.MeetingInfo meetingInfo = new MeetingDetailResponse.MeetingInfo(
-                meeting.getId(),
-                meeting.getMeetingCode(),
-                meeting.getTitle(),
-                meeting.getDescription(),
-                new MeetingDetailResponse.HostInfo(
-                        meeting.getHost().getId(),
-                        meeting.getHost().getUsername(),
-                        meeting.getHost().getProfileImageUrl()
-                ),
-                meeting.getTimezone(),
-                convertSlotIndexesToTimeStrings(meeting.getAvailableDates())
-        );
-
-        MeetingDetailResponse response = new MeetingDetailResponse(
-                meetingInfo,
-                participants,
-                schedule,
-                summary
-        );
+        // 도메인 모델 → DTO 변환
+        MeetingDetailResponse response = convertToMeetingDetailResponse(detailData);
 
         return ApiResponse.success(response);
     }
@@ -116,9 +77,11 @@ public class MeetingController {
             @AuthenticationPrincipal JwtAuthentication authentication,
             @PathVariable String meetingCode
     ) {
+        // Service 호출
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
-        Map<String, int[]> selections = selectionService.getUserSelections(meeting, authentication.getUserId());
+        Map<String, int[]> selections = selectionService.getUserSelections(meeting.getId(), authentication.getUserId());
 
+        // 도메인 모델 → DTO 변환
         Map<String, String[]> timeStrSelections = convertSlotIndexesToTimeStrings(selections);
 
         return ApiResponse.success(new UserSelectionResponse(timeStrSelections));
@@ -131,18 +94,119 @@ public class MeetingController {
             @PathVariable String meetingCode,
             @Valid @RequestBody UpsertUserSelectionRequest request
     ) {
+        // DTO → 도메인 모델 변환
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
-
-        // "HH:mm" 문자열을 slotIndex로 변환
         Map<String, int[]> selections = convertTimeStringsToSlotIndexes(request.getSelections());
 
-        selectionService.upsertUserSelections(meeting, authentication.getUserId(), selections);
+        // Service 호출 (비즈니스 로직)
+        selectionService.upsertUserSelections(meeting.getId(), authentication.getUserId(), selections);
 
         return ApiResponse.success(null);
     }
 
-    // ===== 헬퍼 메서드들 =====
+    // ===== DTO 변환 메서드 (Controller 책임) =====
 
+    /**
+     * 도메인 모델 → MeetingDetailResponse DTO 변환
+     */
+    private MeetingDetailResponse convertToMeetingDetailResponse(MeetingDetailData detailData) {
+        Meeting meeting = detailData.getMeeting();
+        User host = detailData.getHost();
+
+        // Meeting 정보 변환
+        MeetingDetailResponse.MeetingInfo meetingInfo = new MeetingDetailResponse.MeetingInfo(
+                meeting.getId(),
+                meeting.getMeetingCode(),
+                meeting.getTitle(),
+                meeting.getDescription(),
+                new MeetingDetailResponse.HostInfo(
+                        host.getId(),
+                        host.getUsername(),
+                        host.getProfileImageUrl()
+                ),
+                meeting.getTimezone(),
+                convertSlotIndexesToTimeStrings(meeting.getAvailableDates())
+        );
+
+        // 참여자 정보 변환
+        List<MeetingDetailResponse.ParticipantInfo> participants = detailData.getParticipants().stream()
+                .map(user -> new MeetingDetailResponse.ParticipantInfo(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getProfileImageUrl()
+                ))
+                .collect(Collectors.toList());
+
+        // Schedule 정보 변환 (slotIndex → "HH:mm")
+        Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> schedule = convertScheduleToResponse(
+                detailData.getSchedule()
+        );
+
+        // Summary 정보 변환 (slotIndex → "HH:mm")
+        MeetingDetailResponse.SummaryInfo summary = convertSummaryToResponse(
+                detailData.getSummary()
+        );
+
+        return new MeetingDetailResponse(meetingInfo, participants, schedule, summary);
+    }
+
+    /**
+     * Schedule 도메인 모델 → DTO 변환
+     */
+    private Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> convertScheduleToResponse(
+            MeetingDetailData.ScheduleData scheduleData
+    ) {
+        Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> result = new HashMap<>();
+
+        Map<String, Map<Integer, List<User>>> dateTimeUserMap = scheduleData.getDateTimeUserMap();
+        for (Map.Entry<String, Map<Integer, List<User>>> dateEntry : dateTimeUserMap.entrySet()) {
+            String date = dateEntry.getKey();
+            Map<Integer, List<User>> slotUserMap = dateEntry.getValue();
+
+            result.putIfAbsent(date, new HashMap<>());
+            Map<String, List<MeetingDetailResponse.ParticipantInfo>> timeUserMap = result.get(date);
+
+            for (Map.Entry<Integer, List<User>> slotEntry : slotUserMap.entrySet()) {
+                int slot = slotEntry.getKey();
+                List<User> users = slotEntry.getValue();
+
+                String time = TimeSlotConverter.slotIndexToTimeStr(slot);
+                List<MeetingDetailResponse.ParticipantInfo> participantInfos = users.stream()
+                        .map(user -> new MeetingDetailResponse.ParticipantInfo(
+                                user.getId(),
+                                user.getUsername(),
+                                user.getProfileImageUrl()
+                        ))
+                        .collect(Collectors.toList());
+
+                timeUserMap.put(time, participantInfos);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Summary 도메인 모델 → DTO 변환
+     */
+    private MeetingDetailResponse.SummaryInfo convertSummaryToResponse(
+            MeetingDetailData.SummaryData summaryData
+    ) {
+        List<MeetingDetailResponse.BestSlot> bestSlots = summaryData.getBestSlots().stream()
+                .map(slot -> new MeetingDetailResponse.BestSlot(
+                        slot.getDate(),
+                        TimeSlotConverter.slotIndexToTimeStr(slot.getSlotIndex()),
+                        slot.getCount(),
+                        slot.getPercentage()
+                ))
+                .collect(Collectors.toList());
+
+        return new MeetingDetailResponse.SummaryInfo(summaryData.getTotalParticipants(), bestSlots);
+    }
+
+    /**
+     * API "HH:mm" → slotIndex 변환
+     */
     private Map<String, int[]> convertTimeStringsToSlotIndexes(Map<String, String[]> timeStrings) {
         Map<String, int[]> result = new HashMap<>();
         for (Map.Entry<String, String[]> entry : timeStrings.entrySet()) {
@@ -156,6 +220,9 @@ public class MeetingController {
         return result;
     }
 
+    /**
+     * slotIndex → API "HH:mm" 변환
+     */
     private Map<String, String[]> convertSlotIndexesToTimeStrings(Map<String, int[]> slotIndexes) {
         Map<String, String[]> result = new HashMap<>();
         for (Map.Entry<String, int[]> entry : slotIndexes.entrySet()) {
@@ -168,93 +235,4 @@ public class MeetingController {
         }
         return result;
     }
-
-    private Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> buildSchedule(
-            List<MeetingUserSelection> selections
-    ) {
-        Map<String, Map<String, List<MeetingDetailResponse.ParticipantInfo>>> schedule = new HashMap<>();
-
-        for (MeetingUserSelection selection : selections) {
-            MeetingDetailResponse.ParticipantInfo participant = new MeetingDetailResponse.ParticipantInfo(
-                    selection.getUser().getId(),
-                    selection.getUser().getUsername(),
-                    selection.getUser().getProfileImageUrl()
-            );
-
-            Map<String, int[]> userSelections = selection.getSelections();
-            for (Map.Entry<String, int[]> entry : userSelections.entrySet()) {
-                String date = entry.getKey();
-                int[] slots = entry.getValue();
-
-                schedule.putIfAbsent(date, new HashMap<>());
-                Map<String, List<MeetingDetailResponse.ParticipantInfo>> timeMap = schedule.get(date);
-
-                for (int slot : slots) {
-                    String time = TimeSlotConverter.slotIndexToTimeStr(slot);
-                    timeMap.putIfAbsent(time, new ArrayList<>());
-                    timeMap.get(time).add(participant);
-                }
-            }
-        }
-
-        return schedule;
-    }
-
-    private MeetingDetailResponse.SummaryInfo buildSummary(
-            List<MeetingUserSelection> selections,
-            int totalParticipants
-    ) {
-        // 날짜-시간별 카운트
-        Map<String, Map<Integer, Integer>> countMap = new HashMap<>();
-
-        for (MeetingUserSelection selection : selections) {
-            Map<String, int[]> userSelections = selection.getSelections();
-            for (Map.Entry<String, int[]> entry : userSelections.entrySet()) {
-                String date = entry.getKey();
-                int[] slots = entry.getValue();
-
-                countMap.putIfAbsent(date, new HashMap<>());
-                Map<Integer, Integer> slotCountMap = countMap.get(date);
-
-                for (int slot : slots) {
-                    slotCountMap.put(slot, slotCountMap.getOrDefault(slot, 0) + 1);
-                }
-            }
-        }
-
-        // bestSlots 찾기 (가장 많은 사람이 가능한 시간대)
-        List<MeetingDetailResponse.BestSlot> bestSlots = new ArrayList<>();
-        int maxCount = 0;
-
-        for (Map.Entry<String, Map<Integer, Integer>> dateEntry : countMap.entrySet()) {
-            String date = dateEntry.getKey();
-            Map<Integer, Integer> slotCountMap = dateEntry.getValue();
-
-            for (Map.Entry<Integer, Integer> slotEntry : slotCountMap.entrySet()) {
-                int slot = slotEntry.getKey();
-                int count = slotEntry.getValue();
-
-                if (count > maxCount) {
-                    maxCount = count;
-                    bestSlots.clear();
-                    bestSlots.add(new MeetingDetailResponse.BestSlot(
-                            date,
-                            TimeSlotConverter.slotIndexToTimeStr(slot),
-                            count,
-                            totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
-                    ));
-                } else if (count == maxCount) {
-                    bestSlots.add(new MeetingDetailResponse.BestSlot(
-                            date,
-                            TimeSlotConverter.slotIndexToTimeStr(slot),
-                            count,
-                            totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
-                    ));
-                }
-            }
-        }
-
-        return new MeetingDetailResponse.SummaryInfo(totalParticipants, bestSlots);
-    }
 }
-

@@ -1,7 +1,6 @@
 package com.cover.time2gather.domain.meeting;
 
 import com.cover.time2gather.domain.common.BaseEntity;
-import com.cover.time2gather.domain.user.User;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -28,13 +27,11 @@ public class MeetingUserSelection extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "meeting_id", nullable = false)
-    private Meeting meeting;
+    @Column(name = "meeting_id", nullable = false)
+    private Long meetingId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     /**
      * 날짜별 선택한 시간대 (slotIndex 배열)
@@ -44,10 +41,10 @@ public class MeetingUserSelection extends BaseEntity {
     @Column(name = "selections", columnDefinition = "json", nullable = false)
     private Map<String, int[]> selections;
 
-    public static MeetingUserSelection create(Meeting meeting, User user, Map<String, int[]> selections) {
+    public static MeetingUserSelection create(Long meetingId, Long userId, Map<String, int[]> selections) {
         MeetingUserSelection selection = new MeetingUserSelection();
-        selection.meeting = meeting;
-        selection.user = user;
+        selection.meetingId = meetingId;
+        selection.userId = userId;
         selection.selections = selections;
         return selection;
     }
@@ -56,4 +53,3 @@ public class MeetingUserSelection extends BaseEntity {
         this.selections = selections;
     }
 }
-
