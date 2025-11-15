@@ -191,15 +191,80 @@ Do not use relationship like @oneToMany. We have to use only unique identifier a
 - 동일한 JWT 인증 플로우 사용
 - POST /api/v1/meetings/{meetingCode}/auth/anonymous 엔드포인트
 
-**버그 수정 (2025-11-15):**
-- `@EnableJpaAuditing` 중복 선언 문제 해결
-  - Time2gatherApplicationTests.java에서 중복 제거
-  - TestJPAauditingConfig.java 파일 제거
-  - AnonymousLoginIntegrationTest.java에서 중복 제거
-  - 메인 설정(JpaAuditingConfig.java)만 유지
-- Bean definition override 오류 해결 완료
+---
+
+## Phase 3: 모임(Meeting) 관리
+
+### 목표
+일정 조율을 위한 Meeting(모임) 생성 및 조회 기능 구현. 30분 단위 시간 슬롯 선택 기능.
+
+### spec.md 기반 설계
+- **Meeting**: 일정 조율의 기본 단위 (meeting_code로 공유)
+- **MeetingUserSelection**: 유저별 시간 선택
+- **시간 표현**: 
+  - 내부: slotIndex (0~47, 30분 단위)
+  - API: "HH:mm" 형식 (09:00, 09:30 등)
+
+### Phase 3 테스트 계획 (TDD)
+
+**주의사항:**
+- ❌ JPA Relationship 사용 금지 (@OneToMany, @ManyToOne 등)
+- ✅ ID만 참조 (Long hostUserId, Long meetingId 등)
+- ✅ TDD: Red → Green → Refactor 엄격히 준수
+
+#### 3.1 JwtAuthentication 클래스 생성
+- [ ] JwtAuthentication record 생성 (userId, username)
+- [ ] SecurityContext에서 사용할 Principal 구현
+
+#### 3.2 TimeSlotConverter 유틸리티
+- [ ] slotIndex → "HH:mm" 변환 테스트 (0→"00:00", 1→"00:30", 47→"23:30")
+- [ ] "HH:mm" → slotIndex 변환 테스트
+- [ ] 유효하지 않은 입력 예외 처리 테스트
+
+#### 3.3 Meeting 엔티티 (ID 참조만 사용)
+- [ ] Meeting 엔티티 생성 테스트 (hostUserId Long만 저장)
+- [ ] meeting_code 생성 테스트 (8자리 랜덤 문자열)
+- [ ] available_dates JSON 저장 테스트
+
+#### 3.4 MeetingService
+- [ ] createMeeting 테스트 (hostUserId로 생성)
+- [ ] getMeetingByCode 테스트
+- [ ] meeting_code 중복 시 재생성 테스트
+- [ ] 존재하지 않는 모임 조회 예외 테스트
+
+#### 3.5 MeetingUserSelection 엔티티 (ID 참조)
+- [ ] MeetingUserSelection 생성 테스트 (meetingId, userId Long 사용)
+- [ ] selections JSON 저장 테스트
+
+#### 3.6 MeetingSelectionService
+- [ ] upsertUserSelections 테스트 (신규/수정)
+- [ ] getUserSelections 테스트
+- [ ] getAllSelections 테스트 (모임 전체 선택)
+- [ ] 유효하지 않은 시간 선택 예외 테스트
+
+#### 3.7 Meeting API - DTO 설계
+- [ ] CreateMeetingRequest DTO 검증 테스트
+- [ ] CreateMeetingResponse DTO 테스트
+- [ ] MeetingDetailResponse 구성 테스트
+
+#### 3.8 Meeting API - 통합 테스트
+- [ ] POST /api/v1/meetings - 모임 생성 (JWT 인증)
+- [ ] GET /api/v1/meetings/{meetingCode} - 상세 조회 (Public)
+- [ ] GET /api/v1/meetings/{meetingCode}/selections - 내 선택 조회
+- [ ] PUT /api/v1/meetings/{meetingCode}/selections - 시간 선택/수정
+
+### 현재 진행 상태
+- [ ] Phase 3 시작 전 - 기존 구현 코드 삭제 완료, TDD로 재시작
 
 ---
 
-**다음:** Meeting & Selection API 구현
+---
 
+## 일정(Schedule) 기능 추가 (Deprecated - Meeting으로 대체됨)
+- 엔티티 `Schedule` 생성 (모임 코드, 제목, 설명, 시작/종료 시각, 감사 필드)
+- 레포지토리 `ScheduleRepository` 및 기간 필터 조회 메서드 추가
+- 서비스 `ScheduleService` 일정 생성/조회 로직 (endAt 검증 포함)
+- DTO `ScheduleCreateRequest`, `ScheduleResponse` 생성
+- 컨트롤러 `ScheduleController` 작성 (생성, 목록 조회, 단순 검증 & 예외 처리)
+- Swagger 어노테이션 적용 (Tag, Operation, Schema)
+- 추후 계획: 일정 수정/삭제, 겹치는 일정 검증, 타임존 표준화(UTC 저장, KST 변환) 필요 여부 검토
