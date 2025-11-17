@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.meeting.dto;
 
+import com.cover.time2gather.domain.meeting.Meeting;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,5 +18,17 @@ public class CreateMeetingResponse {
 
     @Schema(description = "공유 URL", example = "https://time2gather.org/mtg_a3f8k2md9x")
     private String shareUrl;
+
+    /**
+     * 도메인 모델로부터 DTO 생성
+     */
+    public static CreateMeetingResponse from(Meeting meeting) {
+        return new CreateMeetingResponse(
+                meeting.getId(),
+                meeting.getMeetingCode(),
+                "https://time2gather.org/" + meeting.getMeetingCode()
+        );
+    }
 }
+
 

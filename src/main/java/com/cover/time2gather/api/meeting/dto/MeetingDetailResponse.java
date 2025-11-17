@@ -1,109 +1,227 @@
 package com.cover.time2gather.api.meeting.dto;
 
+import com.cover.time2gather.domain.meeting.Meeting;
+import com.cover.time2gather.domain.meeting.MeetingDetailData;
+import com.cover.time2gather.domain.user.User;
+import com.cover.time2gather.util.TimeSlotConverter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 @AllArgsConstructor
 @Schema(description = "모임 상세 응답")
 public class MeetingDetailResponse {
 
-    @Schema(description = "모임 정보")
-    private MeetingInfo meeting;
+	@Schema(description = "모임 정보")
+	private MeetingInfo meeting;
 
-    @Schema(description = "참여자 목록")
-    private List<ParticipantInfo> participants;
+	@Schema(description = "참여자 목록")
+	private List<ParticipantInfo> participants;
 
-    @Schema(description = "날짜/시간별 참여 가능한 사용자 목록")
-    private Map<String, Map<String, List<ParticipantInfo>>> schedule;
+	@Schema(description = "날짜/시간별 참여 가능한 사용자 목록")
+	private Map<String, Map<String, List<ParticipantInfo>>> schedule;
 
-    @Schema(description = "요약 정보")
-    private SummaryInfo summary;
+	@Schema(description = "요약 정보")
+	private SummaryInfo summary;
 
-    @Getter
-    @AllArgsConstructor
-    @Schema(description = "모임 기본 정보")
-    public static class MeetingInfo {
-        @Schema(description = "모임 ID", example = "1")
-        private Long id;
+	/**
+	 * 도메인 모델로부터 DTO 생성
+	 */
+	public static MeetingDetailResponse from(MeetingDetailData detailData) {
+		Meeting meeting = detailData.getMeeting();
+		User host = detailData.getHost();
 
-        @Schema(description = "모임 코드", example = "mtg_a3f8k2md9x")
-        private String code;
+		// Meeting 정보 변환
+		MeetingInfo meetingInfo = new MeetingInfo(
+			meeting.getId(),
+			meeting.getMeetingCode(),
+			meeting.getTitle(),
+			meeting.getDescription(),
+			new HostInfo(
+				host.getId(),
+				host.getUsername(),
+				host.getProfileImageUrl()
+			),
+			meeting.getTimezone(),
+			convertSlotIndexesToTimeStrings(meeting.getAvailableDates())
+		);
 
-        @Schema(description = "모임 제목", example = "프로젝트 킥오프 미팅")
-        private String title;
+		// 참여자 정보 변환
+		List<ParticipantInfo> participants = detailData.getParticipants().stream()
+			.map(user -> new ParticipantInfo(
+				user.getId(),
+				user.getUsername(),
+				user.getProfileImageUrl()
+			))
+			.collect(Collectors.toList());
 
-        @Schema(description = "모임 설명", example = "2월 신규 프로젝트 시작 회의")
-        private String description;
+		// Schedule 정보 변환
+		Map<String, Map<String, List<ParticipantInfo>>> schedule = convertScheduleToResponse(
+			detailData.getSchedule()
+		);
 
-        @Schema(description = "방장 정보")
-        private HostInfo host;
+		// Summary 정보 변환
+		SummaryInfo summary = convertSummaryToResponse(
+			detailData.getSummary()
+		);
 
-        @Schema(description = "타임존", example = "Asia/Seoul")
-        private String timezone;
+		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary);
+	}
 
-        @Schema(description = "가능한 날짜/시간대",
-                example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:00\"], \"2024-02-16\": [\"11:00\", \"11:30\"]}")
-        private Map<String, String[]> availableDates;
-    }
+	/**
+	 * Schedule 도메인 모델 → DTO 변환
+	 */
+	private static Map<String, Map<String, List<ParticipantInfo>>> convertScheduleToResponse(
+		MeetingDetailData.ScheduleData scheduleData
+	) {
+		Map<String, Map<String, List<ParticipantInfo>>> result = new HashMap<>();
 
-    @Getter
-    @AllArgsConstructor
-    @Schema(description = "방장 정보")
-    public static class HostInfo {
-        @Schema(description = "사용자 ID", example = "1")
-        private Long id;
+		Map<String, Map<Integer, List<User>>> dateTimeUserMap = scheduleData.getDateTimeUserMap();
+		for (Map.Entry<String, Map<Integer, List<User>>> dateEntry : dateTimeUserMap.entrySet()) {
+			String date = dateEntry.getKey();
+			Map<Integer, List<User>> slotUserMap = dateEntry.getValue();
 
-        @Schema(description = "사용자명", example = "jinwoo")
-        private String username;
+			result.putIfAbsent(date, new HashMap<>());
+			Map<String, List<ParticipantInfo>> timeUserMap = result.get(date);
 
-        @Schema(description = "프로필 이미지 URL", example = "https://...")
-        private String profileImageUrl;
-    }
+			for (Map.Entry<Integer, List<User>> slotEntry : slotUserMap.entrySet()) {
+				int slot = slotEntry.getKey();
+				List<User> users = slotEntry.getValue();
 
-    @Getter
-    @AllArgsConstructor
-    @Schema(description = "참여자 정보")
-    public static class ParticipantInfo {
-        @Schema(description = "사용자 ID", example = "1")
-        private Long userId;
+				String time = TimeSlotConverter.slotIndexToTimeStr(slot);
+				List<ParticipantInfo> participantInfos = users.stream()
+					.map(user -> new ParticipantInfo(
+						user.getId(),
+						user.getUsername(),
+						user.getProfileImageUrl()
+					))
+					.collect(Collectors.toList());
 
-        @Schema(description = "사용자명", example = "jinwoo")
-        private String username;
+				timeUserMap.put(time, participantInfos);
+			}
+		}
 
-        @Schema(description = "프로필 이미지 URL", example = "https://...")
-        private String profileImageUrl;
-    }
+		return result;
+	}
 
-    @Getter
-    @AllArgsConstructor
-    @Schema(description = "요약 정보")
-    public static class SummaryInfo {
-        @Schema(description = "총 참여자 수", example = "5")
-        private int totalParticipants;
+	/**
+	 * Summary 도메인 모델 → DTO 변환
+	 */
+	private static SummaryInfo convertSummaryToResponse(
+		MeetingDetailData.SummaryData summaryData
+	) {
+		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
+			.map(slot -> new BestSlot(
+				slot.getDate(),
+				TimeSlotConverter.slotIndexToTimeStr(slot.getSlotIndex()),
+				slot.getCount(),
+				slot.getPercentage()
+			))
+			.collect(Collectors.toList());
 
-        @Schema(description = "베스트 시간대 (가장 많은 사람이 가능한 시간대)")
-        private List<BestSlot> bestSlots;
-    }
+		return new SummaryInfo(summaryData.getTotalParticipants(), bestSlots);
+	}
 
-    @Getter
-    @AllArgsConstructor
-    @Schema(description = "베스트 시간대")
-    public static class BestSlot {
-        @Schema(description = "날짜", example = "2024-02-15")
-        private String date;
+	/**
+	 * slotIndex → API "HH:mm" 변환
+	 */
+	private static Map<String, String[]> convertSlotIndexesToTimeStrings(Map<String, int[]> slotIndexes) {
+		Map<String, String[]> result = new HashMap<>();
+		for (Map.Entry<String, int[]> entry : slotIndexes.entrySet()) {
+			String date = entry.getKey();
+			int[] slots = entry.getValue();
+			String[] times = Arrays.stream(slots)
+				.mapToObj(TimeSlotConverter::slotIndexToTimeStr)
+				.toArray(String[]::new);
+			result.put(date, times);
+		}
+		return result;
+	}
 
-        @Schema(description = "시간", example = "09:00")
-        private String time;
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "모임 기본 정보")
+	public static class MeetingInfo {
+		@Schema(description = "모임 ID", example = "1")
+		private Long id;
 
-        @Schema(description = "가능한 인원 수", example = "4")
-        private int count;
+		@Schema(description = "모임 코드", example = "mtg_a3f8k2md9x")
+		private String code;
 
-        @Schema(description = "가능 비율 (%)", example = "80.0")
-        private double percentage;
-    }
+		@Schema(description = "모임 제목", example = "프로젝트 킥오프 미팅")
+		private String title;
+
+		@Schema(description = "모임 설명", example = "2월 신규 프로젝트 시작 회의")
+		private String description;
+
+		@Schema(description = "방장 정보")
+		private HostInfo host;
+
+		@Schema(description = "타임존", example = "Asia/Seoul")
+		private String timezone;
+
+		@Schema(description = "가능한 날짜/시간대",
+			example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:00\"], \"2024-02-16\": [\"11:00\", \"11:30\"]}")
+		private Map<String, String[]> availableDates;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "방장 정보")
+	public static class HostInfo {
+		@Schema(description = "사용자 ID", example = "1")
+		private Long id;
+
+		@Schema(description = "사용자명", example = "jinwoo")
+		private String username;
+
+		@Schema(description = "프로필 이미지 URL", example = "https://...")
+		private String profileImageUrl;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "참여자 정보")
+	public static class ParticipantInfo {
+		@Schema(description = "사용자 ID", example = "1")
+		private Long userId;
+
+		@Schema(description = "사용자명", example = "jinwoo")
+		private String username;
+
+		@Schema(description = "프로필 이미지 URL", example = "https://...")
+		private String profileImageUrl;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "요약 정보")
+	public static class SummaryInfo {
+		@Schema(description = "총 참여자 수", example = "5")
+		private int totalParticipants;
+
+		@Schema(description = "베스트 시간대 (가장 많은 사람이 가능한 시간대)")
+		private List<BestSlot> bestSlots;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "베스트 시간대")
+	public static class BestSlot {
+		@Schema(description = "날짜", example = "2024-02-15")
+		private String date;
+
+		@Schema(description = "시간", example = "09:00")
+		private String time;
+
+		@Schema(description = "가능한 인원 수", example = "4")
+		private int count;
+
+		@Schema(description = "가능 비율 (%)", example = "80.0")
+		private double percentage;
+	}
 }
