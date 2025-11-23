@@ -27,11 +27,9 @@ public class SecurityConfig {
 
     // CORS 설정 상수
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "http://frontend:*",
-            "http://frontend",
             "https://time2gather.org",
+			"http://localhost:3000",
+			"https://localhost:3000",
             "https://www.time2gather.org",
             "https://*.time2gather.org"
     );
@@ -79,23 +77,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // 허용할 Origin 설정
         configuration.setAllowedOriginPatterns(ALLOWED_ORIGINS);
-
-        // 허용할 HTTP 메서드
         configuration.setAllowedMethods(ALLOWED_METHODS);
-
-        // 허용할 헤더 (모든 헤더 허용)
         configuration.setAllowedHeaders(List.of("*"));
-
-        // 인증 정보 포함 허용 (쿠키 등)
         configuration.setAllowCredentials(true);
-        
-        // Preflight 요청 캐시 시간 (초)
         configuration.setMaxAge(CORS_MAX_AGE_SECONDS);
-
-        // 노출할 헤더 (클라이언트에서 접근 가능한 헤더)
         configuration.setExposedHeaders(EXPOSED_HEADERS);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
