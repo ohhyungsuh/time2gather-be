@@ -1,7 +1,7 @@
 package com.cover.time2gather.config;
 
-import com.cover.time2gather.domain.auth.oidc.KakaoOidcProvider;
-import com.cover.time2gather.domain.auth.oidc.OidcProviderStrategy;
+import com.cover.time2gather.infra.oauth.KakaoOidcProvider;
+import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.cover.time2gather.domain.auth.oidc;
+package com.cover.time2gather.infra.oauth;
 
 /**
  * OIDC Provider 전략 인터페이스
@@ -13,6 +13,14 @@ public interface OidcProviderStrategy {
      * @return ID Token (JWT)
      */
     String getIdToken(String authorizationCode);
+
+    /**
+     * Authorization Code를 사용하여 사용자 정보를 획득
+     *
+     * @param authorizationCode OAuth2 Authorization Code
+     * @return 사용자 정보
+     */
+    OidcUserInfo getUserInfo(String authorizationCode);
 
     /**
      * Provider 이름 반환

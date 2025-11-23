@@ -1,8 +1,8 @@
 package com.cover.time2gather.domain.auth.service;
 
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
-import com.cover.time2gather.domain.auth.oidc.OidcProviderRegistry;
-import com.cover.time2gather.domain.auth.oidc.OidcProviderStrategy;
+import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
+import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
 import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;

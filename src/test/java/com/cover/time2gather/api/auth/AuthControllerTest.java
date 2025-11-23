@@ -51,7 +51,8 @@ class AuthControllerTest {
                 true,
                 1L,
                 "kakao_12345",
-                "user@kakao.com"
+                "user@kakao.com",
+                "https://example.com/profile.jpg"
         );
 
         when(oAuthLoginService.login(eq(provider), eq(authCode))).thenReturn(loginResult);

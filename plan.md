@@ -100,6 +100,48 @@ When approaching a new feature:
 
 6. Add another test for the next small increment of functionality
 
+---
+
+## 작업 이력
+
+### 2025-11-15: Infrastructure Layer 분리 작업
+
+**작업 내용:**
+- OAuth 관련 코드를 `domain.auth.oidc` 패키지에서 `infra.oauth` 패키지로 이동
+- 이동된 파일:
+  - `OidcProviderStrategy.java`
+  - `OidcProviderRegistry.java`
+  - `OidcUserInfo.java`
+  - `KakaoOidcProvider.java`
+  - `KakaoTokenResponse.java`
+
+**수동 작업 필요:**
+다음 중복 파일들을 삭제해야 합니다:
+```
+src/main/java/com/cover/time2gather/domain/auth/oidc/KakaoOidcProvider.java
+src/main/java/com/cover/time2gather/domain/auth/oidc/KakaoTokenResponse.java
+src/main/java/com/cover/time2gather/domain/auth/oidc/OidcProviderRegistry.java
+src/main/java/com/cover/time2gather/domain/auth/oidc/OidcProviderStrategy.java
+src/main/java/com/cover/time2gather/domain/auth/oidc/OidcUserInfo.java
+```
+
+테스트 파일들도 패키지 경로를 수정해야 합니다:
+```
+src/test/java/com/cover/time2gather/domain/auth/oidc/KakaoOidcProviderTest.java
+→ src/test/java/com/cover/time2gather/infra/oauth/KakaoOidcProviderTest.java
+
+src/test/java/com/cover/time2gather/domain/auth/oidc/OidcProviderRegistryTest.java
+→ src/test/java/com/cover/time2gather/infra/oauth/OidcProviderRegistryTest.java
+
+src/test/java/com/cover/time2gather/domain/auth/oidc/OidcProviderStrategyTest.java
+→ src/test/java/com/cover/time2gather/infra/oauth/OidcProviderStrategyTest.java
+```
+
+**변경 사항:**
+- `OAuthLoginService`에서 `infra.oauth` 패키지의 클래스들을 import하도록 수정
+- Kakao 프로필 이미지 URL을 사용자 정보 API에서 정확히 추출하도록 개선
+- `getUserInfo()` 메서드 추가하여 ID Token과 사용자 정보를 함께 반환
+
 7. Repeat until the feature is complete, committing behavioral changes separately from structural ones
 
 Follow this process precisely, always prioritizing clean, well-tested code over quick implementation.
@@ -259,6 +301,26 @@ Response ← Controller (DTO) ← Service (Domain) ← Repository (Entity)
 - BCrypt 암호화 적용
 - 동일한 JWT 인증 플로우 사용
 - POST /api/v1/meetings/{meetingCode}/auth/anonymous 엔드포인트
+
+---
+
+## ✅ Phase 2.1 완료! OAuth 로그인 profileImageUrl 및 중복 필드 수정
+
+### 문제
+1. 카카오 로그인 시 profileImageUrl이 응답에 포함되지 않음
+2. OAuthLoginResponse에서 `newUser`와 `isNewUser` 필드가 중복으로 출력됨
+
+### 해결
+- [x] OAuthLoginService에 ID Token에서 `picture` 또는 `profile_image` 필드 파싱 로직 추가
+- [x] User 엔티티에 `updateProfileImageUrl()` 메서드 추가
+- [x] 기존 사용자 로그인 시 profileImageUrl 업데이트 로직 추가
+- [x] OAuthLoginResponse에서 수동 getter 제거, @Getter 어노테이션으로 통일
+- [x] parseIdToken() 메서드 추가하여 ID Token payload 파싱
+
+**변경된 파일:**
+- `OAuthLoginService.java`: ID Token 파싱 및 profileImageUrl 처리
+- `User.java`: updateProfileImageUrl() 메서드 추가
+- `OAuthLoginResponse.java`: @Getter 사용으로 중복 필드 제거
 
 ---
 

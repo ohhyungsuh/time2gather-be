@@ -2,9 +2,9 @@ package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
-import com.cover.time2gather.domain.meeting.MeetingRepository;
+import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
-import com.cover.time2gather.domain.meeting.MeetingUserSelectionRepository;
+import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;

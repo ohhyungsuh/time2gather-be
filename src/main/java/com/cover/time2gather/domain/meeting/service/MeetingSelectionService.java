@@ -1,9 +1,9 @@
 package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
-import com.cover.time2gather.domain.meeting.MeetingRepository;
+import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
-import com.cover.time2gather.domain.meeting.MeetingUserSelectionRepository;
+import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,6 @@ public class MeetingSelectionService {
 
     @Transactional
     public void upsertUserSelections(Long meetingId, Long userId, Map<String, int[]> selections) {
-        // 사용자가 존재하는지 검증
         if (!userRepository.existsById(userId)) {
             throw new IllegalArgumentException("User not found");
         }

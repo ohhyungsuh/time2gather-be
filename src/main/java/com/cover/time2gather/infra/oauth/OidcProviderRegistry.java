@@ -1,4 +1,4 @@
-package com.cover.time2gather.domain.auth.oidc;
+package com.cover.time2gather.infra.oauth;
 
 import org.springframework.stereotype.Component;
 

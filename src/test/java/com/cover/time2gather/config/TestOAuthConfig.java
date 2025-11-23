@@ -1,6 +1,6 @@
 package com.cover.time2gather.config;
 
-import com.cover.time2gather.domain.auth.oidc.OidcProviderStrategy;
+import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;

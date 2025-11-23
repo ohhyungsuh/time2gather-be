@@ -77,12 +77,11 @@ public class MeetingController {
             @PathVariable String meetingCode,
             @Valid @RequestBody UpsertUserSelectionRequest request
     ) {
-        // Service 호출 (비즈니스 로직)
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
         selectionService.upsertUserSelections(
                 meeting.getId(),
                 authentication.getUserId(),
-                request.toSlotIndexes()  // DTO에서 변환
+                request.toSlotIndexes()
         );
 
         return ApiResponse.success(null);

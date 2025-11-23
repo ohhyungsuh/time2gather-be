@@ -17,6 +17,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AnonymousLoginService {
 
+    private static final String PROVIDER_ID_SEPARATOR = ":";
+    private static final String INVALID_PASSWORD_MESSAGE_FORMAT = "Invalid password for user: %s";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
@@ -29,7 +32,7 @@ public class AnonymousLoginService {
      * @return meeting_code:username 형식의 providerId
      */
     public String generateProviderId(String meetingCode, String username) {
-        return meetingCode + ":" + username;
+        return meetingCode + PROVIDER_ID_SEPARATOR + username;
     }
 
     /**
@@ -63,7 +66,9 @@ public class AnonymousLoginService {
             // 기존 유저 비밀번호 검증
             user = existingUser.get();
             if (!passwordEncoder.matches(password, user.getPassword())) {
-                throw new InvalidPasswordException("Invalid password for user: " + username);
+                throw new InvalidPasswordException(
+                    String.format(INVALID_PASSWORD_MESSAGE_FORMAT, username)
+                );
             }
             isNewUser = false;
         }

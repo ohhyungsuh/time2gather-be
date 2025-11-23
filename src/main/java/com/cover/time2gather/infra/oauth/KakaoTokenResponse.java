@@ -1,4 +1,4 @@
-package com.cover.time2gather.domain.auth.oidc;
+package com.cover.time2gather.infra.oauth;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -26,5 +26,8 @@ public class KakaoTokenResponse {
 
     @JsonProperty("refresh_token_expires_in")
     private Integer refreshTokenExpiresIn;
+
+    // 사용자 정보 API에서 가져온 프로필 이미지 URL (JSON 응답에는 없음)
+    private String profileImageUrl;
 }
 

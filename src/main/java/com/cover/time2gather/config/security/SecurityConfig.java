@@ -25,6 +25,38 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    // CORS 설정 상수
+    private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://frontend:*",
+            "http://frontend",
+            "https://time2gather.org",
+            "https://www.time2gather.org",
+            "https://*.time2gather.org"
+    );
+
+    private static final List<String> ALLOWED_METHODS = Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"
+    );
+
+    private static final List<String> EXPOSED_HEADERS = Arrays.asList(
+            "Authorization",
+            "Set-Cookie",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Credentials"
+    );
+
+    private static final long CORS_MAX_AGE_SECONDS = 3600L;
+
+    // API 엔드포인트 상수
+    private static final String AUTH_API_PATTERN = "/api/v1/auth/**";
+    private static final String MEETING_AUTH_PATTERN = "/api/v1/meetings/*/auth/**";
+    private static final String MEETING_PUBLIC_PATTERN = "/api/v1/meetings/*";
+    private static final String SWAGGER_UI_PATTERN = "/swagger-ui/**";
+    private static final String API_DOCS_PATTERN = "/v3/api-docs/**";
+    private static final String CORS_ALL_PATHS = "/**";
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -33,10 +65,10 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/meetings/*/auth/**").permitAll() // Anonymous login
-                        .requestMatchers("/api/v1/meetings/*").permitAll() // Public meeting view
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger UI
+                        .requestMatchers(AUTH_API_PATTERN).permitAll()
+                        .requestMatchers(MEETING_AUTH_PATTERN).permitAll() // Anonymous login
+                        .requestMatchers(MEETING_PUBLIC_PATTERN).permitAll() // Public meeting view
+                        .requestMatchers(SWAGGER_UI_PATTERN, API_DOCS_PATTERN).permitAll() // Swagger UI
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -49,41 +81,26 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // 허용할 Origin 설정
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-                "http://localhost:*",           // 로컬 개발 환경 (모든 포트)
-                "http://127.0.0.1:*",           // 로컬 개발 환경 (모든 포트)
-                "http://frontend:*",            // Docker 컨테이너 서비스명
-                "http://frontend",              // Docker 컨테이너 서비스명 (기본 포트)
-                "https://time2gather.org",      // 프로덕션
-                "https://www.time2gather.org",  // 프로덕션 (www)
-                "https://*.time2gather.org"     // 프로덕션 서브도메인
-        ));
-        
+        configuration.setAllowedOriginPatterns(ALLOWED_ORIGINS);
+
         // 허용할 HTTP 메서드
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"
-        ));
-        
+        configuration.setAllowedMethods(ALLOWED_METHODS);
+
         // 허용할 헤더 (모든 헤더 허용)
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
+        configuration.setAllowedHeaders(List.of("*"));
+
         // 인증 정보 포함 허용 (쿠키 등)
         configuration.setAllowCredentials(true);
         
         // Preflight 요청 캐시 시간 (초)
-        configuration.setMaxAge(3600L);
-        
+        configuration.setMaxAge(CORS_MAX_AGE_SECONDS);
+
         // 노출할 헤더 (클라이언트에서 접근 가능한 헤더)
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "Set-Cookie",
-                "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials"
-        ));
-        
+        configuration.setExposedHeaders(EXPOSED_HEADERS);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        
+        source.registerCorsConfiguration(CORS_ALL_PATHS, configuration);
+
         return source;
     }
 }

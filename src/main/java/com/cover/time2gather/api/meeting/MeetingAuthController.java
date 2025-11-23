@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.meeting;
 
+import com.cover.time2gather.api.auth.JwtTokenCookie;
 import com.cover.time2gather.api.common.ApiResponse;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginService;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +26,18 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MeetingAuthController {
 
+    private static final String ERROR_USERNAME_REQUIRED = "Username is required";
+    private static final String ERROR_PASSWORD_REQUIRED = "Password is required";
+    private static final String PATH_ANONYMOUS_LOGIN = "/anonymous";
+    private static final String PARAM_MEETING_CODE = "meetingCode";
+    private static final String EXAMPLE_MEETING_CODE = "mtg_abc123";
+    private static final String HTTP_STATUS_200 = "200";
+    private static final String HTTP_STATUS_400 = "400";
+    private static final String HTTP_STATUS_401 = "401";
+    private static final String RESPONSE_DESC_SUCCESS = "로그인 성공";
+    private static final String RESPONSE_DESC_MISSING_FIELD = "필수 필드 누락 (username 또는 password)";
+    private static final String RESPONSE_DESC_INVALID_PASSWORD = "비밀번호 불일치 (기존 사용자)";
+
     private final AnonymousLoginService anonymousLoginService;
 
     @Operation(
@@ -34,32 +46,32 @@ public class MeetingAuthController {
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "로그인 성공",
+                    responseCode = HTTP_STATUS_200,
+                    description = RESPONSE_DESC_SUCCESS,
                     content = @Content(schema = @Schema(implementation = AnonymousLoginResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "필수 필드 누락 (username 또는 password)"
+                    responseCode = HTTP_STATUS_400,
+                    description = RESPONSE_DESC_MISSING_FIELD
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "비밀번호 불일치 (기존 사용자)"
+                    responseCode = HTTP_STATUS_401,
+                    description = RESPONSE_DESC_INVALID_PASSWORD
             )
     })
-    @PostMapping("/anonymous")
+    @PostMapping(PATH_ANONYMOUS_LOGIN)
     public ApiResponse<AnonymousLoginResponse> anonymousLogin(
-            @Parameter(description = "Meeting 코드", example = "mtg_abc123")
-            @PathVariable String meetingCode,
+            @Parameter(description = "Meeting 코드", example = EXAMPLE_MEETING_CODE)
+            @PathVariable(PARAM_MEETING_CODE) String meetingCode,
             @RequestBody AnonymousLoginRequest request,
             HttpServletResponse response
     ) {
         // Manual validation
         if (request.getUsername() == null || request.getUsername().isBlank()) {
-            throw new IllegalArgumentException("Username is required");
+            throw new IllegalArgumentException(ERROR_USERNAME_REQUIRED);
         }
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Password is required");
+            throw new IllegalArgumentException(ERROR_PASSWORD_REQUIRED);
         }
 
         AnonymousLoginResult loginResult = anonymousLoginService.login(
@@ -68,18 +80,11 @@ public class MeetingAuthController {
                 request.getPassword()
         );
 
-        // JWT를 HttpOnly 쿠키에 설정
-        Cookie cookie = new Cookie("accessToken", loginResult.getJwtToken());
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(3600); // 1 hour
-        response.addCookie(cookie);
+        // JWT를 HttpOnly 쿠키에 설정 (Value Object 패턴)
+        JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
+        response.addCookie(jwtCookie.getCookie());
 
-        AnonymousLoginResponse responseData = new AnonymousLoginResponse(
-                loginResult.getUserId(),
-                loginResult.getDisplayName(),
-                loginResult.isNewUser()
-        );
+        AnonymousLoginResponse responseData = AnonymousLoginResponse.from(loginResult);
 
         return ApiResponse.success(responseData);
     }

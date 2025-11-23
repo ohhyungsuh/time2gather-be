@@ -21,6 +21,17 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
+    private static final String ERROR_MESSAGE_OAUTH_LOGIN_FAILED = "OAuth login failed: %s";
+    private static final String PATH_OAUTH_LOGIN = "/oauth/{provider}";
+    private static final String PARAM_PROVIDER = "provider";
+    private static final String EXAMPLE_PROVIDER = "kakao";
+    private static final String HTTP_STATUS_200 = "200";
+    private static final String HTTP_STATUS_400 = "400";
+    private static final String HTTP_STATUS_500 = "500";
+    private static final String RESPONSE_DESC_SUCCESS = "로그인 성공";
+    private static final String RESPONSE_DESC_INVALID_CODE = "유효하지 않거나 만료된 Authorization Code";
+    private static final String RESPONSE_DESC_PROVIDER_ERROR = "OAuth Provider 통신 실패";
+
     private final OAuthLoginService oAuthLoginService;
 
     @Operation(
@@ -29,42 +40,34 @@ public class AuthController {
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "로그인 성공",
+                    responseCode = HTTP_STATUS_200,
+                    description = RESPONSE_DESC_SUCCESS,
                     content = @Content(schema = @Schema(implementation = OAuthLoginResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "유효하지 않거나 만료된 Authorization Code"
+                    responseCode = HTTP_STATUS_400,
+                    description = RESPONSE_DESC_INVALID_CODE
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "500",
-                    description = "OAuth Provider 통신 실패"
+                    responseCode = HTTP_STATUS_500,
+                    description = RESPONSE_DESC_PROVIDER_ERROR
             )
     })
-    @PostMapping("/oauth/{provider}")
+    @PostMapping(PATH_OAUTH_LOGIN)
     public ApiResponse<OAuthLoginResponse> oauthLogin(
-            @Parameter(description = "OAuth Provider (kakao, google 등)", example = "kakao")
-            @PathVariable String provider,
+            @Parameter(description = "OAuth Provider (kakao, google 등)", example = EXAMPLE_PROVIDER)
+            @PathVariable(PARAM_PROVIDER) String provider,
             @RequestBody OAuthLoginRequest request,
             HttpServletResponse response
     ) {
         OAuthLoginResult loginResult = oAuthLoginService.login(provider, request.getAuthorizationCode());
 
-        // JWT를 HttpOnly 쿠키에 설정
-        Cookie cookie = new Cookie("accessToken", loginResult.getJwtToken());
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(3600); // 1 hour
-        response.addCookie(cookie);
+        // JWT를 HttpOnly 쿠키에 설정 (Value Object 패턴)
+        JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
+        response.addCookie(jwtCookie.getCookie());
 
-        OAuthLoginResponse responseData = new OAuthLoginResponse(
-                loginResult.getUserId(),
-                loginResult.getUsername(),
-                loginResult.getEmail(),
-                provider,
-                loginResult.isNewUser()
-        );
+        // DTO 변환 (DTO의 책임)
+        OAuthLoginResponse responseData = OAuthLoginResponse.from(loginResult, provider);
 
         return ApiResponse.success(responseData);
     }
@@ -78,7 +81,7 @@ public class AuthController {
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleIllegalState(IllegalStateException e) {
-        return ApiResponse.error("OAuth login failed: " + e.getMessage());
+        return ApiResponse.error(String.format(ERROR_MESSAGE_OAUTH_LOGIN_FAILED, e.getMessage()));
     }
 }
 

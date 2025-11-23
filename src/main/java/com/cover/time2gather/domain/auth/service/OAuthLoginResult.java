@@ -11,5 +11,6 @@ public class OAuthLoginResult {
     private final Long userId;
     private final String username;
     private final String email;
+    private final String profileImageUrl;
 }
 
