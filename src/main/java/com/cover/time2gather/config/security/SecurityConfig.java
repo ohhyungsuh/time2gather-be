@@ -63,6 +63,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("OPTIONS", "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
                         .requestMatchers(MEETING_AUTH_PATTERN).permitAll() // Anonymous login
                         .requestMatchers(MEETING_PUBLIC_PATTERN).permitAll() // Public meeting view
