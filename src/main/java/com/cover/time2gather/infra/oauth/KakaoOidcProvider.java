@@ -52,10 +52,9 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
     private final RestTemplate restTemplate;
     private final String clientId;
     private final String clientSecret;
-    private final String redirectUri;
 
     @Override
-    public String getIdToken(String authorizationCode) {
+    public String getIdToken(String authorizationCode, String redirectUri) {
         log.info("Requesting ID token from Kakao with authorization code");
         log.debug("Client ID: {}, Redirect URI: {}", clientId, redirectUri);
 
@@ -107,7 +106,7 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
     }
 
     @Override
-    public OidcUserInfo getUserInfo(String authorizationCode) {
+    public OidcUserInfo getUserInfo(String authorizationCode, String redirectUri) {
         log.info("Requesting user info from Kakao with authorization code");
 
         HttpHeaders headers = new HttpHeaders();

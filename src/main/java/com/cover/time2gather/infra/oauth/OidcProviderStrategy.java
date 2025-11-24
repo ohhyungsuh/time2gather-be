@@ -10,17 +10,19 @@ public interface OidcProviderStrategy {
      * Authorization Code를 사용해서 ID Token을 획득
      *
      * @param authorizationCode OAuth2 Authorization Code
+     * @param redirectUri 클라이언트의 리다이렉트 URI
      * @return ID Token (JWT)
      */
-    String getIdToken(String authorizationCode);
+    String getIdToken(String authorizationCode, String redirectUri);
 
     /**
      * Authorization Code를 사용하여 사용자 정보를 획득
      *
      * @param authorizationCode OAuth2 Authorization Code
+     * @param redirectUri 클라이언트의 리다이렉트 URI
      * @return 사용자 정보
      */
-    OidcUserInfo getUserInfo(String authorizationCode);
+    OidcUserInfo getUserInfo(String authorizationCode, String redirectUri);
 
     /**
      * Provider 이름 반환

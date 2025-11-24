@@ -24,9 +24,9 @@ public class OAuthLoginService {
     private final JwtTokenService jwtTokenService;
 
     @Transactional
-    public OAuthLoginResult login(String providerName, String authorizationCode) {
+    public OAuthLoginResult login(String providerName, String authorizationCode, String redirectUri) {
         OidcProviderStrategy provider = providerRegistry.getProvider(providerName);
-        OidcUserInfo userInfo = provider.getUserInfo(authorizationCode);
+        OidcUserInfo userInfo = provider.getUserInfo(authorizationCode, redirectUri);
 
         String providerId = userInfo.getProviderId();
         String email = userInfo.getEmail();

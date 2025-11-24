@@ -18,9 +18,6 @@ public class OAuthConfig {
     @Value("${oauth.kakao.client-secret}")
     private String kakaoClientSecret;
 
-    @Value("${oauth.kakao.redirect-uri}")
-    private String kakaoRedirectUri;
-
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -29,7 +26,7 @@ public class OAuthConfig {
     @Bean
     public List<OidcProviderStrategy> oidcProviders(RestTemplate restTemplate) {
         return List.of(
-                new KakaoOidcProvider(restTemplate, kakaoClientId, kakaoClientSecret, kakaoRedirectUri)
+                new KakaoOidcProvider(restTemplate, kakaoClientId, kakaoClientSecret)
                 // 추후 Google Provider 등 추가 가능
         );
     }

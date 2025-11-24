@@ -9,9 +9,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,9 +34,12 @@ public class AuthController {
 
     private final OAuthLoginService oAuthLoginService;
 
+    @Value("${oauth.redirect.default}")
+    private String defaultRedirectUrl;
+
     @Operation(
             summary = "OAuth 로그인",
-            description = "카카오/구글 등의 OAuth Provider를 통한 로그인. Authorization Code를 받아 JWT 토큰을 발급합니다."
+            description = "카카오/구글 등의 OAuth Provider를 통한 로그인. Authorization Code를 받아 JWT 토큰을 발급합니다. Redirect URL을 요청에 포함할 수 있으며, 없으면 기본값을 사용합니다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -60,7 +63,16 @@ public class AuthController {
             @RequestBody OAuthLoginRequest request,
             HttpServletResponse response
     ) {
-        OAuthLoginResult loginResult = oAuthLoginService.login(provider, request.getAuthorizationCode());
+        // Redirect URL: 요청에 포함되어 있으면 사용, 없으면 기본값 사용
+        String redirectUrl = (request.getRedirectUrl() != null && !request.getRedirectUrl().isBlank())
+                ? request.getRedirectUrl()
+                : defaultRedirectUrl;
+
+        OAuthLoginResult loginResult = oAuthLoginService.login(
+                provider,
+                request.getAuthorizationCode(),
+                redirectUrl
+        );
 
         // JWT를 HttpOnly 쿠키에 설정 (Value Object 패턴)
         JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
