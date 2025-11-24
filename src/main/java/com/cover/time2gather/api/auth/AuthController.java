@@ -1,13 +1,17 @@
 package com.cover.time2gather.api.auth;
 
+import com.cover.time2gather.api.auth.dto.UserInfoResponse;
 import com.cover.time2gather.api.common.ApiResponse;
+import com.cover.time2gather.config.security.CurrentUser;
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.cover.time2gather.domain.auth.service.OAuthLoginService;
+import com.cover.time2gather.domain.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -82,6 +86,28 @@ public class AuthController {
         OAuthLoginResponse responseData = OAuthLoginResponse.from(loginResult, provider);
 
         return ApiResponse.success(responseData);
+    }
+
+    @Operation(
+            summary = "현재 사용자 정보 조회",
+            description = "로그인된 사용자의 기본 정보를 조회합니다. JWT 토큰이 필요합니다.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = HTTP_STATUS_200,
+                    description = "사용자 정보 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserInfoResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증되지 않은 사용자"
+            )
+    })
+    @GetMapping("/me")
+    public ApiResponse<UserInfoResponse> getCurrentUser(@CurrentUser User user) {
+        UserInfoResponse response = UserInfoResponse.from(user);
+        return ApiResponse.success(response);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
