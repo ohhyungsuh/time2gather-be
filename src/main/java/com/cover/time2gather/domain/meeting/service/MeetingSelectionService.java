@@ -58,6 +58,11 @@ public class MeetingSelectionService {
             String date = entry.getKey();
             int[] selectedSlots = entry.getValue();
 
+            // 빈 배열인 경우 검증 스킵 (선택 취소를 의미)
+            if (selectedSlots == null || selectedSlots.length == 0) {
+                continue;
+            }
+
             // 해당 날짜가 available_dates에 없으면 에러
             if (!availableDates.containsKey(date)) {
                 throw new IllegalArgumentException("Date " + date + " is not available in this meeting");

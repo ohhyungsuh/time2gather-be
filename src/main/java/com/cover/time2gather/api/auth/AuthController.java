@@ -110,6 +110,36 @@ public class AuthController {
         return ApiResponse.success(response);
     }
 
+    @Operation(
+            summary = "[테스트용] JWT 토큰 생성",
+            description = "개발/테스트 환경에서 사용할 JWT 토큰을 직접 생성합니다. User ID를 입력하면 해당 사용자의 JWT 토큰을 발급받아 Swagger UI에서 테스트할 수 있습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = HTTP_STATUS_200,
+                    description = "토큰 생성 성공",
+                    content = @Content(schema = @Schema(implementation = TestTokenResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = HTTP_STATUS_400,
+                    description = "존재하지 않는 사용자 ID"
+            )
+    })
+    @PostMapping("/test-token")
+    public ApiResponse<TestTokenResponse> generateTestToken(
+            @RequestBody TestTokenRequest request,
+            HttpServletResponse response
+    ) {
+        OAuthLoginResult loginResult = oAuthLoginService.generateTestToken(request.getUserId());
+
+        // JWT를 HttpOnly 쿠키에 설정
+        JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
+        response.addCookie(jwtCookie.getCookie());
+
+        TestTokenResponse responseData = TestTokenResponse.from(loginResult);
+        return ApiResponse.success(responseData);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleIllegalArgument(IllegalArgumentException e) {

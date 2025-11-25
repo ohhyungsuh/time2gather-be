@@ -16,7 +16,7 @@ public class CreateMeetingResponse {
     @Schema(description = "모임 코드", example = "mtg_a3f8k2md9x")
     private String meetingCode;
 
-    @Schema(description = "공유 URL", example = "https://time2gather.org/mtg_a3f8k2md9x")
+    @Schema(description = "공유 URL", example = "https://time2gather.org/meetings/mtg_a3f8k2md9x")
     private String shareUrl;
 
     /**
@@ -26,7 +26,7 @@ public class CreateMeetingResponse {
         return new CreateMeetingResponse(
                 meeting.getId(),
                 meeting.getMeetingCode(),
-                "https://time2gather.org/" + meeting.getMeetingCode()
+                "https://time2gather.org/meetings/" + meeting.getMeetingCode()
         );
     }
 }

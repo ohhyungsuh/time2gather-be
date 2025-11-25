@@ -59,7 +59,8 @@ public class OAuthLoginService {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getProfileImageUrl()
+                user.getProfileImageUrl(),
+                user
         );
     }
 
@@ -73,5 +74,28 @@ public class OAuthLoginService {
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    /**
+     * 테스트용 JWT 토큰 생성
+     * @param userId 사용자 ID
+     * @return JWT 토큰이 포함된 로그인 결과
+     */
+    @Transactional(readOnly = true)
+    public OAuthLoginResult generateTestToken(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+
+        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername());
+
+        return new OAuthLoginResult(
+                jwtToken,
+                false,
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getProfileImageUrl(),
+                user
+        );
     }
 }
