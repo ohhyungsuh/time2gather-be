@@ -31,6 +31,7 @@ public class OAuthLoginService {
         String providerId = userInfo.getProviderId();
         String email = userInfo.getEmail();
         String profileImageUrl = userInfo.getProfileImageUrl();
+		String userName = userInfo.getNickname();
 
         // 2. User 조회 or 생성
         User.AuthProvider authProvider = User.AuthProvider.valueOf(providerName.toUpperCase());
@@ -40,7 +41,7 @@ public class OAuthLoginService {
 
         User user;
         if (isNewUser) {
-            user = createNewUser(authProvider, providerId, email, profileImageUrl);
+            user = createNewUser(authProvider, providerId, email, profileImageUrl, userName);
         } else {
             user = existingUser.get();
             // 기존 사용자의 profileImageUrl 업데이트
@@ -62,12 +63,9 @@ public class OAuthLoginService {
         );
     }
 
-    private User createNewUser(User.AuthProvider provider, String providerId, String email, String profileImageUrl) {
-        // 도메인 모델의 username 생성 로직 활용
-        String username = User.generateUsername(provider, providerId);
-
+    private User createNewUser(User.AuthProvider provider, String providerId, String email, String profileImageUrl, String nickname) {
         User newUser = User.builder()
-                .username(username)
+                .username(nickname)
                 .email(email)
                 .profileImageUrl(profileImageUrl)
                 .provider(provider)

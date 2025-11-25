@@ -72,21 +72,6 @@ public class User {
         this.profileImageUrl = profileImageUrl;
     }
 
-    /**
-     * OAuth Provider와 Provider ID로 username 생성
-     * 도메인 로직: username 생성 규칙을 도메인 모델이 담당
-     *
-     * @param provider OAuth Provider
-     * @param providerId Provider에서 제공한 사용자 ID
-     * @return 생성된 username
-     */
-    public static String generateUsername(AuthProvider provider, String providerId) {
-        if (provider == null || providerId == null || providerId.isBlank()) {
-            throw new IllegalArgumentException("Provider and providerId must not be null or blank");
-        }
-        return provider.name().toLowerCase() + USERNAME_DELIMITER + providerId;
-    }
-
     public enum AuthProvider {
         ANONYMOUS,
         KAKAO,
