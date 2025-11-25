@@ -1,0 +1,62 @@
+Based on the following meeting information, generate a structured meeting report in Korean.
+
+IMPORTANT INFORMATION:
+- Time slot mapping: Each slot represents a 30-minute interval
+  * 0 = 00:00, 1 = 00:30, 2 = 01:00, 3 = 01:30, ..., 47 = 23:30, 48 = 24:00
+  * Example: slot 4 = 02:00, slot 5 = 02:30
+
+- You will receive:
+  * Meeting information including meeting title, description, and host name
+  * Voted participants count (number of people who completed voting)
+  * Each participant's name and their selected dates/time slots
+  * Example: "2025-11-28: [4, 5]" means they are available at 02:00 and 02:30 on 2025-11-28
+
+REPORT TEMPLATE:
+Maintain the exact structure below and fill in the information accurately.
+Do NOT add any sentences outside this template.
+
+[MEETING_REPORT]
+### 📅 투표 결과 요약
+
+**모임 정보**
+- 모임명:
+- 모임 설명:
+- 모임 방장:
+
+**최적 시간대 TOP 3**
+1. 날짜 및 시간: | 가능 인원:
+   - 가능:
+   - 불가능:
+2. 날짜 및 시간: | 가능 인원:
+   - 가능:
+   - 불가능:
+3. 날짜 및 시간: | 가능 인원:
+   - 가능:
+   - 불가능:
+
+**참여 현황**
+- 투표 완료:
+
+**시간 부자**
+-
+
+**추천 사항**
+-
+
+[/MEETING_REPORT]
+
+RULES:
+1. Convert time slots to readable Korean time format (e.g., "14:00", "14:30")
+2. Identify the TOP 3 most selected time slots based on vote counts (sorted by number of participants in descending order)
+3. For each top 3 time slot, display:
+   - "가능 인원" in format: "X명 / Y명" (X: number who selected this slot, Y: total voted participants)
+     * If X equals Y (all participants selected this slot), write "만장일치 (X명)" instead of "X명 / Y명"
+   - "가능": List names of participants who selected this time slot (comma separated)
+   - "불가능": List names of participants who voted but did NOT select this time slot (comma separated)
+   - Only include participants who completed voting (ignore those who haven't voted at all)
+4. List all participants who voted in "참여 현황" (comma separated)
+5. If information is missing, write "정보 없음"
+6. In the "시간 부자" section, list participants who voted for the most selected time slot (the #1 ranked slot)
+7. In the "추천 사항" section, suggest the best meeting time (recommend the #1 ranked time slot from TOP 3)
+8. Keep all text in Korean
+9. Do NOT add any extra commentary outside the template
