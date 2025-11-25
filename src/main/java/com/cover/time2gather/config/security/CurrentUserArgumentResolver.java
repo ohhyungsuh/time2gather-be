@@ -39,12 +39,11 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
             throw new IllegalStateException("인증되지 않은 사용자입니다.");
         }
 
-        Long userId;
-        try {
-            userId = Long.parseLong(authentication.getName());
-        } catch (NumberFormatException e) {
-            throw new IllegalStateException("유효하지 않은 사용자 ID입니다.");
+        if (!(authentication instanceof JwtAuthentication jwtAuth)) {
+            throw new IllegalStateException("JWT 인증 정보가 아닙니다.");
         }
+
+        Long userId = jwtAuth.getUserId();
 
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다."));
