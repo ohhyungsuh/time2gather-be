@@ -5,6 +5,7 @@ import com.cover.time2gather.api.meeting.dto.*;
 import com.cover.time2gather.config.security.JwtAuthentication;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
+import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -85,6 +86,21 @@ public class MeetingController {
         );
 
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/{meetingCode}/report")
+    @Operation(summary = "모임 레포트 조회", description = "AI가 생성한 모임 요약 레포트를 조회합니다. (인증 불필요)")
+    public ApiResponse<MeetingReportResponse> getMeetingReport(
+            @PathVariable String meetingCode
+    ) {
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+        MeetingReport report = selectionService.getMeetingReport(meeting.getId());
+
+        if (report == null) {
+            return ApiResponse.success(null);
+        }
+
+        return ApiResponse.success(MeetingReportResponse.from(report));
     }
 }
 
