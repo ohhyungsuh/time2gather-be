@@ -80,7 +80,8 @@ public class AuthController {
 
         // JWT를 HttpOnly 쿠키에 설정 (Value Object 패턴)
         JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
-        response.addCookie(jwtCookie.getCookie());
+        // SameSite=None을 포함한 Set-Cookie 헤더 직접 설정
+        response.setHeader("Set-Cookie", jwtCookie.toSetCookieHeader());
 
         // DTO 변환 (DTO의 책임)
         OAuthLoginResponse responseData = OAuthLoginResponse.from(loginResult, provider);
@@ -132,9 +133,9 @@ public class AuthController {
     ) {
         OAuthLoginResult loginResult = oAuthLoginService.generateTestToken(request.getUserId());
 
-        // JWT를 HttpOnly 쿠키에 설정
+        // JWT를 HttpOnly 쿠키에 설정 (SameSite=None 포함)
         JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
-        response.addCookie(jwtCookie.getCookie());
+        response.setHeader("Set-Cookie", jwtCookie.toSetCookieHeader());
 
         TestTokenResponse responseData = TestTokenResponse.from(loginResult);
         return ApiResponse.success(responseData);

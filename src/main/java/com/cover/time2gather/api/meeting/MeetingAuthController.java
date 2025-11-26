@@ -80,9 +80,9 @@ public class MeetingAuthController {
                 request.getPassword()
         );
 
-        // JWT를 HttpOnly 쿠키에 설정 (Value Object 패턴)
+        // JWT를 HttpOnly 쿠키에 설정 (SameSite=None 포함)
         JwtTokenCookie jwtCookie = JwtTokenCookie.from(loginResult.getJwtToken());
-        response.addCookie(jwtCookie.getCookie());
+        response.setHeader("Set-Cookie", jwtCookie.toSetCookieHeader());
 
         AnonymousLoginResponse responseData = AnonymousLoginResponse.from(loginResult);
 
