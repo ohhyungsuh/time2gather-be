@@ -55,6 +55,7 @@ public class MeetingSelectionService {
 
     @Transactional
     public void upsertUserSelections(Long meetingId, Long userId, Map<String, int[]> selections) {
+        // 사용자가 존재하는지 검증
         if (!userRepository.existsById(userId)) {
             throw new IllegalArgumentException("User not found");
         }
@@ -166,6 +167,10 @@ public class MeetingSelectionService {
         }
 
         return sb.toString();
+
+        // TODO 투표 후 모임 요약 리포트 gpt 생성 비동기 처리
+
+
     }
 
     private void validateSelections(Meeting meeting, Map<String, int[]> selections) {
