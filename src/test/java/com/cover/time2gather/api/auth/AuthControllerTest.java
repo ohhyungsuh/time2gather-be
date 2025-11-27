@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.auth;
 
+import com.cover.time2gather.api.auth.dto.request.OAuthLoginRequest;
 import com.cover.time2gather.config.JpaAuditingConfig;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;

@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.auth;
+package com.cover.time2gather.api.auth.vo;
 
 import jakarta.servlet.http.Cookie;
 import lombok.AccessLevel;

@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.auth;
+package com.cover.time2gather.api.auth.constants;
 
 /**
  * 인증 관련 상수 정의

@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.meeting;
+package com.cover.time2gather.api.meeting.dto.response;
 
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;
 import com.fasterxml.jackson.annotation.JsonProperty;

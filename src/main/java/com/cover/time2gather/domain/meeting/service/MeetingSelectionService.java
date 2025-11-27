@@ -1,7 +1,7 @@
 package com.cover.time2gather.domain.meeting.service;
 
-import com.cover.time2gather.api.meeting.dto.UpsertSummaryRequest;
-import com.cover.time2gather.api.meeting.dto.UpsertSummaryResponse;
+import com.cover.time2gather.api.meeting.dto.request.UpsertSummaryRequest;
+import com.cover.time2gather.api.meeting.dto.response.UpsertSummaryResponse;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.infra.meeting.MeetingReportRepository;

@@ -1,7 +1,9 @@
 package com.cover.time2gather.api.meeting;
 
-import com.cover.time2gather.api.auth.JwtTokenCookie;
+import com.cover.time2gather.api.auth.vo.JwtTokenCookie;
 import com.cover.time2gather.api.common.ApiResponse;
+import com.cover.time2gather.api.meeting.dto.request.AnonymousLoginRequest;
+import com.cover.time2gather.api.meeting.dto.response.AnonymousLoginResponse;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginService;
 import com.cover.time2gather.domain.auth.service.InvalidPasswordException;

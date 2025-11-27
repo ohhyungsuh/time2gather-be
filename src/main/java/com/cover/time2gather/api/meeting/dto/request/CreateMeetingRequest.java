@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.meeting.dto;
+package com.cover.time2gather.api.meeting.dto.request;
 
 import com.cover.time2gather.util.TimeSlotConverter;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.auth.dto;
+package com.cover.time2gather.api.auth.dto.response;
 
 import com.cover.time2gather.domain.user.User;
 import io.swagger.v3.oas.annotations.media.Schema;

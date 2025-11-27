@@ -1,6 +1,6 @@
 package com.cover.time2gather.integration;
 
-import com.cover.time2gather.api.meeting.AnonymousLoginRequest;
+import com.cover.time2gather.api.meeting.dto.request.AnonymousLoginRequest;
 import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
