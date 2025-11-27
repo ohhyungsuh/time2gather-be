@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "meeting_reports")
 @Getter
@@ -22,14 +24,26 @@ public class MeetingReport extends BaseEntity {
     @Column(name = "summary_text", columnDefinition = "TEXT", nullable = false)
     private String summaryText;
 
+    @Column(name = "retry_count", nullable = false)
+    private Integer retryCount;
+
+    @Column(name = "last_attempt_at")
+    private LocalDateTime lastAttemptAt;
+
     public static MeetingReport create(Long meetingId, String summaryText) {
         MeetingReport report = new MeetingReport();
         report.meetingId = meetingId;
         report.summaryText = summaryText;
+        report.retryCount = 0;
         return report;
     }
 
     public void updateSummaryText(String summaryText) {
         this.summaryText = summaryText;
+    }
+
+    public void incrementRetryCount() {
+        this.retryCount++;
+        this.lastAttemptAt = LocalDateTime.now();
     }
 }
