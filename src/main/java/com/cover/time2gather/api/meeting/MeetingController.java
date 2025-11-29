@@ -11,6 +11,7 @@ import com.cover.time2gather.config.security.JwtAuthentication;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingReport;
+import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,7 @@ public class MeetingController {
 
     private final MeetingService meetingService;
     private final MeetingSelectionService selectionService;
+    private final MeetingFacadeService meetingFacadeService;
 
     @PostMapping
     @Operation(summary = "모임 생성", description = "새로운 모임을 생성합니다.")
@@ -83,9 +85,8 @@ public class MeetingController {
             @PathVariable String meetingCode,
             @Valid @RequestBody UpsertUserSelectionRequest request
     ) {
-        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
-        selectionService.upsertUserSelections(
-                meeting.getId(),
+        meetingFacadeService.upsertUserSelections(
+                meetingCode,
                 authentication.getUserId(),
                 request.toSlotIndexes()
         );
