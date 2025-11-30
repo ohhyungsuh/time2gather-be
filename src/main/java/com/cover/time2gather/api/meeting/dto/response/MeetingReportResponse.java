@@ -11,10 +11,10 @@ import lombok.Getter;
 public class MeetingReportResponse {
 
     @Schema(description = "레포트 ID", example = "1")
-    private Long reportId;
+    private long reportId;
 
     @Schema(description = "모임 ID", example = "1")
-    private Long meetingId;
+    private long meetingId;
 
     @Schema(description = "요약된 레포트 내용")
     private String summaryText;
