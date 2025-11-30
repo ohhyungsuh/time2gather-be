@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: time2gather
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+        enable_lazy_load_no_trans: true
+
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/time2gather?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+# JWT Configuration
+jwt:
+  secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-this-in-production
+  expiration-ms: 3600000
+
+# OAuth - Kakao
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:4ea5e31b7c9fd5131c30f91acac4abb0}
+    client-secret: ${KAKAO_CLIENT_SECRET:Ftk2nyEdPIsgBBJFlqstGO3X1r1teH9L}
+  redirect:
+    default: ${OAUTH_REDIRECT_URL:https://time2gather.com/login/oauth2/code/kakao}
+
+# Swagger
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+    csrf:
+      enabled: false
+    tryItOutEnabled: true
+
+# OpenAPI
+openai:
+  api-key: ${OPENAI_API_KEY}
+  api-base: ${OPENAI_API_BASE}
+  model: ${OPENAI_MODEL}

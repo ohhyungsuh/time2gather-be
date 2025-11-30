@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.meeting.dto;
+package com.cover.time2gather.api.meeting.dto.response;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 import io.swagger.v3.oas.annotations.media.Schema;

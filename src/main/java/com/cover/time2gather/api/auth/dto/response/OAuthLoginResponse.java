@@ -1,4 +1,4 @@
-package com.cover.time2gather.api.auth;
+package com.cover.time2gather.api.auth.dto.response;
 
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.meeting;
 
+import com.cover.time2gather.api.meeting.dto.request.AnonymousLoginRequest;
 import com.cover.time2gather.config.JpaAuditingConfig;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;

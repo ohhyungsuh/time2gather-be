@@ -1,24 +1,33 @@
 package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
-import com.cover.time2gather.infra.meeting.MeetingRepository;
+import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
-import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
+import com.cover.time2gather.domain.meeting.event.ReportGenerateEvent;
 import com.cover.time2gather.domain.user.UserRepository;
+import com.cover.time2gather.infra.meeting.MeetingReportRepository;
+import com.cover.time2gather.infra.meeting.MeetingRepository;
+import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class MeetingSelectionService {
 
     private final MeetingUserSelectionRepository selectionRepository;
     private final UserRepository userRepository;
     private final MeetingRepository meetingRepository;
+    private final MeetingReportRepository reportRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Map<String, int[]> getUserSelections(Long meetingId, Long userId) {
         return selectionRepository.findByMeetingIdAndUserId(meetingId, userId)
@@ -32,7 +41,6 @@ public class MeetingSelectionService {
             throw new IllegalArgumentException("User not found");
         }
 
-        // 모임이 존재하는지 검증 및 선택한 시간이 모임의 available_dates 내에 있는지 검증
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
         validateSelections(meeting, selections);
@@ -42,12 +50,16 @@ public class MeetingSelectionService {
                 .orElse(null);
 
         if (selection == null) {
-            // 새로 생성
             selection = MeetingUserSelection.create(meetingId, userId, selections);
             selectionRepository.save(selection);
         } else {
-            // 업데이트
             selection.updateSelections(selections);
+        }
+
+        try {
+            eventPublisher.publishEvent(ReportGenerateEvent.of(meetingId));
+        } catch (Exception e) {
+            log.error("Failed to publish report generate event. meetingId={}", meetingId, e);
         }
     }
 
@@ -86,5 +98,10 @@ public class MeetingSelectionService {
 
     public List<MeetingUserSelection> getAllSelections(Long meetingId) {
         return selectionRepository.findAllByMeetingId(meetingId);
+    }
+
+    public MeetingReport getMeetingReport(Long meetingId) {
+        return reportRepository.findByMeetingId(meetingId)
+                .orElse(null);
     }
 }
