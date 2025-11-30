@@ -3,13 +3,11 @@ package com.cover.time2gather.domain.meeting.service;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
+import com.cover.time2gather.domain.meeting.ReportData;
 import com.cover.time2gather.domain.meeting.client.ReportSummaryClient;
 import com.cover.time2gather.domain.meeting.event.ReportGenerateEvent;
 import com.cover.time2gather.domain.user.User;
-import com.cover.time2gather.domain.user.UserRepository;
 import com.cover.time2gather.infra.meeting.MeetingReportRepository;
-import com.cover.time2gather.infra.meeting.MeetingRepository;
-import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.cover.time2gather.domain.meeting.constants.ReportConstants.MAX_RETRY_COUNT;
 
@@ -31,33 +28,20 @@ import static com.cover.time2gather.domain.meeting.constants.ReportConstants.MAX
 @RequiredArgsConstructor
 public class ReportWorkerService {
 
-    private final MeetingRepository meetingRepository;
-    private final MeetingUserSelectionRepository selectionRepository;
-    private final MeetingReportRepository reportRepository;
-    private final UserRepository userRepository;
-    private final ReportSummaryClient summaryClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final ReportSummaryClient summaryClient;
     private final ScheduledExecutorService reportRetryScheduler;
+
+    private final ReportDataAggregator reportDataAggregator;
+
+    private final MeetingReportRepository reportRepository;
 
     @Async("reportTaskExecutor")
     public void generateReportAsync(Long meetingId, Integer currentRetryCount) {
-        Meeting meeting;
-        List<MeetingUserSelection> allSelections;
-        Map<Long, User> userMap;
+        ReportData reportData;
 
         try {
-            meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new IllegalArgumentException("Meeting not found: " + meetingId));
-
-            allSelections = selectionRepository.findAllByMeetingId(meetingId);
-
-            Set<Long> userIds = allSelections.stream()
-                    .map(MeetingUserSelection::getUserId)
-                    .collect(Collectors.toSet());
-
-            userMap = userRepository.findAllById(userIds).stream()
-                    .collect(Collectors.toMap(User::getId, user -> user));
-
+            reportData = reportDataAggregator.aggregate(meetingId);
         } catch (IllegalArgumentException | IllegalStateException | NullPointerException e) {
             log.error("Permanent failure - Data integrity issue. meetingId={}", meetingId, e);
             return;
@@ -66,6 +50,10 @@ public class ReportWorkerService {
             handleRetry(meetingId, currentRetryCount);
             return;
         }
+
+        Meeting meeting = reportData.meeting();
+        List<MeetingUserSelection> allSelections = reportData.selections();
+        Map<Long, User> userMap = reportData.userMap();
 
         String summaryText;
         try {
