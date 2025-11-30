@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.cover.time2gather.domain.meeting.constants.ReportConstants.*;
@@ -40,29 +42,43 @@ public class ReportWorkerService {
     private final UserRepository userRepository;
     private final RestClient restClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final ScheduledExecutorService reportRetryScheduler;
 
     @Value("${openai.model}")
     private String model;
 
     @Async("reportTaskExecutor")
     public void generateReportAsync(Long meetingId, Integer currentRetryCount) {
+        Meeting meeting;
+        List<MeetingUserSelection> allSelections;
+        Map<Long, User> userMap;
+
         try {
-            String instructions = ResourceLoader.loadTextFile(PROMPT_TEMPLATE_PATH);
+            meeting = meetingRepository.findById(meetingId)
+                    .orElseThrow(() -> new IllegalArgumentException("Meeting not found: " + meetingId));
 
-            Meeting meeting = meetingRepository.findById(meetingId)
-                    .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
-
-            List<MeetingUserSelection> allSelections = selectionRepository.findAllByMeetingId(meetingId);
+            allSelections = selectionRepository.findAllByMeetingId(meetingId);
 
             Set<Long> userIds = allSelections.stream()
                     .map(MeetingUserSelection::getUserId)
                     .collect(Collectors.toSet());
 
-            Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+            userMap = userRepository.findAllById(userIds).stream()
                     .collect(Collectors.toMap(User::getId, user -> user));
 
-            String inputText = ReportInputTextBuilder.build(meeting, allSelections, userMap);
+        } catch (IllegalArgumentException | IllegalStateException | NullPointerException e) {
+            log.error("Permanent failure - Data integrity issue. meetingId={}", meetingId, e);
+            return;
+        } catch (Exception e) {
+            log.error("Failed to load meeting data. meetingId={}, retryCount={}", meetingId, currentRetryCount, e);
+            handleRetry(meetingId, currentRetryCount);
+            return;
+        }
 
+        String summaryText;
+        try {
+            String instructions = ResourceLoader.loadTextFile(PROMPT_TEMPLATE_PATH);
+            String inputText = ReportInputTextBuilder.build(meeting, allSelections, userMap);
             UpsertSummaryRequest request = new UpsertSummaryRequest(model, inputText, instructions);
 
             UpsertSummaryResponse response = restClient
@@ -74,17 +90,23 @@ public class ReportWorkerService {
 
             if (response == null || response.getSummary() == null || response.getSummary().isBlank()) {
                 log.warn("Received empty summary for meetingId={}", meetingId);
+                summaryText = "";
+            } else {
+                summaryText = response.getSummary();
             }
 
-            saveMeetingReport(meetingId, response.getSummary());
-            log.info("Meeting report saved successfully. meetingId={}", meetingId);
-
         } catch (Exception e) {
-            log.error("Failed to generate report. meetingId={}, retryCount={}",
-                    meetingId, currentRetryCount, e);
+            log.error("Failed to call OpenAI API. meetingId={}, retryCount={}", meetingId, currentRetryCount, e);
+            handleRetry(meetingId, currentRetryCount);
+            return;
+        }
 
-            updateRetryCount(meetingId);
-            scheduleRetry(meetingId, currentRetryCount);
+        try {
+            saveMeetingReport(meetingId, summaryText);
+            log.info("Meeting report saved successfully. meetingId={}", meetingId);
+        } catch (Exception e) {
+            log.error("Failed to save meeting report. meetingId={}, retryCount={}", meetingId, currentRetryCount, e);
+            handleRetry(meetingId, currentRetryCount);
         }
     }
 
@@ -92,10 +114,19 @@ public class ReportWorkerService {
         MeetingReport report = reportRepository.findByMeetingId(meetingId)
                 .map(r -> {
                     r.updateSummaryText(summaryText);
-                    return r; }
-                )
+                    return r;
+                })
                 .orElseGet(() -> MeetingReport.create(meetingId, summaryText));
         reportRepository.save(report);
+    }
+
+    private void handleRetry(Long meetingId, Integer currentRetryCount) {
+        try {
+            updateRetryCount(meetingId);
+            scheduleRetry(meetingId, currentRetryCount);
+        } catch (Exception e) {
+            log.error("Failed to schedule retry. meetingId={}, retryCount={}", meetingId, currentRetryCount, e);
+        }
     }
 
     private void updateRetryCount(Long meetingId) {
@@ -123,17 +154,13 @@ public class ReportWorkerService {
         log.info("Scheduling retry. meetingId={}, nextRetryCount={}, delayMs={}",
                 meetingId, nextRetryCount, delayMillis);
 
-        new Thread(() -> {
+        reportRetryScheduler.schedule(() -> {
             try {
-                Thread.sleep(delayMillis);
                 eventPublisher.publishEvent(ReportGenerateEvent.ofRetry(meetingId, nextRetryCount));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Retry scheduling interrupted. meetingId={}", meetingId, e);
             } catch (Exception e) {
                 log.error("Failed to publish retry event. meetingId={}, retryCount={}",
                         meetingId, nextRetryCount, e);
             }
-        }).start();
+        }, delayMillis, TimeUnit.MILLISECONDS);
     }
 }
