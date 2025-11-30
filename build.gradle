@@ -58,6 +58,7 @@ dependencies {
 
     // util
     implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.0'
+    implementation 'org.mnode.ical4j:ical4j:4.0.3'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 

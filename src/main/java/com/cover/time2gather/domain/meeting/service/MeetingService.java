@@ -35,6 +35,7 @@ public class MeetingService {
             String title,
             String description,
             String timezone,
+            Integer intervalMinutes,
             Map<String, int[]> availableDates
     ) {
         // 사용자가 존재하는지 검증
@@ -50,6 +51,7 @@ public class MeetingService {
                 description,
                 hostUserId,
                 timezone,
+                intervalMinutes,
                 availableDates
         );
 

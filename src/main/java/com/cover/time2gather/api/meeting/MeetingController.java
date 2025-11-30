@@ -12,12 +12,16 @@ import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
+import com.cover.time2gather.domain.meeting.service.CalendarExportService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +36,7 @@ public class MeetingController {
     private final MeetingService meetingService;
     private final MeetingSelectionService selectionService;
     private final MeetingFacadeService meetingFacadeService;
+    private final CalendarExportService calendarExportService;
 
     @PostMapping
     @Operation(summary = "모임 생성", description = "새로운 모임을 생성합니다.")
@@ -45,6 +50,7 @@ public class MeetingController {
                 request.getTitle(),
                 request.getDescription(),
                 request.getTimezone(),
+                request.getIntervalMinutes(),
                 request.toSlotIndexes()  // DTO에서 변환
         );
 
@@ -107,6 +113,35 @@ public class MeetingController {
         }
 
         return ApiResponse.success(MeetingReportResponse.from(report));
+    }
+
+    @PostMapping("/{meetingCode}/export")
+    @Operation(summary = "캘린더로 export",
+               description = "선택한 날짜/시간을 ICS 파일로 다운로드합니다. Google Calendar, iOS Calendar 등에서 import 가능합니다.")
+    public ResponseEntity<byte[]> exportToCalendar(
+            @PathVariable String meetingCode,
+            @Valid @RequestBody ExportCalendarRequest request
+    ) {
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
+        // ICS 파일 생성
+        byte[] icsFile = calendarExportService.createIcsFile(
+                meeting.getTitle(),
+                meeting.getDescription(),
+                request.getDate(),
+                request.getTime(),
+                meeting.getTimezone()
+        );
+
+        // 파일명 생성 (예: meeting_2024-02-15_1430.ics)
+        String filename = String.format("meeting_%s_%s.ics",
+                request.getDate(),
+                request.getTime().replace(":", ""));
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/calendar"))
+                .body(icsFile);
     }
 }
 

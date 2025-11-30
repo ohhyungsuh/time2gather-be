@@ -410,13 +410,44 @@ Response ← Controller (DTO) ← Service (Domain) ← Repository (Entity)
 
 ---
 
+## ✅ Phase 4 완료! Calendar Export (ICS)
+
+**기능:** 선택한 일정을 Google Calendar, iOS Calendar로 export
+- iCalendar (ICS) 표준 포맷 지원
+- 날짜/시간 선택 → .ics 파일 다운로드
+
+### 구현 내역
+
+#### 1. Calendar Export Service
+- [x] ical4j 라이브러리 통합 (build.gradle)
+- [x] CalendarExportService 구현
+  - ICS 파일 생성 (VEvent)
+  - 타임존 지원 (ZonedDateTime)
+  - 30분 단위 시간 슬롯 변환
+  - UID, DTSTAMP 등 필수 iCalendar 속성 자동 생성
+
+#### 2. Export API
+- [x] POST /api/v1/meetings/{meetingCode}/export
+- [x] ExportCalendarRequest DTO (date, time)
+- [x] ICS 파일 다운로드 응답
+  - Content-Type: text/calendar
+  - Content-Disposition: attachment
+  - 파일명: meeting_YYYY-MM-DD_HHmm.ics
+
+#### 3. Integration
+- [x] Meeting 정보 활용 (제목, 설명, 타임존)
+- [x] TimeSlotConverter와 통합 (HH:mm → slotIndex → 시작/종료 시간)
+- [x] ResponseEntity<byte[]>로 파일 응답
+
+### 구현 완료!
+- **Google Calendar, iOS Calendar, Outlook 등 모든 표준 캘린더 앱 호환**
+- iCalendar RFC 5545 표준 준수
+- 사용자가 원하는 시간대를 캘린더 앱에 직접 추가 가능
+- 30분 단위 이벤트 생성
+
+구현된 API:
+- POST /api/v1/meetings/{meetingCode}/export - 캘린더 export
+
 ---
 
-## 일정(Schedule) 기능 추가 (Deprecated - Meeting으로 대체됨)
-- 엔티티 `Schedule` 생성 (모임 코드, 제목, 설명, 시작/종료 시각, 감사 필드)
-- 레포지토리 `ScheduleRepository` 및 기간 필터 조회 메서드 추가
-- 서비스 `ScheduleService` 일정 생성/조회 로직 (endAt 검증 포함)
-- DTO `ScheduleCreateRequest`, `ScheduleResponse` 생성
-- 컨트롤러 `ScheduleController` 작성 (생성, 목록 조회, 단순 검증 & 예외 처리)
-- Swagger 어노테이션 적용 (Tag, Operation, Schema)
-- 추후 계획: 일정 수정/삭제, 겹치는 일정 검증, 타임존 표준화(UTC 저장, KST 변환) 필요 여부 검토
+

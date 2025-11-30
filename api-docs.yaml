@@ -94,6 +94,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  /api/v1/auth/me:
+    get:
+      tags:
+        - 인증 API
+      summary: 현재 사용자 정보 조회
+      description: |
+        로그인된 사용자의 기본 정보를 조회합니다.
+        
+        ## 요구사항
+        - JWT 토큰 필요 (OAuth 또는 익명 로그인)
+      operationId: getCurrentUser
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: 사용자 정보 조회 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfoResponse'
+        '401':
+          description: 인증되지 않은 사용자
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
   /api/v1/meetings/{meetingCode}/auth/anonymous:
     post:
       tags:
@@ -338,6 +370,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  /api/v1/meetings/{meetingCode}/export:
+    post:
+      tags:
+        - Meeting
+      summary: 캘린더로 export
+      description: |
+        선택한 날짜/시간을 ICS 파일로 다운로드합니다.
+        
+        ## 지원 캘린더
+        - Google Calendar
+        - iOS Calendar
+        - Outlook
+        - 기타 iCalendar(RFC 5545) 호환 앱
+        
+        ## 사용 방법
+        1. 원하는 날짜/시간 선택
+        2. 이 API 호출하여 .ics 파일 다운로드
+        3. 캘린더 앱에서 파일 열기
+        4. 이벤트가 자동으로 캘린더에 추가됨
+      operationId: exportToCalendar
+      parameters:
+        - name: meetingCode
+          in: path
+          required: true
+          description: Meeting 코드
+          schema:
+            type: string
+            example: mtg_a3f8k2md9x
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportCalendarRequest'
+      responses:
+        '200':
+          description: ICS 파일 생성 성공
+          headers:
+            Content-Disposition:
+              description: 파일 다운로드 헤더
+              schema:
+                type: string
+                example: 'attachment; filename="meeting_2024-02-15_1430.ics"'
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+                description: iCalendar (ICS) 파일 데이터
+        '400':
+          description: 잘못된 요청 (날짜/시간 형식 오류)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: 존재하지 않는 모임
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
 components:
   securitySchemes:
     cookieAuth:
@@ -478,6 +572,43 @@ components:
           description: 신규 사용자 여부
           example: true
 
+    UserInfoResponse:
+      type: object
+      description: 사용자 정보 응답
+      required:
+        - userId
+        - username
+        - provider
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: 사용자 ID
+          example: 1
+        username:
+          type: string
+          description: 사용자명
+          example: kakao_1234567890
+        email:
+          type: string
+          description: 이메일 주소
+          nullable: true
+          example: user@example.com
+        profileImageUrl:
+          type: string
+          description: 프로필 이미지 URL
+          nullable: true
+          example: https://example.com/profile.jpg
+        provider:
+          type: string
+          description: 인증 제공자
+          example: KAKAO
+        createdAt:
+          type: string
+          description: 가입 일시
+          nullable: true
+          example: "2025-11-15T10:00:00"
+
     CreateMeetingRequest:
       type: object
       description: 모임 생성 요청
@@ -491,12 +622,12 @@ components:
           example: 프로젝트 킥오프 미팅
         description:
           type: string
-          description: 모임 설명
+          description: 모임 설명 (선택사항)
           nullable: true
           example: 2월 신규 프로젝트 시작 회의
         timezone:
           type: string
-          description: 타임존
+          description: 타임존 (선택사항, 기본값: Asia/Seoul)
           default: Asia/Seoul
           example: Asia/Seoul
         availableDates:
@@ -742,4 +873,22 @@ components:
             "2024-02-15": ["09:00", "09:30", "10:30"]
             "2024-02-16": ["11:00", "11:30"]
             "2024-02-17": []
+
+    ExportCalendarRequest:
+      type: object
+      description: 캘린더 export 요청
+      required:
+        - date
+        - time
+      properties:
+        date:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: 일정 날짜 (yyyy-MM-dd)
+          example: "2024-02-15"
+        time:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          description: 일정 시간 (HH:mm)
+          example: "14:30"
 

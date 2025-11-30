@@ -1,6 +1,7 @@
 package com.cover.time2gather.domain.meeting;
 
 import com.cover.time2gather.domain.common.BaseEntity;
+import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -36,6 +37,13 @@ public class Meeting extends BaseEntity {
     private String timezone = "Asia/Seoul";
 
     /**
+     * 시간 슬롯 간격 (분)
+     * 기본값: 30분
+     */
+    @Column(name = "interval_minutes", nullable = false)
+    private Integer intervalMinutes = TimeSlot.DEFAULT_INTERVAL_MINUTES;
+
+    /**
      * 날짜별 가능한 시간대 (slotIndex 배열)
      * 예: {"2024-02-15": [18, 19, 20, 21], "2024-02-16": [22, 23, 24]}
      */
@@ -52,6 +60,7 @@ public class Meeting extends BaseEntity {
             String description,
             Long hostUserId,
             String timezone,
+            Integer intervalMinutes,
             Map<String, int[]> availableDates
     ) {
         Meeting meeting = new Meeting();
@@ -60,8 +69,35 @@ public class Meeting extends BaseEntity {
         meeting.description = description;
         meeting.hostUserId = hostUserId;
         meeting.timezone = timezone != null ? timezone : "Asia/Seoul";
+        meeting.intervalMinutes = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
         meeting.availableDates = availableDates;
         meeting.isActive = true;
+
+        // TimeSlot 검증
+        meeting.validateTimeSlots();
+
         return meeting;
+    }
+
+    /**
+     * TimeSlot 유효성 검증
+     * 도메인 규칙: 모든 슬롯 인덱스는 해당 간격에 맞는 범위여야 함
+     */
+    private void validateTimeSlots() {
+        if (availableDates == null || availableDates.isEmpty()) {
+            throw new IllegalArgumentException("최소 하나의 날짜와 시간대를 선택해야 합니다.");
+        }
+
+        for (Map.Entry<String, int[]> entry : availableDates.entrySet()) {
+            int[] slots = entry.getValue();
+            if (slots == null || slots.length == 0) {
+                throw new IllegalArgumentException("각 날짜마다 최소 하나의 시간대를 선택해야 합니다.");
+            }
+
+            for (int slotIndex : slots) {
+                // TimeSlot 생성으로 검증 (범위 체크)
+                TimeSlot.fromIndex(slotIndex, intervalMinutes);
+            }
+        }
     }
 }

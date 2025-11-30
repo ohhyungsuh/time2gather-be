@@ -1,6 +1,6 @@
 package com.cover.time2gather.api.meeting.dto.response;
 
-import com.cover.time2gather.util.TimeSlotConverter;
+import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,7 +27,7 @@ public class UserSelectionResponse {
             String date = entry.getKey();
             int[] slots = entry.getValue();
             String[] times = Arrays.stream(slots)
-                    .mapToObj(TimeSlotConverter::slotIndexToTimeStr)
+                    .mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex).toTimeString())
                     .toArray(String[]::new);
             result.put(date, times);
         }

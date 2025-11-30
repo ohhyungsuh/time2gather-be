@@ -1,6 +1,6 @@
 package com.cover.time2gather.api.meeting.dto.request;
 
-import com.cover.time2gather.util.TimeSlotConverter;
+import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -31,7 +31,7 @@ public class UpsertUserSelectionRequest {
             String date = entry.getKey();
             String[] times = entry.getValue();
             int[] slots = Arrays.stream(times)
-                    .mapToInt(TimeSlotConverter::timeStrToSlotIndex)
+                    .mapToInt(timeStr -> TimeSlot.fromTimeString(timeStr).getSlotIndex())
                     .toArray();
             result.put(date, slots);
         }

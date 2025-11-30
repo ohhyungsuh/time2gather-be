@@ -3,7 +3,7 @@ package com.cover.time2gather.api.meeting.dto.response;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.user.User;
-import com.cover.time2gather.util.TimeSlotConverter;
+import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -34,6 +34,7 @@ public class MeetingDetailResponse {
 	public static MeetingDetailResponse from(MeetingDetailData detailData) {
 		Meeting meeting = detailData.getMeeting();
 		User host = detailData.getHost();
+		int intervalMinutes = meeting.getIntervalMinutes();
 
 		// Meeting 정보 변환
 		MeetingInfo meetingInfo = new MeetingInfo(
@@ -47,7 +48,8 @@ public class MeetingDetailResponse {
 				host.getProfileImageUrl()
 			),
 			meeting.getTimezone(),
-			convertSlotIndexesToTimeStrings(meeting.getAvailableDates())
+			intervalMinutes,
+			convertSlotIndexesToTimeStrings(meeting.getAvailableDates(), intervalMinutes)
 		);
 
 		// 참여자 정보 변환
@@ -61,12 +63,14 @@ public class MeetingDetailResponse {
 
 		// Schedule 정보 변환
 		Map<String, Map<String, List<ParticipantInfo>>> schedule = convertScheduleToResponse(
-			detailData.getSchedule()
+			detailData.getSchedule(),
+			intervalMinutes
 		);
 
 		// Summary 정보 변환
 		SummaryInfo summary = convertSummaryToResponse(
-			detailData.getSummary()
+			detailData.getSummary(),
+			intervalMinutes
 		);
 
 		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary);
@@ -76,7 +80,8 @@ public class MeetingDetailResponse {
 	 * Schedule 도메인 모델 → DTO 변환
 	 */
 	private static Map<String, Map<String, List<ParticipantInfo>>> convertScheduleToResponse(
-		MeetingDetailData.ScheduleData scheduleData
+		MeetingDetailData.ScheduleData scheduleData,
+		int intervalMinutes
 	) {
 		Map<String, Map<String, List<ParticipantInfo>>> result = new HashMap<>();
 
@@ -92,7 +97,7 @@ public class MeetingDetailResponse {
 				int slot = slotEntry.getKey();
 				List<User> users = slotEntry.getValue();
 
-				String time = TimeSlotConverter.slotIndexToTimeStr(slot);
+				String time = TimeSlot.fromIndex(slot, intervalMinutes).toTimeString();
 				List<ParticipantInfo> participantInfos = users.stream()
 					.map(user -> new ParticipantInfo(
 						user.getId(),
@@ -112,12 +117,13 @@ public class MeetingDetailResponse {
 	 * Summary 도메인 모델 → DTO 변환
 	 */
 	private static SummaryInfo convertSummaryToResponse(
-		MeetingDetailData.SummaryData summaryData
+		MeetingDetailData.SummaryData summaryData,
+		int intervalMinutes
 	) {
 		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
 			.map(slot -> new BestSlot(
 				slot.getDate(),
-				TimeSlotConverter.slotIndexToTimeStr(slot.getSlotIndex()),
+				TimeSlot.fromIndex(slot.getSlotIndex(), intervalMinutes).toTimeString(),
 				slot.getCount(),
 				slot.getPercentage()
 			))
@@ -129,13 +135,13 @@ public class MeetingDetailResponse {
 	/**
 	 * slotIndex → API "HH:mm" 변환
 	 */
-	private static Map<String, String[]> convertSlotIndexesToTimeStrings(Map<String, int[]> slotIndexes) {
+	private static Map<String, String[]> convertSlotIndexesToTimeStrings(Map<String, int[]> slotIndexes, int intervalMinutes) {
 		Map<String, String[]> result = new HashMap<>();
 		for (Map.Entry<String, int[]> entry : slotIndexes.entrySet()) {
 			String date = entry.getKey();
 			int[] slots = entry.getValue();
 			String[] times = Arrays.stream(slots)
-				.mapToObj(TimeSlotConverter::slotIndexToTimeStr)
+				.mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex, intervalMinutes).toTimeString())
 				.toArray(String[]::new);
 			result.put(date, times);
 		}
@@ -163,6 +169,9 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "타임존", example = "Asia/Seoul")
 		private String timezone;
+
+		@Schema(description = "시간 간격 (분 단위)", example = "30")
+		private int intervalMinutes;
 
 		@Schema(description = "가능한 날짜/시간대",
 			example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:00\"], \"2024-02-16\": [\"11:00\", \"11:30\"]}")
