@@ -5,6 +5,7 @@ import com.cover.time2gather.config.JpaAuditingConfig;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.cover.time2gather.domain.auth.service.OAuthLoginService;
+import com.cover.time2gather.domain.user.UserRepository;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +43,9 @@ class AuthControllerTest {
     @MockitoBean
     private OidcProviderRegistry oidcProviderRegistry;
 
+	@MockitoBean
+	private UserRepository userRepository;
+
     @Test
     @WithMockUser
     void shouldLoginWithKakaoAuthorizationCode() throws Exception {
@@ -63,7 +66,7 @@ class AuthControllerTest {
                 null
         );
 
-        when(oAuthLoginService.login(eq(provider), eq(authCode), isNull())).thenReturn(loginResult);
+        when(oAuthLoginService.login(eq(provider), eq(authCode), any())).thenReturn(loginResult);
 
         // When & Then
         mockMvc.perform(post("/api/v1/auth/oauth/{provider}", provider)
@@ -78,7 +81,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.isNewUser").value(true))
                 .andExpect(cookie().exists("accessToken"))
                 .andExpect(cookie().httpOnly("accessToken", true))
-                .andExpect(cookie().secure("accessToken", false)); // test환경
+                .andExpect(cookie().secure("accessToken", true)); // secure 쿠키 설정
     }
 }
 

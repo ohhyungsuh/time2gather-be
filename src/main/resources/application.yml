@@ -52,6 +52,6 @@ springdoc:
 
 # OpenAPI
 openai:
-  api-key: ${OPENAI_API_KEY}
-  api-base: ${OPENAI_API_BASE}
-  model: ${OPENAI_MODEL}
+  api-key: ${OPENAI_API_KEY:dummy-key}
+  api-base: ${OPENAI_API_BASE:https://api.openai.com}
+  model: ${OPENAI_MODEL:gpt-4}

@@ -6,6 +6,7 @@ import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginService;
 import com.cover.time2gather.domain.auth.service.InvalidPasswordException;
+import com.cover.time2gather.domain.user.UserRepository;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,9 @@ class MeetingAuthControllerTest {
 
     @MockitoBean
     private OidcProviderRegistry oidcProviderRegistry;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
     @Test
     void shouldLoginAnonymousUserSuccessfully() throws Exception {
