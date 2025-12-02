@@ -1,8 +1,10 @@
-package com.cover.time2gather.infra.oauth;
+package com.cover.time2gather.domain.auth.oidc;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
 
 class OidcProviderStrategyTest {
 
@@ -18,10 +20,10 @@ class OidcProviderStrategyTest {
     void shouldHaveGetIdTokenMethod() throws NoSuchMethodException {
         // Given: OidcProviderStrategy 인터페이스
 
-        // Then: getIdToken(authorizationCode) 메서드가 존재해야 함
-        var method = OidcProviderStrategy.class.getMethod("getIdToken", String.class);
+        // Then: getUserInfo(authorizationCode, redirectUri) 메서드가 존재해야 함
+        var method = OidcProviderStrategy.class.getMethod("getUserInfo", String.class, String.class);
         assertThat(method).isNotNull();
-        assertThat(method.getReturnType()).isEqualTo(String.class);
+        assertThat(method.getReturnType()).isEqualTo(com.cover.time2gather.infra.oauth.OidcUserInfo.class);
     }
 
     @Test

@@ -12,12 +12,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Base64;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,25 +46,29 @@ class OAuthLoginServiceTest {
         // Given
         String provider = "kakao";
         String authCode = "test-auth-code";
-        String idToken = createMockIdToken("12345", "kakao_user", "user@kakao.com");
+        String redirectUri = "http://localhost:3000/callback";
+
+        com.cover.time2gather.infra.oauth.OidcUserInfo userInfo =
+            new com.cover.time2gather.infra.oauth.OidcUserInfo("12345", "kakao_user", "user@kakao.com", "test", "http://profile.url");
 
         when(providerRegistry.getProvider(provider)).thenReturn(kakaoProvider);
-        when(kakaoProvider.getIdToken(authCode)).thenReturn(idToken);
+        when(kakaoProvider.getUserInfo(anyString(), anyString())).thenReturn(userInfo);
         when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, "12345"))
                 .thenReturn(Optional.empty());
 
         User savedUser = User.builder()
-                .username("kakao_12345")
+                .username("kakao_user")
                 .email("user@kakao.com")
                 .provider(User.AuthProvider.KAKAO)
                 .providerId("12345")
+                .profileImageUrl("http://profile.url")
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtTokenService.generateToken(any(), any())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(anyLong(), anyString())).thenReturn("jwt-token");
 
         // When
-        OAuthLoginResult result = oAuthLoginService.login(provider, authCode);
+        OAuthLoginResult result = oAuthLoginService.login(provider, authCode, redirectUri);
 
         // Then
         assertThat(result).isNotNull();
@@ -78,6 +81,7 @@ class OAuthLoginServiceTest {
         User capturedUser = userCaptor.getValue();
         assertThat(capturedUser.getProvider()).isEqualTo(User.AuthProvider.KAKAO);
         assertThat(capturedUser.getProviderId()).isEqualTo("12345");
+        assertThat(capturedUser.getUsername()).isEqualTo("kakao_user");
     }
 
     @Test
@@ -85,23 +89,27 @@ class OAuthLoginServiceTest {
         // Given
         String provider = "kakao";
         String authCode = "test-auth-code";
-        String idToken = createMockIdToken("12345", "kakao_user", "user@kakao.com");
+        String redirectUri = "http://localhost:3000/callback";
+
+        com.cover.time2gather.infra.oauth.OidcUserInfo userInfo =
+            new com.cover.time2gather.infra.oauth.OidcUserInfo("12345", "kakao_user", "user@kakao.com", "test","http://profile.url");
 
         User existingUser = User.builder()
-                .username("kakao_12345")
+                .username("kakao_user")
                 .email("user@kakao.com")
                 .provider(User.AuthProvider.KAKAO)
                 .providerId("12345")
+                .profileImageUrl("http://old.url")
                 .build();
 
         when(providerRegistry.getProvider(provider)).thenReturn(kakaoProvider);
-        when(kakaoProvider.getIdToken(authCode)).thenReturn(idToken);
+        when(kakaoProvider.getUserInfo(anyString(), anyString())).thenReturn(userInfo);
         when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, "12345"))
                 .thenReturn(Optional.of(existingUser));
-        when(jwtTokenService.generateToken(any(), any())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(anyLong(), anyString())).thenReturn("jwt-token");
 
         // When
-        OAuthLoginResult result = oAuthLoginService.login(provider, authCode);
+        OAuthLoginResult result = oAuthLoginService.login(provider, authCode, redirectUri);
 
         // Then
         assertThat(result).isNotNull();
@@ -109,16 +117,6 @@ class OAuthLoginServiceTest {
         assertThat(result.isNewUser()).isFalse();
 
         verify(userRepository, never()).save(any());
-    }
-
-    private String createMockIdToken(String sub, String nickname, String email) {
-        // Simple mock ID token: header.payload.signature
-        String header = Base64.getUrlEncoder().encodeToString("{\"alg\":\"HS256\"}".getBytes());
-        String payload = Base64.getUrlEncoder().encodeToString(
-                String.format("{\"sub\":\"%s\",\"nickname\":\"%s\",\"email\":\"%s\"}", sub, nickname, email).getBytes()
-        );
-        String signature = Base64.getUrlEncoder().encodeToString("mock-signature".getBytes());
-        return header + "." + payload + "." + signature;
     }
 }
 

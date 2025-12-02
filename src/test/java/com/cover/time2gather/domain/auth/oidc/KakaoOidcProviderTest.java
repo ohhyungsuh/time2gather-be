@@ -25,7 +25,7 @@ class KakaoOidcProviderTest {
         String clientId = "test-client-id";
         String clientSecret = "test-client-secret";
         String redirectUri = "http://localhost:3000/callback";
-        kakaoOidcProvider = new KakaoOidcProvider(restTemplate, clientId, clientSecret, redirectUri);
+        kakaoOidcProvider = new KakaoOidcProvider(restTemplate, clientId, clientSecret);
     }
 
     @Test
@@ -57,7 +57,7 @@ class KakaoOidcProviderTest {
         )).thenReturn(tokenResponse);
 
         // When
-        String idToken = kakaoOidcProvider.getIdToken(authorizationCode);
+        String idToken = kakaoOidcProvider.getIdToken(authorizationCode, null);
 
         // Then
         assertThat(idToken).isEqualTo(expectedIdToken);

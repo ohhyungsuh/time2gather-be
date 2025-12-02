@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting;
 
+import static com.cover.time2gather.domain.meeting.vo.TimeSlot.*;
+
 import com.cover.time2gather.domain.common.BaseEntity;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
@@ -39,7 +41,7 @@ public class MeetingUserSelection extends BaseEntity {
      * Meeting의 intervalMinutes와 동일해야 함
      */
     @Column(name = "interval_minutes", nullable = false)
-    private Integer intervalMinutes = TimeSlot.DEFAULT_INTERVAL_MINUTES;
+    private Integer intervalMinutes = DEFAULT_INTERVAL_MINUTES;
 
     /**
      * 날짜별 선택한 시간대 (slotIndex 배열)
@@ -49,11 +51,21 @@ public class MeetingUserSelection extends BaseEntity {
     @Column(name = "selections", columnDefinition = "json", nullable = false)
     private Map<String, int[]> selections;
 
+    /**
+     * 기본 간격(30분)으로 선택 생성
+     */
+    public static MeetingUserSelection create(Long meetingId, Long userId, Map<String, int[]> selections) {
+        return create(meetingId, userId, DEFAULT_INTERVAL_MINUTES, selections);
+    }
+
+    /**
+     * 사용자 정의 간격으로 선택 생성
+     */
     public static MeetingUserSelection create(Long meetingId, Long userId, Integer intervalMinutes, Map<String, int[]> selections) {
         MeetingUserSelection selection = new MeetingUserSelection();
         selection.meetingId = meetingId;
         selection.userId = userId;
-        selection.intervalMinutes = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
+        selection.intervalMinutes = intervalMinutes != null ? intervalMinutes : DEFAULT_INTERVAL_MINUTES;
         selection.selections = selections;
 
         // TimeSlot 검증

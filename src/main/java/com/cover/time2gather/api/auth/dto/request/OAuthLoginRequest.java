@@ -4,9 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Schema(description = "OAuth 로그인 요청")
 @Getter
+@Setter
 @NoArgsConstructor
 public class OAuthLoginRequest {
 
