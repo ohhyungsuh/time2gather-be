@@ -22,8 +22,8 @@ public class MeetingDetailResponse {
 	@Schema(description = "참여자 목록")
 	private List<ParticipantInfo> participants;
 
-	@Schema(description = "날짜/시간별 참여 가능한 사용자 목록")
-	private Map<String, Map<String, List<ParticipantInfo>>> schedule;
+	@Schema(description = "날짜/시간별 참여 가능한 사용자 목록 및 카운트")
+	private Map<String, Map<String, TimeSlotDetail>> schedule;
 
 	@Schema(description = "요약 정보")
 	private SummaryInfo summary;
@@ -62,7 +62,7 @@ public class MeetingDetailResponse {
 			.collect(Collectors.toList());
 
 		// Schedule 정보 변환
-		Map<String, Map<String, List<ParticipantInfo>>> schedule = convertScheduleToResponse(
+		Map<String, Map<String, TimeSlotDetail>> schedule = convertScheduleToResponse(
 			detailData.getSchedule(),
 			intervalMinutes
 		);
@@ -79,11 +79,11 @@ public class MeetingDetailResponse {
 	/**
 	 * Schedule 도메인 모델 → DTO 변환
 	 */
-	private static Map<String, Map<String, List<ParticipantInfo>>> convertScheduleToResponse(
+	private static Map<String, Map<String, TimeSlotDetail>> convertScheduleToResponse(
 		MeetingDetailData.ScheduleData scheduleData,
 		int intervalMinutes
 	) {
-		Map<String, Map<String, List<ParticipantInfo>>> result = new HashMap<>();
+		Map<String, Map<String, TimeSlotDetail>> result = new HashMap<>();
 
 		Map<String, Map<Integer, List<User>>> dateTimeUserMap = scheduleData.getDateTimeUserMap();
 		for (Map.Entry<String, Map<Integer, List<User>>> dateEntry : dateTimeUserMap.entrySet()) {
@@ -91,7 +91,7 @@ public class MeetingDetailResponse {
 			Map<Integer, List<User>> slotUserMap = dateEntry.getValue();
 
 			result.putIfAbsent(date, new HashMap<>());
-			Map<String, List<ParticipantInfo>> timeUserMap = result.get(date);
+			Map<String, TimeSlotDetail> timeDetailMap = result.get(date);
 
 			for (Map.Entry<Integer, List<User>> slotEntry : slotUserMap.entrySet()) {
 				int slot = slotEntry.getKey();
@@ -106,7 +106,7 @@ public class MeetingDetailResponse {
 					))
 					.collect(Collectors.toList());
 
-				timeUserMap.put(time, participantInfos);
+				timeDetailMap.put(time, new TimeSlotDetail(users.size(), participantInfos));
 			}
 		}
 
@@ -204,6 +204,17 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "프로필 이미지 URL", example = "https://...")
 		private String profileImageUrl;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "시간대별 상세 정보")
+	public static class TimeSlotDetail {
+		@Schema(description = "해당 시간대를 선택한 참여자 수", example = "3")
+		private int count;
+
+		@Schema(description = "해당 시간대를 선택한 참여자 목록")
+		private List<ParticipantInfo> participants;
 	}
 
 	@Getter

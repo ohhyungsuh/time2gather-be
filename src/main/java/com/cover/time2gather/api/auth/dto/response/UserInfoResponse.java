@@ -1,9 +1,13 @@
 package com.cover.time2gather.api.auth.dto.response;
 
+import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.user.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Schema(description = "사용자 정보 응답")
 @Getter
@@ -28,10 +32,13 @@ public class UserInfoResponse {
     @Schema(description = "가입 일시", example = "2025-11-15T10:00:00")
     private String createdAt;
 
+    @Schema(description = "생성한 모임 목록")
+    private List<CreatedMeetingInfo> createdMeetings;
+
     /**
-     * User 엔티티로부터 UserInfoResponse 생성
+     * User 엔티티와 생성한 모임 목록으로부터 UserInfoResponse 생성
      */
-    public static UserInfoResponse from(User user) {
+    public static UserInfoResponse from(User user, List<Meeting> createdMeetings) {
         return UserInfoResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -39,7 +46,44 @@ public class UserInfoResponse {
                 .profileImageUrl(user.getProfileImageUrl())
                 .provider(user.getProvider().name())
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
+                .createdMeetings(createdMeetings.stream()
+                        .map(CreatedMeetingInfo::from)
+                        .collect(Collectors.toList()))
                 .build();
+    }
+
+    @Schema(description = "생성한 모임 정보")
+    @Getter
+    @Builder
+    public static class CreatedMeetingInfo {
+        @Schema(description = "모임 ID", example = "1")
+        private Long id;
+
+        @Schema(description = "모임 코드", example = "mtg_a3f8k2md9x")
+        private String code;
+
+        @Schema(description = "모임 제목", example = "프로젝트 킥오프 미팅")
+        private String title;
+
+        @Schema(description = "모임 설명", example = "2월 신규 프로젝트 시작 회의", nullable = true)
+        private String description;
+
+        @Schema(description = "타임존", example = "Asia/Seoul")
+        private String timezone;
+
+        @Schema(description = "생성 일시", example = "2025-11-15T10:00:00")
+        private String createdAt;
+
+        public static CreatedMeetingInfo from(Meeting meeting) {
+            return CreatedMeetingInfo.builder()
+                    .id(meeting.getId())
+                    .code(meeting.getMeetingCode())
+                    .title(meeting.getTitle())
+                    .description(meeting.getDescription())
+                    .timezone(meeting.getTimezone())
+                    .createdAt(meeting.getCreatedAt() != null ? meeting.getCreatedAt().toString() : null)
+                    .build();
+        }
     }
 }
 
