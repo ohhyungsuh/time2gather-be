@@ -24,6 +24,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     // CORS 설정 상수
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
@@ -62,6 +63,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception ->
+                        exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("OPTIONS", "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
