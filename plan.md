@@ -199,23 +199,23 @@ Do not use relationship like @oneToMany. We have to use only unique identifier a
   - ✅ 엔티티만 반환
   - ❌ 비즈니스 로직 금지
 
-## Data Flow
+## 정적 리소스 및 에러 처리 가이드
 
-```
-Request → Controller (DTO) → Service (Domain) → Repository (Entity)
-                   ↓              ↓                    ↓
-Response ← Controller (DTO) ← Service (Domain) ← Repository (Entity)
-```
+### NoResourceFoundException 처리
+- Spring MVC에서 존재하지 않는 경로에 대한 요청 시 발생
+- GlobalExceptionHandler에서 INFO 레벨로 로깅하여 에러 로그 오염 방지
+- 404 NOT_FOUND 응답으로 처리
 
-## Key Principles
+### 정적 리소스 설정
+- `/static/**`: 정적 리소스 경로
+- `/favicon.ico`: 파비콘
+- `/error`: 에러 페이지
+- 위 경로들은 Spring Security에서 permit all 처리
 
-1. **DTO는 Controller에서만 사용**
-   - Service는 DTO를 모름
-   - Domain 모델과 DTO는 완전히 분리
-
-2. **비즈니스 로직은 Service에만**
-   - Controller는 얇게 유지
-   - 복잡한 계산, 집계, 검증은 모두 Service로
+### 로깅 레벨 설정
+- `com.cover.time2gather`: INFO
+- `org.springframework.web.servlet.resource`: WARN (정적 리소스 관련 로그 최소화)
+- `org.springframework.security`: WARN (보안 관련 로그 최소화)
 
 3. **변환은 경계에서만**
    - Controller: DTO ↔ Domain
