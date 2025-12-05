@@ -4,12 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.List;
 
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 @Schema(description = "Open AI 요약 응답")
 public class UpsertSummaryResponse {
 
@@ -19,6 +21,7 @@ public class UpsertSummaryResponse {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    @ToString
     public static class OutputItem {
         @Schema(description = "컨텐츠 배열")
         private List<ContentItem> content;
@@ -27,6 +30,7 @@ public class UpsertSummaryResponse {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    @ToString
     public static class ContentItem {
         @Schema(description = "텍스트 내용")
         private String text;
