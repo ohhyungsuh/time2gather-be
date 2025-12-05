@@ -34,8 +34,9 @@ public class UpsertSummaryResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @ToString
+    @Schema(description = "응답 선택")
     public static class Choice {
-        @Schema(description = "선택 인덱스")
+        @Schema(description = "인덱스")
         private Integer index;
 
         @Schema(description = "메시지 내용")
@@ -49,6 +50,7 @@ public class UpsertSummaryResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @ToString
+    @Schema(description = "메시지")
     public static class Message {
         @Schema(description = "역할")
         private String role;
@@ -64,6 +66,6 @@ public class UpsertSummaryResponse {
                 return firstChoice.getMessage().getContent();
             }
         }
-        return null;
+        return "";
     }
 }

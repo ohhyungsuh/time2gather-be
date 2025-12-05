@@ -57,6 +57,7 @@ public class SecurityConfig {
     private static final String ACTUATOR_PATTERN = "/actuator/**";
     private static final String HEALTH_CHECK_PATTERN = "/health";
     private static final String ROOT_PATTERN = "/";
+    private static final String FAVICON_PATTERN = "/favicon.ico";
     private static final String CORS_ALL_PATHS = "/**";
 
     @Bean
@@ -70,6 +71,7 @@ public class SecurityConfig {
                         exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("OPTIONS", "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
+                        .requestMatchers(FAVICON_PATTERN).permitAll() // Favicon
                         .requestMatchers(HEALTH_CHECK_PATTERN).permitAll() // Health check for AWS
                         .requestMatchers(ROOT_PATTERN).permitAll() // Root endpoint
                         .requestMatchers(ACTUATOR_PATTERN).permitAll() // Actuator endpoints

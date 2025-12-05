@@ -5,11 +5,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
         enable_lazy_load_no_trans: true
 
@@ -71,4 +71,14 @@ management:
   health:
     db:
       enabled: true
+
+# Logging
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.springframework.web.servlet.resource: ERROR
+    org.springframework.security.web: WARN
+
 
