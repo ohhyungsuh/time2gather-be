@@ -5,7 +5,15 @@ IMPORTANT INFORMATION:
   * Meeting information including meeting title, description, and host name
   * Voted participants count (number of people who completed voting)
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
-  * Example: "2025-11-28: 15:00, 15:30" means they are available at 15:00 and 15:30 on 2025-11-28
+  * Example: "2025-11-28: 15:00, 15:30, 16:00" means they are available at 15:00, 15:30, and 16:00 on 2025-11-28
+  * **Your job**: Intelligently merge consecutive time slots into readable time ranges
+
+KEY INSIGHT:
+- If participant A selected: "2025-12-15: 14:00, 14:30, 15:00, 15:30, 16:00"
+- And participant B selected the same times
+- DON'T show 5 separate slots: "14:00 (2명)", "14:30 (2명)", "15:00 (2명)", etc.
+- INSTEAD show ONE range: "14:00 ~ 16:30 (2명)"
+- This makes the report much more practical and readable!
 
 OUTPUT FORMAT (Markdown):
 - Produce clean, professional Markdown suitable for PDF-level rendering.
@@ -23,11 +31,14 @@ OUTPUT FORMAT (Markdown):
 - **모임 방장:**
 
 ### ⭐ 최적 시간대 TOP 5
-1. **날짜 및 시간:**
+1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm
+   **가능 인원:** X명 / Y명
+   - **가능:** 이름1, 이름2, 이름3
+   - **불가능:** 이름4, 이름5 (또는 "-")
+2. **날짜 및 시간:**
    **가능 인원:**
    - **가능:**
    - **불가능:**
-2.
 3.
 4.
 5.
@@ -39,16 +50,40 @@ OUTPUT FORMAT (Markdown):
 -
 
 ### 💡 추천 사항
+[여기에 추천 내용을 작성합니다]
+
+**예시 1 (명확한 TOP 5가 있는 경우):**
+- 1순위: 2025-12-15 (일) 14:00 ~ 16:00에 모임을 진행하시는 것을 추천드립니다. (5명 가능)
+- 2순위: 2025-12-16 (월) 19:00 ~ 20:00에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
+
+**예시 2 (시간이 널널한 경우):**
+대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!
+- 2025-12-15 (일) 14:00 ~ 18:00 (5명 가능)
+- 2025-12-16 (월) 10:00 ~ 12:00, 19:00 ~ 21:00 (5명 가능)
+- 2025-12-17 (화) 15:00 ~ 17:00 (4명 가능)
 
 --------------------------------------------
 
 RULES:
-1. **TIME SLOT RANKING**:
-   - Identify the TOP 5 most selected time slots based on vote counts (descending)
-   - If tied, prioritize weekends (Sat/Sun) over weekdays
-   - Show up to 5 slots in the "최적 시간대 TOP 5" section
+1. **TIME SLOT GROUPING & RANKING**:
+   - **STEP 1: Group by Date First**
+     * Organize all time slots by date (YYYY-MM-DD)
+     * For each date, merge consecutive time slots with the SAME participants into time ranges
+     * Example: If 14:00, 14:30, 15:00 have the same 3 people available → "14:00 ~ 15:30 (3명)"
 
-2. For each top 5 time slot:
+   - **STEP 2: Rank Time Ranges**
+     * Rank these grouped time ranges by participant count (descending)
+     * If tied, prioritize:
+       1. Longer continuous time blocks (more consecutive slots)
+       2. Weekends (Sat/Sun) over weekdays
+       3. Earlier in the day
+
+   - **STEP 3: Select TOP 5**
+     * Show the TOP 5 ranked time ranges in "최적 시간대 TOP 5"
+     * Format: `YYYY-MM-DD HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD HH:mm` for single slots
+
+2. For each top 5 time range:
+   - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format
    - **가능 인원**:
      * If unanimous → format: `X명 / Y명 (만장일치)`
      * Otherwise → `X명 / Y명`
@@ -59,19 +94,29 @@ RULES:
 
 4. If any info missing → write "정보 없음"
 
-5. "시간 부자": participants who selected the #1 ranked time slot
+5. "시간 부자": participants available during the #1 ranked time range
 
 6. **CRITICAL: 추천 사항 RULES**
-   - **IF more than 5 time slots share the same highest vote count (large tie)**:
+   - **IF most participants are very flexible (many time ranges with high counts)**:
      * Output:
-       > "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 순서대로 모두 보여드릴게요!"
-     * Group consecutive slots by date
-     * Format:
-       - YYYY-MM-DD HH:mm ~ HH:mm (X명 가능)
-   - **Else (normal case, <=5 top slots)**:
-     * For each ranked slot, provide:
-       - `- N순위: YYYY-MM-DD HH:mm에 모임을 진행하시는 것을 추천드립니다. (X명 가능)`
+       > "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!"
+     * Group by date and show merged time ranges:
+       - `YYYY-MM-DD (요일) HH:mm ~ HH:mm (X명 가능)`
+
+   - **Else (normal case, clear top 5)**:
+     * For each ranked time range, provide:
+       - `- N순위: YYYY-MM-DD (요일) HH:mm ~ HH:mm에 모임을 진행하시는 것을 추천드립니다. (X명 가능)`
+     * Use natural language for time ranges:
+       - 1-2 slots: list times (e.g., "14:00 또는 14:30")
+       - 3+ consecutive slots: use range (e.g., "14:00부터 16:00까지")
 
 7. Entire output must be **Korean only**
 
 8. **DO NOT add any commentary outside the Markdown report**
+
+9. **IMPORTANT: Merge consecutive time slots intelligently**
+   - Same participants + consecutive times = ONE time range
+   - This makes the report much more readable and practical
+   - Example: Don't show "14:00 (3명)", "14:30 (3명)", "15:00 (3명)" separately
+   - Instead show: "14:00 ~ 15:30 (3명)"
+
