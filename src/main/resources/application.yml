@@ -55,3 +55,20 @@ openai:
   api-key: ${OPENAI_API_KEY:dummy-key}
   api-base: ${OPENAI_API_BASE:https://api.openai.com}
   model: ${OPENAI_MODEL:gpt-4}
+
+# Actuator (Health Check)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+

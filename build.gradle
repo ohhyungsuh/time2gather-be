@@ -28,6 +28,9 @@ dependencies {
     // web
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // actuator for health check
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
     // db
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'

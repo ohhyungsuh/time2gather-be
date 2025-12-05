@@ -54,6 +54,7 @@ public class SecurityConfig {
     private static final String MEETING_PUBLIC_PATTERN = "/api/v1/meetings/*";
     private static final String SWAGGER_UI_PATTERN = "/swagger-ui/**";
     private static final String API_DOCS_PATTERN = "/v3/api-docs/**";
+    private static final String HEALTH_CHECK_PATTERN = "/health";
     private static final String CORS_ALL_PATHS = "/**";
 
     @Bean
@@ -67,6 +68,7 @@ public class SecurityConfig {
                         exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("OPTIONS", "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
+                        .requestMatchers(HEALTH_CHECK_PATTERN).permitAll() // Health check for AWS
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
                         .requestMatchers(MEETING_AUTH_PATTERN).permitAll() // Anonymous login
                         .requestMatchers(MEETING_PUBLIC_PATTERN).permitAll() // Public meeting view
