@@ -7,89 +7,71 @@ IMPORTANT INFORMATION:
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
   * Example: "2025-11-28: 15:00, 15:30" means they are available at 15:00 and 15:30 on 2025-11-28
 
-REPORT TEMPLATE:
-Maintain the exact structure below and fill in the information accurately.
-Do NOT add any sentences outside this template.
+OUTPUT FORMAT (Markdown):
+- Produce clean, professional Markdown suitable for PDF-level rendering.
+- DO NOT include "[MEETING_REPORT]" or any wrapper tags.
+- Use headings (##), bold, lists, and clear spacing.
+- No additional commentary outside the report.
 
-[MEETING_REPORT]
-### 📅 투표 결과 요약
+--------------------------------------------
 
-**모임 정보**
-- 모임명:
-- 모임 설명:
-- 모임 방장:
+## 📅 투표 결과 요약
 
-**최적 시간대 TOP 5**
-1. 날짜 및 시간: | 가능 인원:
-   - 가능:
-   - 불가능:
-2. 날짜 및 시간: | 가능 인원:
-   - 가능:
-   - 불가능:
-3. 날짜 및 시간: | 가능 인원:
-   - 가능:
-   - 불가능:
-4. 날짜 및 시간: | 가능 인원:
-   - 가능:
-   - 불가능:
-5. 날짜 및 시간: | 가능 인원:
-   - 가능:
-   - 불가능:
+### 📝 모임 정보
+- **모임명:**
+- **모임 설명:**
+- **모임 방장:**
 
-**참여 현황**
-- 투표 완료:
+### ⭐ 최적 시간대 TOP 5
+1. **날짜 및 시간:**
+   **가능 인원:**
+   - **가능:**
+   - **불가능:**
+2.
+3.
+4.
+5.
 
-**시간 부자**
+### 👥 참여 현황
+- **투표 완료:**
+
+### 🕒 시간 부자
 -
 
-**추천 사항**
+### 💡 추천 사항
 
-[/MEETING_REPORT]
+--------------------------------------------
 
 RULES:
 1. **TIME SLOT RANKING**:
-   - Identify the TOP 5 most selected time slots based on vote counts (sorted by number of participants in descending order)
-   - Time slots are already in "HH:mm" format, use them as-is
-   - **TIE-BREAKING**: If multiple time slots have the same vote count, prioritize weekends (Saturday, Sunday) over weekdays
-   - Show only up to 5 slots in the "최적 시간대 TOP 5" section
+   - Identify the TOP 5 most selected time slots based on vote counts (descending)
+   - If tied, prioritize weekends (Sat/Sun) over weekdays
+   - Show up to 5 slots in the "최적 시간대 TOP 5" section
 
-2. For each top 5 time slot, display:
-   - "가능 인원":
-     * **CRITICAL**: Always use format "X명 / Y명 (만장일치)" if all participants selected this slot
-     * Otherwise use format: "X명 / Y명"
-     * X = number who selected this slot, Y = total voted participants
-   - "가능": List names of participants who selected this time slot (comma separated)
-   - "불가능":
-     * If no one is unavailable, write "-" (just a dash)
-     * Otherwise list names of participants who voted but did NOT select this time slot (comma separated)
-   - Only include participants who completed voting (ignore those who haven't voted at all)
+2. For each top 5 time slot:
+   - **가능 인원**:
+     * If unanimous → format: `X명 / Y명 (만장일치)`
+     * Otherwise → `X명 / Y명`
+   - **가능** → comma-separated names
+   - **불가능** → comma-separated names, or "-" if none
 
-3. List all participants who voted in "참여 현황" (comma separated)
+3. "참여 현황": list participants who completed voting
 
-4. If information is missing, write "정보 없음"
+4. If any info missing → write "정보 없음"
 
-5. In the "시간 부자" section, list participants who voted for the most selected time slot (the #1 ranked slot)
+5. "시간 부자": participants who selected the #1 ranked time slot
 
-6. **CRITICAL** - In the "추천 사항" section:
-   - **SPECIAL CASE**: If there are MORE THAN 5 time slots with the highest vote count (many ties):
-     * Write: "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 순서대로 모두 보여드릴게요!"
-     * Group consecutive time slots by date and show as time ranges
-     * Format: "- YYYY-MM-DD HH:mm ~ HH:mm (X명 가능)"
-     * Example:
-       * "- 2025-12-04 11:30 ~ 14:00 (3명 가능)"
-       * "- 2025-12-05 09:00 ~ 12:30 (3명 가능)"
-     * List all dates in chronological order
+6. **CRITICAL: 추천 사항 RULES**
+   - **IF more than 5 time slots share the same highest vote count (large tie)**:
+     * Output:
+       > "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 순서대로 모두 보여드릴게요!"
+     * Group consecutive slots by date
+     * Format:
+       - YYYY-MM-DD HH:mm ~ HH:mm (X명 가능)
+   - **Else (normal case, <=5 top slots)**:
+     * For each ranked slot, provide:
+       - `- N순위: YYYY-MM-DD HH:mm에 모임을 진행하시는 것을 추천드립니다. (X명 가능)`
 
-   - **NORMAL CASE**: Otherwise (5 or fewer top slots):
-     * Provide recommendations for ALL TOP 5 time slots as complete, friendly sentences
-     * Format: "- N순위: [date] [time]에 모임을 진행하시는 것을 추천드립니다. (X명 가능)"
-     * Example:
-       * "- 1순위: 2025-12-04 11:30에 모임을 진행하시는 것을 추천드립니다. (3명 가능)"
-       * "- 2순위: 2025-12-04 12:00에 모임을 진행하시는 것을 추천드립니다. (2명 가능)"
-       * "- 3순위: 2025-12-05 14:00에 모임을 진행하시는 것을 추천드립니다. (2명 가능)"
-     * Always include "에 모임을 진행하시는 것을 추천드립니다." after the date/time
-     * List up to 5 recommendations
+7. Entire output must be **Korean only**
 
-7. Keep all text in Korean
-
-8. Do NOT add any extra commentary outside the template
+8. **DO NOT add any commentary outside the Markdown report**
