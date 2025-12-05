@@ -45,6 +45,7 @@ public class AuthController {
 
     private final OAuthLoginService oAuthLoginService;
     private final MeetingRepository meetingRepository;
+    private final com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository meetingUserSelectionRepository;
 
     @Value("${oauth.redirect.default}")
     private String defaultRedirectUrl;
@@ -99,7 +100,7 @@ public class AuthController {
 
     @Operation(
             summary = "현재 사용자 정보 조회",
-            description = "로그인된 사용자의 기본 정보와 생성한 모임 목록을 조회합니다. JWT 토큰이 필요합니다.",
+            description = "로그인된 사용자의 기본 정보와 생성한 모임 목록, 참여한 모임 목록을 조회합니다. JWT 토큰이 필요합니다.",
             security = @SecurityRequirement(name = "cookieAuth")
     )
     @ApiResponses(value = {
@@ -115,8 +116,18 @@ public class AuthController {
     })
     @GetMapping("/me")
     public ApiResponse<UserInfoResponse> getCurrentUser(@CurrentUser User user) {
+        // 생성한 모임 목록
         List<Meeting> createdMeetings = meetingRepository.findByHostUserId(user.getId());
-        UserInfoResponse response = UserInfoResponse.from(user, createdMeetings);
+
+        // 참여한 모임 목록 (시간 선택을 한 모임들)
+        List<Meeting> participatedMeetings = meetingUserSelectionRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(selection -> meetingRepository.findById(selection.getMeetingId()).orElse(null))
+                .filter(meeting -> meeting != null && !meeting.getHostUserId().equals(user.getId())) // 자신이 만든 모임 제외
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        UserInfoResponse response = UserInfoResponse.from(user, createdMeetings, participatedMeetings);
         return ApiResponse.success(response);
     }
 

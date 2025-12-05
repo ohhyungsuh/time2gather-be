@@ -35,10 +35,13 @@ public class UserInfoResponse {
     @Schema(description = "생성한 모임 목록")
     private List<CreatedMeetingInfo> createdMeetings;
 
+    @Schema(description = "참여한 모임 목록")
+    private List<ParticipatedMeetingInfo> participatedMeetings;
+
     /**
      * User 엔티티와 생성한 모임 목록으로부터 UserInfoResponse 생성
      */
-    public static UserInfoResponse from(User user, List<Meeting> createdMeetings) {
+    public static UserInfoResponse from(User user, List<Meeting> createdMeetings, List<Meeting> participatedMeetings) {
         return UserInfoResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -48,6 +51,9 @@ public class UserInfoResponse {
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
                 .createdMeetings(createdMeetings.stream()
                         .map(CreatedMeetingInfo::from)
+                        .collect(Collectors.toList()))
+                .participatedMeetings(participatedMeetings.stream()
+                        .map(ParticipatedMeetingInfo::from)
                         .collect(Collectors.toList()))
                 .build();
     }
@@ -76,6 +82,40 @@ public class UserInfoResponse {
 
         public static CreatedMeetingInfo from(Meeting meeting) {
             return CreatedMeetingInfo.builder()
+                    .id(meeting.getId())
+                    .code(meeting.getMeetingCode())
+                    .title(meeting.getTitle())
+                    .description(meeting.getDescription())
+                    .timezone(meeting.getTimezone())
+                    .createdAt(meeting.getCreatedAt() != null ? meeting.getCreatedAt().toString() : null)
+                    .build();
+        }
+    }
+
+    @Schema(description = "참여한 모임 정보")
+    @Getter
+    @Builder
+    public static class ParticipatedMeetingInfo {
+        @Schema(description = "모임 ID", example = "2")
+        private Long id;
+
+        @Schema(description = "모임 코드", example = "mtg_x9k2md3fa8")
+        private String code;
+
+        @Schema(description = "모임 제목", example = "팀 정기 회의")
+        private String title;
+
+        @Schema(description = "모임 설명", example = "주간 팀 미팅", nullable = true)
+        private String description;
+
+        @Schema(description = "타임존", example = "Asia/Seoul")
+        private String timezone;
+
+        @Schema(description = "생성 일시", example = "2025-11-15T10:00:00")
+        private String createdAt;
+
+        public static ParticipatedMeetingInfo from(Meeting meeting) {
+            return ParticipatedMeetingInfo.builder()
                     .id(meeting.getId())
                     .code(meeting.getMeetingCode())
                     .title(meeting.getTitle())
