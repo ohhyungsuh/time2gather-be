@@ -20,6 +20,7 @@ public class MeetingDetailData {
     private final List<MeetingUserSelection> selections;
     private final ScheduleData schedule;
     private final SummaryData summary;
+    private final boolean isParticipated; // 현재 사용자의 참여 여부
 
     /**
      * 날짜/시간별 참여자 정보

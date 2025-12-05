@@ -28,6 +28,9 @@ public class MeetingDetailResponse {
 	@Schema(description = "요약 정보")
 	private SummaryInfo summary;
 
+	@Schema(description = "현재 사용자의 참여 여부 (미인증 시 false)")
+	private boolean isParticipated;
+
 	/**
 	 * 도메인 모델로부터 DTO 생성
 	 */
@@ -73,7 +76,7 @@ public class MeetingDetailResponse {
 			intervalMinutes
 		);
 
-		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary);
+		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary, detailData.isParticipated());
 	}
 
 	/**

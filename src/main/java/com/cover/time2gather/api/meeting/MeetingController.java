@@ -60,12 +60,14 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingCode}")
-    @Operation(summary = "모임 상세 조회", description = "모임 상세 정보를 조회합니다. (인증 불필요)")
+    @Operation(summary = "모임 상세 조회", description = "모임 상세 정보를 조회합니다. (인증 선택적)")
     public ApiResponse<MeetingDetailResponse> getMeetingDetail(
-            @PathVariable String meetingCode
+            @PathVariable String meetingCode,
+            @AuthenticationPrincipal JwtAuthentication authentication
     ) {
         // Service 호출 (비즈니스 로직)
-        MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode);
+        Long currentUserId = authentication != null ? authentication.getUserId() : null;
+        MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, currentUserId);
 
         // 도메인 → DTO 변환
         return ApiResponse.success(MeetingDetailResponse.from(detailData));

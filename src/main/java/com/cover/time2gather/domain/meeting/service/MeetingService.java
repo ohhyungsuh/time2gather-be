@@ -67,32 +67,37 @@ public class MeetingService {
      * 모임 상세 데이터 조회 (비즈니스 로직 포함)
      * 도메인 모델만 반환
      */
-    public MeetingDetailData getMeetingDetailData(String meetingCode) {
+    public MeetingDetailData getMeetingDetailData(String meetingCode, Long currentUserId) {
         Meeting meeting = getMeetingByCode(meetingCode);
         List<MeetingUserSelection> selections = selectionRepository.findAllByMeetingId(meeting.getId());
 
-        // 참여자 ID 목록 추출
+        // 참여자 ID 목록 추출 (시간 선택이 있는 사용자만)
         Set<Long> participantIds = selections.stream()
                 .map(MeetingUserSelection::getUserId)
                 .collect(Collectors.toSet());
-        participantIds.add(meeting.getHostUserId()); // 방장도 포함
 
         // 한 번에 모든 사용자 정보 조회
         Map<Long, User> userMap = userRepository.findAllById(participantIds).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
 
-        User host = userMap.get(meeting.getHostUserId());
+        // 방장 정보 조회 (참여자 목록과 별도)
+        User host = userRepository.findById(meeting.getHostUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Host not found"));
+
         List<User> participants = participantIds.stream()
                 .map(userMap::get)
                 .collect(Collectors.toList());
 
+        // 현재 사용자의 참여 여부 확인
+        boolean isParticipated = currentUserId != null && participantIds.contains(currentUserId);
+
         // Schedule 데이터 구성
         MeetingDetailData.ScheduleData schedule = buildScheduleData(selections, userMap);
 
-        // Summary 데이터 구성
+        // Summary 데이터 구성 (참여자 수는 시간 선택이 있는 사용자만)
         MeetingDetailData.SummaryData summary = buildSummaryData(selections, participantIds.size());
 
-        return new MeetingDetailData(meeting, host, participants, selections, schedule, summary);
+        return new MeetingDetailData(meeting, host, participants, selections, schedule, summary, isParticipated);
     }
 
     /**
