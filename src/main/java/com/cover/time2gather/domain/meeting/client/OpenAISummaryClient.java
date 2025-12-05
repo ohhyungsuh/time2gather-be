@@ -44,7 +44,7 @@ public class OpenAISummaryClient implements ReportSummaryClient {
             // String으로 응답을 받아서 로깅
             String rawResponse = restClient
                     .post()
-                    .uri("/v1/chat/completions")
+                    .uri("/chat/completions")
                     .body(request)
                     .retrieve()
                     .body(String.class);
