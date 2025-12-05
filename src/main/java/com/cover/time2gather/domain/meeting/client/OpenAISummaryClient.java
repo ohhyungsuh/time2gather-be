@@ -35,7 +35,7 @@ public class OpenAISummaryClient implements ReportSummaryClient {
         try {
             String instructions = ResourceLoader.loadTextFile(PROMPT_TEMPLATE_PATH);
             String inputText = ReportInputTextBuilder.build(meeting, selections, userMap);
-            UpsertSummaryRequest request = new UpsertSummaryRequest(model, inputText, instructions);
+            UpsertSummaryRequest request = UpsertSummaryRequest.of(model, inputText, instructions);
 
             log.info("Sending summary request to ChatGPT API. Model: {}, Meeting: {}", model, meeting.getId());
             log.debug("Request body - Input length: {}, Instructions length: {}",
@@ -44,7 +44,7 @@ public class OpenAISummaryClient implements ReportSummaryClient {
             // String으로 응답을 받아서 로깅
             String rawResponse = restClient
                     .post()
-                    .uri("/responses")
+                    .uri("/v1/chat/completions")
                     .body(request)
                     .retrieve()
                     .body(String.class);

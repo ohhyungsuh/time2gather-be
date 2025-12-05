@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,11 +17,28 @@ public class UpsertSummaryRequest {
             example = "gpt-4o-mini")
     private String model;
 
-    @Schema(description = "요약할 모임 정보 텍스트",
-            example = "모임 제목: 대학 동기 모임, 참석자: 김철수, 이영희...")
-    private String input;
+    @Schema(description = "대화 메시지 목록")
+    private List<Message> messages;
 
-    @Schema(description = "모임 요약을 위한 지시문입니다",
-            example = "위 제목, 사용자 시간 선택 정보를 바탕으로 모임 요약을 작성해주세요.")
-    private String instructions;
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Message {
+        @Schema(description = "메시지 역할 (system, user, assistant)")
+        private String role;
+
+        @Schema(description = "메시지 내용")
+        private String content;
+    }
+
+    /**
+     * 기존 input, instructions를 OpenAI 표준 형식으로 변환하는 팩토리 메서드
+     */
+    public static UpsertSummaryRequest of(String model, String input, String instructions) {
+        List<Message> messages = List.of(
+                new Message("system", instructions),
+                new Message("user", input)
+        );
+        return new UpsertSummaryRequest(model, messages);
+    }
 }

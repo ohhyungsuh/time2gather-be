@@ -15,32 +15,53 @@ import java.util.List;
 @Schema(description = "Open AI 요약 응답")
 public class UpsertSummaryResponse {
 
-    @Schema(description = "응답 출력 배열")
-    private List<OutputItem> output;
+    @Schema(description = "응답 ID")
+    private String id;
+
+    @Schema(description = "객체 타입")
+    private String object;
+
+    @Schema(description = "생성 시간")
+    private Long created;
+
+    @Schema(description = "모델명")
+    private String model;
+
+    @Schema(description = "응답 선택 목록")
+    private List<Choice> choices;
 
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
     @ToString
-    public static class OutputItem {
-        @Schema(description = "컨텐츠 배열")
-        private List<ContentItem> content;
+    public static class Choice {
+        @Schema(description = "선택 인덱스")
+        private Integer index;
+
+        @Schema(description = "메시지 내용")
+        private Message message;
+
+        @Schema(description = "종료 이유")
+        private String finish_reason;
     }
 
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
     @ToString
-    public static class ContentItem {
-        @Schema(description = "텍스트 내용")
-        private String text;
+    public static class Message {
+        @Schema(description = "역할")
+        private String role;
+
+        @Schema(description = "내용")
+        private String content;
     }
 
     public String getSummary() {
-        if (output != null && !output.isEmpty()) {
-            OutputItem firstOutput = output.getFirst();
-            if (firstOutput.getContent() != null && !firstOutput.getContent().isEmpty()) {
-                return firstOutput.getContent().getFirst().getText();
+        if (choices != null && !choices.isEmpty()) {
+            Choice firstChoice = choices.getFirst();
+            if (firstChoice.getMessage() != null) {
+                return firstChoice.getMessage().getContent();
             }
         }
         return null;
