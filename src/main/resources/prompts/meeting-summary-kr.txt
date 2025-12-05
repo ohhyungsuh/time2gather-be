@@ -3,7 +3,7 @@ Based on the following meeting information, generate a structured meeting report
 IMPORTANT INFORMATION:
 - You will receive:
   * Meeting information including meeting title, description, and host name
-  * Voted participants count (number of people who completed voting)
+  * **Voted participants count**: TOTAL number of people who completed voting (this is your denominator "Y")
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
   * Example: "2025-11-28: 15:00, 15:30, 16:00" means they are available at 15:00, 15:30, and 16:00 on 2025-11-28
   * **Your job**: Intelligently merge consecutive time slots into readable time ranges
@@ -14,6 +14,49 @@ KEY INSIGHT:
 - DON'T show 5 separate slots: "14:00 (2명)", "14:30 (2명)", "15:00 (2명)", etc.
 - INSTEAD show ONE range: "14:00 ~ 16:30 (2명)"
 - This makes the report much more practical and readable!
+
+CRITICAL - CALCULATING 가능/불가능 인원:
+- For each time range:
+  * Count how many participants selected ALL slots in that time range → this is "가능" (X)
+  * Total voted participants - 가능 인원 = "불가능" (Y - X)
+  * Format: "X명 / Y명"
+  * Example: If 5 people voted and 3 selected this time range → "3명 / 5명"
+  * If ALL voted participants selected it → "5명 / 5명 (만장일치)"
+
+- **NEVER write weird text like "추가명" or similar**
+- **ALWAYS use the EXACT participant names provided in the input**
+- 가능: List ONLY the names who selected this time range
+- 불가능: List ONLY the names who DID NOT select this time range (or write "-" if none)
+
+EXAMPLE INPUT FORMAT:
+```
+Meeting Title: 팀 회의
+Meeting Description: 12월 정기 미팅
+Meeting Host: 김철수
+Voted Participants: 3
+
+Participant Selections:
+- 김철수:
+  * 2025-12-10: 14:00, 14:30, 15:00
+  * 2025-12-11: 10:00, 10:30
+- 이영희:
+  * 2025-12-10: 14:00, 14:30
+  * 2025-12-11: 10:00
+- 박민수:
+  * 2025-12-10: 14:00, 14:30, 15:00
+  * 2025-12-12: 16:00
+```
+
+HOW TO INTERPRET THIS:
+- Total voted: 3 people (김철수, 이영희, 박민수)
+- For time range "2025-12-10 14:00 ~ 14:30":
+  * 가능: 김철수, 이영희, 박민수 (all 3 selected it)
+  * 불가능: - (none)
+  * Format: `3명 / 3명 (만장일치)`
+- For time range "2025-12-10 14:00 ~ 15:00":
+  * 가능: 김철수, 박민수 (only 2 selected ALL slots 14:00, 14:30, 15:00)
+  * 불가능: 이영희 (she only selected 14:00, 14:30, not 15:00)
+  * Format: `2명 / 3명`
 
 OUTPUT FORMAT (Markdown):
 - Produce clean, professional Markdown suitable for PDF-level rendering.
@@ -32,9 +75,19 @@ OUTPUT FORMAT (Markdown):
 
 ### ⭐ 최적 시간대 TOP 5
 1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm
-   **가능 인원:** X명 / Y명
-   - **가능:** 이름1, 이름2, 이름3
-   - **불가능:** 이름4, 이름5 (또는 "-")
+   **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
+   - **가능:** [ONLY list names who selected this time range]
+   - **불가능:** [ONLY list names who DID NOT select this time range, or write "-" if all selected]
+
+   **Example**:
+   - If 5 people voted: Alice, Bob, Charlie, David, Emma
+   - And only Alice, Bob, Charlie selected this time range:
+   ```
+   **가능 인원:** 3명 / 5명
+   - **가능:** Alice, Bob, Charlie
+   - **불가능:** David, Emma
+   ```
+
 2. **날짜 및 시간:**
    **가능 인원:**
    - **가능:**
@@ -82,13 +135,26 @@ RULES:
      * Show the TOP 5 ranked time ranges in "최적 시간대 TOP 5"
      * Format: `YYYY-MM-DD HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD HH:mm` for single slots
 
-2. For each top 5 time range:
+2. **For each top 5 time range - CRITICAL**:
    - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format
+
    - **가능 인원**:
-     * If unanimous → format: `X명 / Y명 (만장일치)`
-     * Otherwise → `X명 / Y명`
-   - **가능** → comma-separated names
-   - **불가능** → comma-separated names, or "-" if none
+     * **STEP 1**: Count ONLY participants who selected this ENTIRE time range
+     * **STEP 2**: Calculate: 가능 = count of participants who selected it, 불가능 = total voted - 가능
+     * **STEP 3**: Format as `X명 / Y명` where Y = total voted participants
+     * If X == Y (everyone selected it) → add `(만장일치)`
+     * Example: 3 out of 5 voted participants selected it → `3명 / 5명`
+
+   - **가능**:
+     * List EXACT names (from input) of participants who selected this time range
+     * Use comma-separated format: `이름1, 이름2, 이름3`
+     * **NEVER invent names or use placeholders like "추가명"**
+
+   - **불가능**:
+     * List EXACT names (from input) of participants who DID NOT select this time range
+     * Use comma-separated format: `이름4, 이름5`
+     * If everyone selected it → write "-"
+     * **NEVER invent names or use placeholders**
 
 3. "참여 현황": list participants who completed voting
 
