@@ -122,9 +122,16 @@ public class MeetingService {
                 dateTimeUserMap.putIfAbsent(date, new HashMap<>());
                 Map<Integer, List<User>> slotUserMap = dateTimeUserMap.get(date);
 
-                for (int slot : slots) {
-                    slotUserMap.putIfAbsent(slot, new ArrayList<>());
-                    slotUserMap.get(slot).add(user);
+                // ALL_DAY 타입 (빈 배열)인 경우
+                if (slots.length == 0) {
+                    slotUserMap.putIfAbsent(-1, new ArrayList<>());
+                    slotUserMap.get(-1).add(user);
+                } else {
+                    // TIME 타입 (슬롯 배열)인 경우
+                    for (int slot : slots) {
+                        slotUserMap.putIfAbsent(slot, new ArrayList<>());
+                        slotUserMap.get(slot).add(user);
+                    }
                 }
             }
         }
