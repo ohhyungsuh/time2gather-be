@@ -97,7 +97,7 @@ public class MeetingService {
         MeetingDetailData.ScheduleData schedule = buildScheduleData(selections, userMap);
 
         // Summary 데이터 구성 (참여자 수는 시간 선택이 있는 사용자만)
-        MeetingDetailData.SummaryData summary = buildSummaryData(selections, participantIds.size());
+        MeetingDetailData.SummaryData summary = buildSummaryData(meeting, selections, participantIds.size());
 
         return new MeetingDetailData(meeting, host, participants, selections, schedule, summary, isParticipated);
     }
@@ -136,10 +136,13 @@ public class MeetingService {
      * 요약 정보 구성 (비즈니스 로직)
      */
     private MeetingDetailData.SummaryData buildSummaryData(
+            Meeting meeting,
             List<MeetingUserSelection> selections,
             int totalParticipants
     ) {
-        // 날짜-시간별 카운트
+        boolean isAllDay = meeting.getSelectionType() == com.cover.time2gather.domain.meeting.SelectionType.ALL_DAY;
+
+        // 날짜-시간별 카운트 (ALL_DAY는 날짜별, TIME은 시간별)
         Map<String, Map<Integer, Integer>> countMap = new HashMap<>();
 
         for (MeetingUserSelection selection : selections) {
@@ -151,13 +154,19 @@ public class MeetingService {
                 countMap.putIfAbsent(date, new HashMap<>());
                 Map<Integer, Integer> slotCountMap = countMap.get(date);
 
-                for (int slot : slots) {
-                    slotCountMap.put(slot, slotCountMap.getOrDefault(slot, 0) + 1);
+                if (isAllDay) {
+                    // ALL_DAY: 날짜별로 카운트 (슬롯 인덱스 -1 사용)
+                    slotCountMap.put(-1, slotCountMap.getOrDefault(-1, 0) + 1);
+                } else {
+                    // TIME: 시간별로 카운트
+                    for (int slot : slots) {
+                        slotCountMap.put(slot, slotCountMap.getOrDefault(slot, 0) + 1);
+                    }
                 }
             }
         }
 
-        // bestSlots 찾기 (가장 많은 사람이 가능한 시간대)
+        // bestSlots 찾기 (가장 많은 사람이 가능한 시간대 또는 날짜)
         List<MeetingDetailData.BestSlot> bestSlots = new ArrayList<>();
         int maxCount = 0;
 
@@ -178,7 +187,7 @@ public class MeetingService {
                             count,
                             totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
                     ));
-                } else if (count == maxCount) {
+                } else if (count == maxCount && maxCount > 0) {
                     bestSlots.add(new MeetingDetailData.BestSlot(
                             date,
                             slot,

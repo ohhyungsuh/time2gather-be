@@ -89,7 +89,110 @@ public class MeetingController {
     }
 
     @PutMapping("/{meetingCode}/selections")
-    @Operation(summary = "시간 선택/수정", description = "사용자의 시간 선택을 등록하거나 수정합니다.")
+    @Operation(
+        summary = "시간 선택/수정",
+        description = """
+            ## 사용자의 시간 선택을 등록하거나 수정합니다
+            
+            ### 📌 사용 흐름
+            1. `GET /meetings/{code}`로 모임 정보 조회
+            2. `meeting.selectionType` 확인 ("TIME" 또는 "ALL_DAY")
+            3. 해당 타입에 맞게 selections 구성
+            4. 이 API 호출
+            
+            ---
+            
+            ### 🎯 타입별 사용법
+            
+            #### 1. TIME 타입 (시간 단위 선택)
+            모임이 시간 단위로 선택하는 경우:
+            ```json
+            {
+              "selections": [
+                {
+                  "date": "2024-12-15",
+                  "type": "TIME",
+                  "times": ["09:00", "10:00", "11:00"]
+                },
+                {
+                  "date": "2024-12-16",
+                  "type": "TIME",
+                  "times": ["14:00", "15:00"]
+                }
+              ]
+            }
+            ```
+            
+            **필수 조건:**
+            - `type` = "TIME"
+            - `times` 배열 필수 (최소 1개 시간)
+            - `times`가 빈 배열 [] 또는 null이면 에러!
+            
+            #### 2. ALL_DAY 타입 (일 단위 선택)
+            모임이 일 단위로 선택하는 경우:
+            ```json
+            {
+              "selections": [
+                {
+                  "date": "2024-12-20",
+                  "type": "ALL_DAY"
+                },
+                {
+                  "date": "2024-12-21",
+                  "type": "ALL_DAY"
+                }
+              ]
+            }
+            ```
+            
+            **조건:**
+            - `type` = "ALL_DAY"
+            - `times` 필드는 무시됨 (null, [], 뭐든 가능)
+            
+            ---
+            
+            ### ⚠️ 중요 사항
+            
+            1. **모임 타입과 선택 타입이 일치해야 함**
+               - TIME 모임 → type="TIME" 사용
+               - ALL_DAY 모임 → type="ALL_DAY" 사용
+               - 불일치 시 서버 에러
+            
+            2. **선택하지 않은 날짜는 배열에서 제외**
+               - 선택 안 한 날짜 = selections 배열에 포함하지 않음
+               - null이나 빈 객체 보내지 말 것
+            
+            3. **기존 선택 덮어쓰기**
+               - 이 API는 기존 선택을 완전히 대체합니다
+               - 부분 수정이 아닌 전체 교체
+            
+            ---
+            
+            ### ❌ 흔한 실수
+            
+            **실수 1**: TIME 타입인데 times가 비어있음
+            ```json
+            {"date": "2024-12-15", "type": "TIME", "times": []}
+            ```
+            → **에러**: "TIME 타입인데 시간이 지정되지 않았습니다"
+            
+            **실수 2**: type 필드 누락
+            ```json
+            {"date": "2024-12-15", "times": ["09:00"]}
+            ```
+            → **에러**: "타입은 필수입니다"
+            
+            **실수 3**: 잘못된 타입 값
+            ```json
+            {"date": "2024-12-15", "type": "FULL_DAY", "times": []}
+            ```
+            → **에러**: "알 수 없는 타입: FULL_DAY"
+            
+            ---
+            
+            ### 📖 상세 필드 설명은 Request Body Schema 참고
+            """
+    )
     public ApiResponse<Void> upsertUserSelections(
             @AuthenticationPrincipal JwtAuthentication authentication,
             @PathVariable String meetingCode,
