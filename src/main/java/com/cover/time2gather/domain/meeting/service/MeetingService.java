@@ -35,6 +35,7 @@ public class MeetingService {
             String title,
             String description,
             String timezone,
+            com.cover.time2gather.domain.meeting.SelectionType selectionType,
             Integer intervalMinutes,
             Map<String, int[]> availableDates
     ) {
@@ -51,6 +52,7 @@ public class MeetingService {
                 description,
                 hostUserId,
                 timezone,
+                selectionType,
                 intervalMinutes,
                 availableDates
         );

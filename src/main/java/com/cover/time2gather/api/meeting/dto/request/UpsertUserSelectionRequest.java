@@ -14,16 +14,35 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "사용자 시간 선택 요청")
+@Schema(description = """
+    사용자 시간 선택 요청
+    - null = 해당 날짜 선택 안함
+    - [] = 하루 종일 가능 (ALL_DAY)
+    - ["HH:mm"] = 특정 시간 선택 (TIME)
+    """)
 public class UpsertUserSelectionRequest {
 
     @NotNull(message = "선택한 시간대는 필수입니다")
-    @Schema(description = "날짜별 선택한 시간대 (HH:mm 형식)",
-            example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:30\"], \"2024-02-16\": [\"11:00\", \"11:30\"], \"2024-02-17\": []}")
+    @Schema(
+        description = """
+            날짜별 선택 시간대
+            
+            값의 의미:
+            - null = 선택 안함
+            - [] (빈 배열) = 하루 종일 (ALL_DAY 전용)
+            - ["09:00", ...] = 특정 시간 (TIME 전용)
+            """,
+        example = "{\"2024-02-15\": [\"09:00\", \"10:00\"], \"2024-02-16\": [], \"2024-02-17\": null}"
+    )
     private Map<String, String[]> selections;
 
     /**
      * API "HH:mm" → 도메인 slotIndex 변환
+     *
+     * null과 빈 배열의 구분:
+     * - null: 맵에 포함하지 않음 (선택 안함)
+     * - 빈 배열: 빈 int 배열로 변환 (ALL_DAY - 하루 종일)
+     * - 시간 배열: 슬롯 인덱스 배열로 변환 (TIME - 특정 시간)
      */
     public Map<String, int[]> toSlotIndexes() {
         if (selections == null) {
@@ -35,12 +54,18 @@ public class UpsertUserSelectionRequest {
             String date = entry.getKey();
             String[] times = entry.getValue();
 
-            // 빈 배열은 그대로 빈 int 배열로 변환
-            if (times == null || times.length == 0) {
+            // null인 경우: 결과 맵에 포함하지 않음 (선택 안함)
+            if (times == null) {
+                continue;
+            }
+
+            // 빈 배열: 하루 종일 선택 (ALL_DAY 타입)
+            if (times.length == 0) {
                 result.put(date, new int[0]);
                 continue;
             }
 
+            // 시간 배열: TIME 타입 처리
             try {
                 int[] slots = Arrays.stream(times)
                         .mapToInt(timeStr -> {

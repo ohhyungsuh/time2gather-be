@@ -6,9 +6,9 @@ import lombok.Getter;
 /**
  * 시간 슬롯을 나타내는 값 객체
  * 슬롯 간격(intervalMinutes)에 따라 하루의 슬롯 개수가 결정됨
- * 기본값: 30분 간격 (하루 48개 슬롯, 0~47)
- * - 예: 30분 간격 -> 0: 00:00, 1: 00:30, ..., 47: 23:30
+ * 기본값: 60분 간격 (하루 24개 슬롯, 0~23)
  * - 예: 60분 간격 -> 0: 00:00, 1: 01:00, ..., 23: 23:00
+ * - 예: 30분 간격 -> 0: 00:00, 1: 00:30, ..., 47: 23:30
  * - 예: 15분 간격 -> 0: 00:00, 1: 00:15, ..., 95: 23:45
  */
 @Getter
@@ -18,7 +18,7 @@ public class TimeSlot {
     /**
      * 기본 슬롯 간격 (분)
      */
-    public static final int DEFAULT_INTERVAL_MINUTES = 30;
+    public static final int DEFAULT_INTERVAL_MINUTES = 60;
 
     private static final int MINUTES_PER_DAY = 24 * 60;
 

@@ -37,15 +37,25 @@ public class Meeting extends BaseEntity {
     private String timezone = "Asia/Seoul";
 
     /**
+     * 선택 타입 (TIME: 시간 단위, ALL_DAY: 일 단위)
+     * 기본값: TIME
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "selection_type", nullable = false, length = 20)
+    private SelectionType selectionType = SelectionType.TIME;
+
+    /**
      * 시간 슬롯 간격 (분)
-     * 기본값: 30분
+     * 기본값: 60분
+     * ALL_DAY 타입인 경우에도 저장하지만 실제로는 사용되지 않음
      */
     @Column(name = "interval_minutes", nullable = false)
     private Integer intervalMinutes = TimeSlot.DEFAULT_INTERVAL_MINUTES;
 
     /**
      * 날짜별 가능한 시간대 (slotIndex 배열)
-     * 예: {"2024-02-15": [18, 19, 20, 21], "2024-02-16": [22, 23, 24]}
+     * TIME 타입: {"2024-02-15": [18, 19, 20, 21], "2024-02-16": [22, 23, 24]}
+     * ALL_DAY 타입: {"2024-02-15": [], "2024-02-16": []} (빈 배열 = 하루 종일)
      */
     @Type(JsonType.class)
     @Column(name = "available_dates", columnDefinition = "json", nullable = false)
@@ -60,6 +70,7 @@ public class Meeting extends BaseEntity {
             String description,
             Long hostUserId,
             String timezone,
+            SelectionType selectionType,
             Integer intervalMinutes,
             Map<String, int[]> availableDates
     ) {
@@ -69,12 +80,17 @@ public class Meeting extends BaseEntity {
         meeting.description = description;
         meeting.hostUserId = hostUserId;
         meeting.timezone = timezone != null ? timezone : "Asia/Seoul";
+        meeting.selectionType = selectionType != null ? selectionType : SelectionType.TIME;
         meeting.intervalMinutes = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
         meeting.availableDates = availableDates;
         meeting.isActive = true;
 
-        // TimeSlot 검증
-        meeting.validateTimeSlots();
+        // TimeSlot 검증 (타입에 따라)
+        if (meeting.selectionType == SelectionType.TIME) {
+            meeting.validateTimeSlots();
+        } else {
+            meeting.validateAllDayDates();
+        }
 
         return meeting;
     }
@@ -97,6 +113,24 @@ public class Meeting extends BaseEntity {
             for (int slotIndex : slots) {
                 // TimeSlot 생성으로 검증 (범위 체크)
                 TimeSlot.fromIndex(slotIndex, intervalMinutes);
+            }
+        }
+    }
+
+    /**
+     * ALL_DAY 타입 날짜 유효성 검증
+     * 도메인 규칙: 최소 하나의 날짜가 있어야 하며, 각 날짜는 빈 배열이어야 함
+     */
+    private void validateAllDayDates() {
+        if (availableDates == null || availableDates.isEmpty()) {
+            throw new IllegalArgumentException("최소 하나의 날짜를 선택해야 합니다.");
+        }
+
+        for (Map.Entry<String, int[]> entry : availableDates.entrySet()) {
+            int[] slots = entry.getValue();
+            // ALL_DAY 타입은 빈 배열이어야 함
+            if (slots != null && slots.length > 0) {
+                throw new IllegalArgumentException("일 단위 선택(ALL_DAY)인 경우 시간대는 빈 배열이어야 합니다.");
             }
         }
     }

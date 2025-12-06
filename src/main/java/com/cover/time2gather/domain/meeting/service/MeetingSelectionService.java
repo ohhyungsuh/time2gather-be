@@ -50,7 +50,14 @@ public class MeetingSelectionService {
                 .orElse(null);
 
         if (selection == null) {
-            selection = MeetingUserSelection.create(meetingId, userId, selections);
+            // Meeting의 selectionType과 intervalMinutes를 전달
+            selection = MeetingUserSelection.create(
+                    meetingId,
+                    userId,
+                    meeting.getSelectionType(),
+                    meeting.getIntervalMinutes(),
+                    selections
+            );
             selectionRepository.save(selection);
         } else {
             selection.updateSelections(selections);
@@ -70,14 +77,25 @@ public class MeetingSelectionService {
             String date = entry.getKey();
             int[] selectedSlots = entry.getValue();
 
-            // 빈 배열인 경우 검증 스킵 (선택 취소를 의미)
-            if (selectedSlots == null || selectedSlots.length == 0) {
-                continue;
-            }
-
             // 해당 날짜가 available_dates에 없으면 에러
             if (!availableDates.containsKey(date)) {
                 throw new IllegalArgumentException("Date " + date + " is not available in this meeting");
+            }
+
+            // 빈 배열: ALL_DAY 타입에서만 허용
+            if (selectedSlots != null && selectedSlots.length == 0) {
+                if (meeting.getSelectionType() != com.cover.time2gather.domain.meeting.SelectionType.ALL_DAY) {
+                    throw new IllegalArgumentException(
+                            "Empty array is only allowed for ALL_DAY type meetings. " +
+                            "For TIME type, either specify times or exclude the date from the request.");
+                }
+                // ALL_DAY 타입이면 빈 배열 허용
+                continue;
+            }
+
+            // TIME 타입: 시간대 검증
+            if (selectedSlots == null) {
+                throw new IllegalArgumentException("Slot array cannot be null. Use empty map to exclude dates.");
             }
 
             // 선택한 슬롯이 모두 available_dates에 포함되어 있는지 확인

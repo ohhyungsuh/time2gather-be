@@ -51,6 +51,7 @@ public class MeetingController {
                 request.getTitle(),
                 request.getDescription(),
                 request.getTimezone(),
+                request.getSelectionTypeEnum(),
                 request.getIntervalMinutes(),
                 request.toSlotIndexes()  // DTO에서 변환
         );

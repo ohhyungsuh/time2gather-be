@@ -51,6 +51,7 @@ public class MeetingDetailResponse {
 				host.getProfileImageUrl()
 			),
 			meeting.getTimezone(),
+			meeting.getSelectionType().name(),
 			intervalMinutes,
 			convertSlotIndexesToTimeStrings(meeting.getAvailableDates(), intervalMinutes)
 		);
@@ -173,11 +174,14 @@ public class MeetingDetailResponse {
 		@Schema(description = "타임존", example = "Asia/Seoul")
 		private String timezone;
 
-		@Schema(description = "시간 간격 (분 단위)", example = "30")
+		@Schema(description = "선택 타입 (TIME: 시간 단위, ALL_DAY: 일 단위)", example = "TIME")
+		private String selectionType;
+
+		@Schema(description = "시간 간격 (분 단위)", example = "60")
 		private int intervalMinutes;
 
-		@Schema(description = "가능한 날짜/시간대",
-			example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:00\"], \"2024-02-16\": [\"11:00\", \"11:30\"]}")
+		@Schema(description = "가능한 날짜/시간대. ALL_DAY인 경우 빈 배열",
+			example = "{\"2024-02-15\": [\"09:00\", \"10:00\", \"11:00\"], \"2024-02-16\": [\"14:00\", \"15:00\"]}")
 		private Map<String, String[]> availableDates;
 	}
 

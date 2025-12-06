@@ -3,17 +3,26 @@ Based on the following meeting information, generate a structured meeting report
 IMPORTANT INFORMATION:
 - You will receive:
   * Meeting information including meeting title, description, and host name
+  * **Selection Type**: TIME (시간 단위) or ALL_DAY (일 단위)
   * **Voted participants count**: TOTAL number of people who completed voting (this is your denominator "Y")
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
-  * Example: "2025-11-28: 15:00, 15:30, 16:00" means they are available at 15:00, 15:30, and 16:00 on 2025-11-28
+  * Example TIME: "2025-11-28: 15:00, 16:00, 17:00" means they are available at specific times
+  * Example ALL_DAY: "2025-11-28: 하루 종일" means they are available all day
   * **Your job**: Intelligently merge consecutive time slots into readable time ranges
 
-KEY INSIGHT:
-- If participant A selected: "2025-12-15: 14:00, 14:30, 15:00, 15:30, 16:00"
+KEY INSIGHT FOR TIME TYPE:
+- If participant A selected: "2025-12-15: 14:00, 15:00, 16:00, 17:00, 18:00"
 - And participant B selected the same times
-- DON'T show 5 separate slots: "14:00 (2명)", "14:30 (2명)", "15:00 (2명)", etc.
-- INSTEAD show ONE range: "14:00 ~ 16:30 (2명)"
+- DON'T show 5 separate slots: "14:00 (2명)", "15:00 (2명)", "16:00 (2명)", etc.
+- INSTEAD show ONE range: "14:00 ~ 18:00 (2명)"
 - This makes the report much more practical and readable!
+
+KEY INSIGHT FOR ALL_DAY TYPE:
+- If Selection Type is ALL_DAY:
+  * Participants selected DATES, not specific times
+  * Format: "YYYY-MM-DD (요일)" without time information
+  * Example: "2025-12-15 (일)" instead of "2025-12-15: 14:00 ~ 16:00"
+  * Treat each date as a single unit for ranking
 
 CRITICAL - CALCULATING 가능/불가능 인원:
 - For each time range:
@@ -29,34 +38,73 @@ CRITICAL - CALCULATING 가능/불가능 인원:
 - 불가능: List ONLY the names who DID NOT select this time range (or write "-" if none)
 
 EXAMPLE INPUT FORMAT:
+
+**TIME Type (시간 단위):**
 ```
 Meeting Title: 팀 회의
 Meeting Description: 12월 정기 미팅
 Meeting Host: 김철수
+Selection Type: TIME
 Voted Participants: 3
 
 Participant Selections:
 - 김철수:
-  * 2025-12-10: 14:00, 14:30, 15:00
-  * 2025-12-11: 10:00, 10:30
+  * 2025-12-10: 14:00, 15:00, 16:00
+  * 2025-12-11: 10:00, 11:00
 - 이영희:
-  * 2025-12-10: 14:00, 14:30
+  * 2025-12-10: 14:00, 15:00
   * 2025-12-11: 10:00
 - 박민수:
-  * 2025-12-10: 14:00, 14:30, 15:00
-  * 2025-12-12: 16:00
+  * 2025-12-10: 14:00, 15:00, 16:00
+  * 2025-12-12: 17:00
+```
+
+**ALL_DAY Type (일 단위):**
+```
+Meeting Title: 워크샵
+Meeting Description: 연말 워크샵
+Meeting Host: 김철수
+Selection Type: ALL_DAY
+Voted Participants: 3
+
+Participant Selections:
+- 김철수:
+  * 2025-12-15: 하루 종일
+  * 2025-12-16: 하루 종일
+- 이영희:
+  * 2025-12-15: 하루 종일
+  * 2025-12-17: 하루 종일
+- 박민수:
+  * 2025-12-15: 하루 종일
+  * 2025-12-16: 하루 종일
 ```
 
 HOW TO INTERPRET THIS:
+
+**For TIME Type:**
 - Total voted: 3 people (김철수, 이영희, 박민수)
-- For time range "2025-12-10 14:00 ~ 14:30":
+- For time range "2025-12-10 14:00 ~ 15:00":
   * 가능: 김철수, 이영희, 박민수 (all 3 selected it)
   * 불가능: - (none)
   * Format: `3명 / 3명 (만장일치)`
-- For time range "2025-12-10 14:00 ~ 15:00":
-  * 가능: 김철수, 박민수 (only 2 selected ALL slots 14:00, 14:30, 15:00)
-  * 불가능: 이영희 (she only selected 14:00, 14:30, not 15:00)
+- For time range "2025-12-10 14:00 ~ 16:00":
+  * 가능: 김철수, 박민수 (only 2 selected ALL slots 14:00, 15:00, 16:00)
+  * 불가능: 이영희 (she only selected 14:00, 15:00, not 16:00)
   * Format: `2명 / 3명`
+
+**For ALL_DAY Type:**
+- Total voted: 3 people (김철수, 이영희, 박민수)
+- For date "2025-12-15":
+  * 가능: 김철수, 이영희, 박민수 (all 3 selected this date)
+  * 불가능: - (none)
+  * Format: `3명 / 3명 (만장일치)`
+- For date "2025-12-16":
+  * 가능: 김철수, 박민수 (only 2 selected this date)
+  * 불가능: 이영희
+  * Format: `2명 / 3명`
+- **IMPORTANT**: For ALL_DAY type, don't show time ranges. Just show dates.
+  * ✅ CORRECT: "2025-12-15 (일)"
+  * ❌ WRONG: "2025-12-15 (일) 14:00 ~ 16:00"
 
 OUTPUT FORMAT (Markdown):
 - Produce clean, professional Markdown suitable for PDF-level rendering.
@@ -74,24 +122,36 @@ OUTPUT FORMAT (Markdown):
 - **모임 방장:**
 
 ### ⭐ 최적 시간대 TOP 5
+
+**For TIME Type:**
 1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm
    **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
    - **가능:** [ONLY list names who selected this time range]
    - **불가능:** [ONLY list names who DID NOT select this time range, or write "-" if all selected]
 
-   **Example**:
-   - If 5 people voted: Alice, Bob, Charlie, David, Emma
-   - And only Alice, Bob, Charlie selected this time range:
+**For ALL_DAY Type:**
+1. **날짜:** YYYY-MM-DD (요일)
+   **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
+   - **가능:** [ONLY list names who selected this date]
+   - **불가능:** [ONLY list names who DID NOT select this date, or write "-" if all selected]
+
+   **Example (ALL_DAY)**:
    ```
-   **가능 인원:** 3명 / 5명
-   - **가능:** Alice, Bob, Charlie
-   - **불가능:** David, Emma
+   1. **날짜:** 2025-12-15 (일)
+      **가능 인원:** 3명 / 3명 (만장일치)
+      - **가능:** 김철수, 이영희, 박민수
+      - **불가능:** -
    ```
 
-2. **날짜 및 시간:**
-   **가능 인원:**
-   - **가능:**
-   - **불가능:**
+   **Example (TIME)**:
+   ```
+   1. **날짜 및 시간:** 2025-12-10 (화) 14:00 ~ 16:00
+      **가능 인원:** 3명 / 5명
+      - **가능:** Alice, Bob, Charlie
+      - **불가능:** David, Emma
+   ```
+
+2. (continue with remaining top dates/time ranges)
 3.
 4.
 5.
@@ -105,24 +165,35 @@ OUTPUT FORMAT (Markdown):
 ### 💡 추천 사항
 [여기에 추천 내용을 작성합니다]
 
-**예시 1 (명확한 TOP 5가 있는 경우):**
+**예시 1 (TIME 타입 - 명확한 TOP 5가 있는 경우):**
 - 1순위: 2025-12-15 (일) 14:00 ~ 16:00에 모임을 진행하시는 것을 추천드립니다. (5명 가능)
 - 2순위: 2025-12-16 (월) 19:00 ~ 20:00에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
 
-**예시 2 (시간이 널널한 경우):**
+**예시 2 (TIME 타입 - 시간이 널널한 경우):**
 대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!
 - 2025-12-15 (일) 14:00 ~ 18:00 (5명 가능)
 - 2025-12-16 (월) 10:00 ~ 12:00, 19:00 ~ 21:00 (5명 가능)
 - 2025-12-17 (화) 15:00 ~ 17:00 (4명 가능)
 
+**예시 3 (ALL_DAY 타입 - 명확한 TOP 날짜):**
+- 1순위: 2025-12-15 (일)에 모임을 진행하시는 것을 추천드립니다. (5명 전원 가능, 만장일치!)
+- 2순위: 2025-12-16 (월)에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
+
+**예시 4 (ALL_DAY 타입 - 여러 날짜 가능):**
+대부분 참여자들이 날짜가 유연해요! 가능한 날짜를 정리해드릴게요!
+- 2025-12-15 (일) - 5명 가능
+- 2025-12-16 (월) - 5명 가능
+- 2025-12-17 (화) - 4명 가능
+- 2025-12-18 (수) - 4명 가능
+
 --------------------------------------------
 
 RULES:
-1. **TIME SLOT GROUPING & RANKING**:
+1. **TIME SLOT GROUPING & RANKING (FOR TIME TYPE ONLY)**:
    - **STEP 1: Group by Date First**
      * Organize all time slots by date (YYYY-MM-DD)
      * For each date, merge consecutive time slots with the SAME participants into time ranges
-     * Example: If 14:00, 14:30, 15:00 have the same 3 people available → "14:00 ~ 15:30 (3명)"
+     * Example: If 14:00, 15:00, 16:00 have the same 3 people available → "14:00 ~ 16:00 (3명)"
 
    - **STEP 2: Rank Time Ranges**
      * Rank these grouped time ranges by participant count (descending)
@@ -133,7 +204,23 @@ RULES:
 
    - **STEP 3: Select TOP 5**
      * Show the TOP 5 ranked time ranges in "최적 시간대 TOP 5"
-     * Format: `YYYY-MM-DD HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD HH:mm` for single slots
+     * Format: `YYYY-MM-DD (요일) HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD (요일) HH:mm` for single slots
+
+1-1. **DATE RANKING (FOR ALL_DAY TYPE ONLY)**:
+   - **STEP 1: Count Participants per Date**
+     * For each date, count how many participants selected it
+     * Example: "2025-12-15" selected by 3 people → rank 1
+
+   - **STEP 2: Rank Dates**
+     * Rank dates by participant count (descending)
+     * If tied, prioritize:
+       1. Weekends (Sat/Sun) over weekdays
+       2. Earlier dates
+
+   - **STEP 3: Select TOP 5**
+     * Show the TOP 5 ranked dates in "최적 시간대 TOP 5"
+     * Format: `YYYY-MM-DD (요일)` (NO TIME INFORMATION!)
+     * **Section title remains "최적 시간대 TOP 5" but content is date-only**
 
 2. **For each top 5 time range - CRITICAL**:
    - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format

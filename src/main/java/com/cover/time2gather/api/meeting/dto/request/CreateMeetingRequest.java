@@ -28,33 +28,67 @@ public class CreateMeetingRequest {
     @Schema(description = "타임존 (선택사항, 기본값: Asia/Seoul)", example = "Asia/Seoul", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String timezone;
 
-    @Schema(description = "시간 슬롯 간격 (분, 선택사항, 기본값: 30분)",
-            example = "30",
+    @Schema(description = "시간 슬롯 간격 (분, 선택사항, 기본값: 60분)",
+            example = "60",
             allowableValues = {"15", "30", "60"},
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Integer intervalMinutes;
 
+    @Schema(description = "선택 타입 (TIME: 시간 단위, ALL_DAY: 일 단위, 기본값: TIME)",
+            example = "TIME",
+            allowableValues = {"TIME", "ALL_DAY"},
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String selectionType;
+
     @NotNull(message = "가능한 날짜/시간은 필수입니다")
-    @Schema(description = "날짜별 가능한 시간대 (HH:mm 형식)",
-            example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:00\", \"10:30\"], \"2024-02-16\": [\"11:00\", \"11:30\", \"12:00\"]}",
+    @Schema(description = "날짜별 가능한 시간대 (HH:mm 형식). ALL_DAY 타입인 경우 빈 배열 [] 사용",
+            example = "{\"2024-02-15\": [\"09:00\", \"10:00\", \"11:00\"], \"2024-02-16\": [\"14:00\", \"15:00\"]}",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private Map<String, String[]> availableDates;
 
     /**
      * API "HH:mm" → 도메인 slotIndex 변환
+     * ALL_DAY 타입인 경우 빈 배열로 변환
      */
     public Map<String, int[]> toSlotIndexes() {
+        // ALL_DAY 타입인 경우 빈 배열로 변환
+        if ("ALL_DAY".equalsIgnoreCase(selectionType)) {
+            Map<String, int[]> result = new HashMap<>();
+            for (String date : availableDates.keySet()) {
+                result.put(date, new int[0]); // 빈 배열
+            }
+            return result;
+        }
+
+        // TIME 타입 (기존 로직)
         int interval = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
         Map<String, int[]> result = new HashMap<>();
         for (Map.Entry<String, String[]> entry : availableDates.entrySet()) {
             String date = entry.getKey();
             String[] times = entry.getValue();
+
+            // 빈 배열인 경우 (ALL_DAY로 잘못 표시된 경우)
+            if (times == null || times.length == 0) {
+                result.put(date, new int[0]);
+                continue;
+            }
+
             int[] slots = Arrays.stream(times)
                     .mapToInt(timeStr -> TimeSlot.fromTimeString(timeStr, interval).getSlotIndex())
                     .toArray();
             result.put(date, slots);
         }
         return result;
+    }
+
+    /**
+     * SelectionType enum으로 변환
+     */
+    public com.cover.time2gather.domain.meeting.SelectionType getSelectionTypeEnum() {
+        if ("ALL_DAY".equalsIgnoreCase(selectionType)) {
+            return com.cover.time2gather.domain.meeting.SelectionType.ALL_DAY;
+        }
+        return com.cover.time2gather.domain.meeting.SelectionType.TIME;
     }
 }
 
