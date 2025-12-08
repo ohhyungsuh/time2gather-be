@@ -85,22 +85,35 @@ HOW TO INTERPRET THIS:
 
 **For TIME Type:**
 - Total voted: 3 people (김철수, 이영희, 박민수)
-- For time range "2025-12-10 14:00 ~ 15:00":
+- For time range "2025-12-10 (화) 14:00 ~ 15:00":
   * 가능: 김철수, 이영희, 박민수 (all 3 selected it)
   * 불가능: - (none)
   * Format: `3명 / 3명 (만장일치)`
-- For time range "2025-12-10 14:00 ~ 16:00":
+- For time range "2025-12-10 (화) 14:00 ~ 16:00":
   * 가능: 김철수, 박민수 (only 2 selected ALL slots 14:00, 15:00, 16:00)
   * 불가능: 이영희 (she only selected 14:00, 15:00, not 16:00)
   * Format: `2명 / 3명`
 
 **For ALL_DAY Type:**
 - Total voted: 3 people (김철수, 이영희, 박민수)
-- For date "2025-12-15":
+- For date "2025-12-15 (일)":
   * 가능: 김철수, 이영희, 박민수 (all 3 selected this date)
   * 불가능: - (none)
   * Format: `3명 / 3명 (만장일치)`
-- For date "2025-12-16":
+- For date "2025-12-16 (월)":
+  * 가능: 김철수, 박민수 (only 2 selected this date)
+  * 불가능: 이영희
+  * Format: `2명 / 3명`
+- **IMPORTANT**: For ALL_DAY type, don't show time ranges. Just show dates with day of week.
+  * ✅ CORRECT: "2025-12-15 (일)"
+  * ❌ WRONG: "2025-12-15 (일) 14:00 ~ 16:00"
+
+**CRITICAL - DAY OF WEEK (요일):**
+- The input data ALREADY contains the correct day of week
+- Example: "2025-12-09 (월)" means Monday December 9th, 2025
+- DO NOT recalculate or verify the day of week
+- Simply USE the provided day of week in your output
+- Copy the exact format: "YYYY-MM-DD (요일)"
   * 가능: 김철수, 박민수 (only 2 selected this date)
   * 불가능: 이영희
   * Format: `2명 / 3명`
