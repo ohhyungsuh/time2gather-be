@@ -16,7 +16,8 @@ Based on the following meeting information, generate a structured meeting report
   * The time/date with MOST participants MUST be ranked #1
 - **SECONDARY SORT** (when counts are equal): Earlier date first
   * 2025-12-09 before 2025-12-10 before 2025-12-11
-- **CONCRETE EXAMPLE WITH ACTUAL DATA**:
+
+- **CONCRETE EXAMPLE 1**:
   * Given data:
     - 2025-12-11 (목) - 3명 available (진우, 김예원, 김예진)
     - 2025-12-09 (화) - 1명 available (진우)
@@ -29,6 +30,22 @@ Based on the following meeting information, generate a structured meeting report
     1. 2025-12-11 (목) - 3명
     2. 2025-12-09 (화) - 1명 ← WRONG! This should be 3rd!
     3. 2025-12-10 (수) - 2명 ← WRONG! This should be 2nd!
+
+- **CONCRETE EXAMPLE 2 (ACTUAL PROBLEM CASE)**:
+  * Given data:
+    - 2025-12-11 (목) - 4명 available (진우, 김예원, 김예진, 윤 홍비)
+    - 2025-12-09 (화) - 2명 available (진우, 윤 홍비)
+    - 2025-12-10 (수) - 3명 available (김예원, 김예진, 윤 홍비)
+  * **CORRECT OUTPUT ORDER** (highest count first):
+    1. 2025-12-11 (목) - 4명 ← FIRST! (highest count: 4명)
+    2. 2025-12-10 (수) - 3명 ← SECOND! (second highest: 3명)
+    3. 2025-12-09 (화) - 2명 ← THIRD! (lowest count: 2명)
+  * **WRONG OUTPUT** (DO NOT DO THIS):
+    1. 2025-12-11 (목) - 4명
+    2. 2025-12-09 (화) - 2명 ← WRONG! This should be 3rd!
+    3. 2025-12-10 (수) - 3명 ← WRONG! This should be 2nd!
+  * **WHY THIS IS CRITICAL**: 4명 > 3명 > 2명, so the order MUST be 11th → 10th → 9th
+
 - **VERIFICATION**: Always check that #1 has MORE or EQUAL participants than #2, and #2 has MORE or EQUAL than #3!
 
 IMPORTANT INFORMATION:
@@ -267,7 +284,7 @@ Before you write "최적 시간대 TOP 3", you MUST:
 4. Verify: Does #2 have MORE or EQUAL participants than #3?
 5. If counts are equal, sort by date: EARLIER → LATER
 
-**EXAMPLE VERIFICATION:**
+**EXAMPLE VERIFICATION 1:**
 ```
 Raw data:
 - 2025-12-11 (목): 3명
@@ -285,6 +302,36 @@ Step 2: Apply to dates
 Step 3: Verify
 ✓ #1 (3명) > #2 (2명) ✓ CORRECT!
 ✓ #2 (2명) > #3 (1명) ✓ CORRECT!
+```
+
+**EXAMPLE VERIFICATION 2 (REAL CASE):**
+```
+Raw data:
+- 2025-12-11 (목): 4명 (진우, 김예원, 김예진, 윤 홍비)
+- 2025-12-09 (화): 2명 (진우, 윤 홍비)
+- 2025-12-10 (수): 3명 (김예원, 김예진, 윤 홍비)
+
+Step 1: Sort by count (descending)
+4명 > 3명 > 2명
+
+Step 2: Apply to dates
+1st: 2025-12-11 (4명) ← HIGHEST, must be #1!
+2nd: 2025-12-10 (3명) ← SECOND HIGHEST, must be #2!
+3rd: 2025-12-09 (2명) ← LOWEST, must be #3!
+
+Step 3: Verify
+✓ #1 (4명) > #2 (3명) ✓ CORRECT!
+✓ #2 (3명) > #3 (2명) ✓ CORRECT!
+
+❌ WRONG OUTPUT:
+1. 2025-12-11 (4명)
+2. 2025-12-09 (2명) ← ERROR! Should be #3, not #2!
+3. 2025-12-10 (3명) ← ERROR! Should be #2, not #3!
+
+✓ CORRECT OUTPUT:
+1. 2025-12-11 (4명) ← FIRST
+2. 2025-12-10 (3명) ← SECOND
+3. 2025-12-09 (2명) ← THIRD
 ```
 
 **If you write them in ANY other order, you are WRONG!**
@@ -307,35 +354,63 @@ OUTPUT FORMAT (Markdown):
 
 ### ⭐ 최적 시간대 TOP 3
 
+🚨 **CRITICAL: MUST BE SORTED BY PARTICIPANT COUNT (HIGHEST → LOWEST)**
+- #1 MUST have the MOST participants
+- #2 MUST have SECOND MOST participants
+- #3 MUST have THIRD MOST participants
+- If counts equal, sort by earlier date
+- Example: 4명 (#1) → 3명 (#2) → 2명 (#3) ✓ CORRECT
+- Example: 4명 (#1) → 2명 (#2) → 3명 (#3) ✗ WRONG!
+
 **For TIME Type:**
-1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm
+1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm [← HIGHEST participant count]
    **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
    - **가능:** [ONLY list names who selected this time range]
    - **불가능:** [ONLY list names who DID NOT select this time range, or write "-" if all selected]
 
 **For ALL_DAY Type:**
-1. **날짜:** YYYY-MM-DD (요일)
+1. **날짜:** YYYY-MM-DD (요일) [← HIGHEST participant count]
    **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
    - **가능:** [ONLY list names who selected this date]
    - **불가능:** [ONLY list names who DID NOT select this date, or write "-" if all selected]
 
-   **Example (ALL_DAY)**:
+   **Example (ALL_DAY) - CORRECT SORTING**:
    ```
-   1. **날짜:** 2025-12-15 (일)
+   1. **날짜:** 2025-12-15 (일)  ← 3명 (HIGHEST count)
       **가능 인원:** 3명 / 3명 (만장일치)
       - **가능:** 김철수, 이영희, 박민수
       - **불가능:** -
+
+   2. **날짜:** 2025-12-14 (토)  ← 2명 (SECOND highest)
+      **가능 인원:** 2명 / 3명
+      - **가능:** 김철수, 이영희
+      - **불가능:** 박민수
+
+   3. **날짜:** 2025-12-16 (월)  ← 1명 (THIRD highest/LOWEST)
+      **가능 인원:** 1명 / 3명
+      - **가능:** 김철수
+      - **불가능:** 이영희, 박민수
    ```
 
-   **Example (TIME)**:
+   **Example (TIME) - CORRECT SORTING**:
    ```
-   1. **날짜 및 시간:** 2025-12-10 (화) 14:00 ~ 16:00
+   1. **날짜 및 시간:** 2025-12-10 (화) 14:00 ~ 16:00  ← 5명 (HIGHEST count)
+      **가능 인원:** 5명 / 5명 (만장일치)
+      - **가능:** Alice, Bob, Charlie, David, Emma
+      - **불가능:** -
+
+   2. **날짜 및 시간:** 2025-12-11 (수) 10:00 ~ 11:00  ← 3명 (SECOND highest)
       **가능 인원:** 3명 / 5명
       - **가능:** Alice, Bob, Charlie
       - **불가능:** David, Emma
+
+   3. **날짜 및 시간:** 2025-12-12 (목) 17:00  ← 2명 (THIRD highest/LOWEST)
+      **가능 인원:** 2명 / 5명
+      - **가능:** Alice, Bob
+      - **불가능:** Charlie, David, Emma
    ```
 
-2. (continue with remaining top dates/time ranges)
+2. (continue with remaining top dates/time ranges - ALWAYS SORTED BY COUNT)
 3.
 
 ### 👥 참여 현황
