@@ -16,13 +16,20 @@ Based on the following meeting information, generate a structured meeting report
   * The time/date with MOST participants MUST be ranked #1
 - **SECONDARY SORT** (when counts are equal): Earlier date first
   * 2025-12-09 before 2025-12-10 before 2025-12-11
-- **Example**:
-  * If you have: 3명 (2025-12-11), 1명 (2025-12-09), 2명 (2025-12-10)
-  * Correct order:
-    1. 2025-12-11 (3명) ← highest count
-    2. 2025-12-10 (2명) ← second highest
-    3. 2025-12-09 (1명) ← lowest count
-  * NEVER show: 2025-12-11, 2025-12-09, 2025-12-10 ← WRONG!
+- **CONCRETE EXAMPLE WITH ACTUAL DATA**:
+  * Given data:
+    - 2025-12-11 (목) - 3명 available (진우, 김예원, 김예진)
+    - 2025-12-09 (화) - 1명 available (진우)
+    - 2025-12-10 (수) - 2명 available (김예원, 김예진)
+  * **CORRECT OUTPUT ORDER** (highest count first):
+    1. 2025-12-11 (목) - 3명 ← FIRST! (highest count)
+    2. 2025-12-10 (수) - 2명 ← SECOND! (second highest)
+    3. 2025-12-09 (화) - 1명 ← THIRD! (lowest count)
+  * **WRONG OUTPUT** (DO NOT DO THIS):
+    1. 2025-12-11 (목) - 3명
+    2. 2025-12-09 (화) - 1명 ← WRONG! This should be 3rd!
+    3. 2025-12-10 (수) - 2명 ← WRONG! This should be 2nd!
+- **VERIFICATION**: Always check that #1 has MORE or EQUAL participants than #2, and #2 has MORE or EQUAL than #3!
 
 IMPORTANT INFORMATION:
 - You will receive:
@@ -247,12 +254,42 @@ Participant Selections:
 **Example with Tie:**
 If Alice and Bob both selected 3 dates (highest count):
 → **시간 부자**: Alice, Bob
-  * 가능: 김철수, 박민수 (only 2 selected this date)
-  * 불가능: 이영희
-  * Format: `2명 / 3명`
-- **IMPORTANT**: For ALL_DAY type, don't show time ranges. Just show dates.
-  * ✅ CORRECT: "2025-12-15 (일)"
-  * ❌ WRONG: "2025-12-15 (일) 14:00 ~ 16:00"
+
+--------------------------------------------
+
+**🚨 FINAL CHECK BEFORE GENERATING OUTPUT:**
+
+**SORTING VERIFICATION - DO NOT SKIP THIS!**
+Before you write "최적 시간대 TOP 3", you MUST:
+1. List all dates/time ranges with their participant counts
+2. Sort them by count: HIGHEST → MIDDLE → LOWEST
+3. Verify: Does #1 have the MOST participants?
+4. Verify: Does #2 have MORE or EQUAL participants than #3?
+5. If counts are equal, sort by date: EARLIER → LATER
+
+**EXAMPLE VERIFICATION:**
+```
+Raw data:
+- 2025-12-11 (목): 3명
+- 2025-12-09 (화): 1명
+- 2025-12-10 (수): 2명
+
+Step 1: Sort by count (descending)
+3명 > 2명 > 1명
+
+Step 2: Apply to dates
+1st: 2025-12-11 (3명)
+2nd: 2025-12-10 (2명)
+3rd: 2025-12-09 (1명)
+
+Step 3: Verify
+✓ #1 (3명) > #2 (2명) ✓ CORRECT!
+✓ #2 (2명) > #3 (1명) ✓ CORRECT!
+```
+
+**If you write them in ANY other order, you are WRONG!**
+
+--------------------------------------------
 
 OUTPUT FORMAT (Markdown):
 - Produce clean, professional Markdown suitable for PDF-level rendering.
@@ -383,20 +420,24 @@ RULES:
 
      **CRITICAL EXAMPLES:**
      - If you have:
-       * 2025-12-11 (목) - 3명
-       * 2025-12-09 (화) - 1명
-       * 2025-12-10 (수) - 2명
-       → **CORRECT ORDER**:
-         1. 2025-12-11 (목) - 3명 (highest count)
-         2. 2025-12-10 (수) - 2명 (second highest)
-         3. 2025-12-09 (화) - 1명 (lowest count)
-       → **WRONG ORDER**: 2025-12-11, 2025-12-09, 2025-12-10
+       * 2025-12-11 (목) - 3명 (진우, 김예원, 김예진)
+       * 2025-12-09 (화) - 1명 (진우)
+       * 2025-12-10 (수) - 2명 (김예원, 김예진)
+       → **CORRECT ORDER** (sort by count first!):
+         1. 2025-12-11 (목) - 3명 (highest count) ← MUST BE FIRST!
+         2. 2025-12-10 (수) - 2명 (second highest) ← MUST BE SECOND!
+         3. 2025-12-09 (화) - 1명 (lowest count) ← MUST BE THIRD!
+       → **WRONG ORDER** (DO NOT OUTPUT THIS):
+         1. 2025-12-11 (목) - 3명
+         2. 2025-12-09 (화) - 1명 ← ERROR! Should be 3rd, not 2nd!
+         3. 2025-12-10 (수) - 2명 ← ERROR! Should be 2nd, not 3rd!
+       → **WHY IT'S WRONG**: You must sort by PARTICIPANT COUNT first, not by date order!
 
      - If you have (same count):
        * 2025-12-11 (목) - 3명
        * 2025-12-09 (화) - 3명
        * 2025-12-10 (수) - 3명
-       → **CORRECT ORDER**: 2025-12-09, 2025-12-10, 2025-12-11 (earlier dates first)
+       → **CORRECT ORDER**: 2025-12-09, 2025-12-10, 2025-12-11 (earlier dates first when tied)
 
    - **STEP 3: Select TOP 3**
      * Show the TOP 3 ranked dates in "최적 시간대 TOP 3"
