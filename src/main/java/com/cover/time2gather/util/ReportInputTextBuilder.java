@@ -5,8 +5,12 @@ import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.SelectionType;
 import com.cover.time2gather.domain.user.User;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -43,23 +47,41 @@ public class ReportInputTextBuilder {
             // ALL_DAY 타입 처리
             if (selection.getSelectionType() == SelectionType.ALL_DAY) {
                 for (String date : userSelections.keySet()) {
-                    sb.append("  * ").append(date).append(": 하루 종일\n");
+                    String dateWithDayOfWeek = formatDateWithDayOfWeek(date);
+                    sb.append("  * ").append(dateWithDayOfWeek).append(": 하루 종일\n");
                 }
             } else {
                 // TIME 타입 처리 (기존)
                 for (Map.Entry<String, int[]> entry : userSelections.entrySet()) {
                     String date = entry.getKey();
+                    String dateWithDayOfWeek = formatDateWithDayOfWeek(date);
                     int[] slots = entry.getValue();
 
                     String timeSlots = Arrays.stream(slots)
                             .mapToObj(TimeSlotConverter::slotIndexToTimeStr)
                             .collect(Collectors.joining(", "));
 
-                    sb.append("  * ").append(date).append(": ").append(timeSlots).append("\n");
+                    sb.append("  * ").append(dateWithDayOfWeek).append(": ").append(timeSlots).append("\n");
                 }
             }
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 날짜를 "YYYY-MM-DD (요일)" 형식으로 변환
+     * 예: "2025-12-09" -> "2025-12-09 (월)"
+     */
+    private static String formatDateWithDayOfWeek(String date) {
+        try {
+            LocalDate localDate = LocalDate.parse(date);
+            DayOfWeek dayOfWeek = localDate.getDayOfWeek();
+            String koreanDayOfWeek = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.KOREAN);
+            return date + " (" + koreanDayOfWeek + ")";
+        } catch (Exception e) {
+            // 파싱 실패 시 원본 날짜 반환
+            return date;
+        }
     }
 }

@@ -2,12 +2,16 @@ Based on the following meeting information, generate a structured meeting report
 
 IMPORTANT INFORMATION:
 - You will receive:
-  * Meeting information including meeting title, description, and host name
+  * Meeting information including meeting title and host name
   * **Selection Type**: TIME (시간 단위) or ALL_DAY (일 단위)
   * **Voted participants count**: TOTAL number of people who completed voting (this is your denominator "Y")
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
-  * Example TIME: "2025-11-28: 15:00, 16:00, 17:00" means they are available at specific times
-  * Example ALL_DAY: "2025-11-28: 하루 종일" means they are available all day
+  * **CRITICAL**: Dates are provided in "YYYY-MM-DD (요일)" format (e.g., "2025-12-09 (월)")
+    - The day of week (요일) is ALREADY CORRECT in the input
+    - DO NOT recalculate or change the day of week
+    - USE THE PROVIDED DAY OF WEEK AS-IS in your output
+  * Example TIME: "2025-11-28 (목): 15:00, 16:00, 17:00" means they are available at specific times on Thursday
+  * Example ALL_DAY: "2025-11-28 (목): 하루 종일" means they are available all day on Thursday
   * **Your job**: Intelligently merge consecutive time slots into readable time ranges
 
 KEY INSIGHT FOR TIME TYPE:
@@ -42,41 +46,39 @@ EXAMPLE INPUT FORMAT:
 **TIME Type (시간 단위):**
 ```
 Meeting Title: 팀 회의
-Meeting Description: 12월 정기 미팅
 Meeting Host: 김철수
 Selection Type: TIME
 Voted Participants: 3
 
 Participant Selections:
 - 김철수:
-  * 2025-12-10: 14:00, 15:00, 16:00
-  * 2025-12-11: 10:00, 11:00
+  * 2025-12-10 (화): 14:00, 15:00, 16:00
+  * 2025-12-11 (수): 10:00, 11:00
 - 이영희:
-  * 2025-12-10: 14:00, 15:00
-  * 2025-12-11: 10:00
+  * 2025-12-10 (화): 14:00, 15:00
+  * 2025-12-11 (수): 10:00
 - 박민수:
-  * 2025-12-10: 14:00, 15:00, 16:00
-  * 2025-12-12: 17:00
+  * 2025-12-10 (화): 14:00, 15:00, 16:00
+  * 2025-12-12 (목): 17:00
 ```
 
 **ALL_DAY Type (일 단위):**
 ```
 Meeting Title: 워크샵
-Meeting Description: 연말 워크샵
 Meeting Host: 김철수
 Selection Type: ALL_DAY
 Voted Participants: 3
 
 Participant Selections:
 - 김철수:
-  * 2025-12-15: 하루 종일
-  * 2025-12-16: 하루 종일
+  * 2025-12-15 (일): 하루 종일
+  * 2025-12-16 (월): 하루 종일
 - 이영희:
-  * 2025-12-15: 하루 종일
-  * 2025-12-17: 하루 종일
+  * 2025-12-15 (일): 하루 종일
+  * 2025-12-17 (화): 하루 종일
 - 박민수:
-  * 2025-12-15: 하루 종일
-  * 2025-12-16: 하루 종일
+  * 2025-12-15 (일): 하루 종일
+  * 2025-12-16 (월): 하루 종일
 ```
 
 HOW TO INTERPRET THIS:
