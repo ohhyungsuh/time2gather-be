@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -105,6 +106,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("숫자 형식이 올바르지 않습니다. 입력값을 확인해 주세요."));
+    }
+
+    /**
+     * NoResourceFoundException 처리 (정적 리소스 요청)
+     * favicon.ico, 존재하지 않는 정적 파일 요청 등을 조용히 처리
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+        // DEBUG 레벨로 로깅 (불필요한 에러 로그 방지)
+        log.debug("Static resource not found: {}", e.getResourcePath());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("요청한 리소스를 찾을 수 없습니다"));
     }
 
     /**

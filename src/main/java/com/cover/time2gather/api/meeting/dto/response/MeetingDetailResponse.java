@@ -101,7 +101,9 @@ public class MeetingDetailResponse {
 				int slot = slotEntry.getKey();
 				List<User> users = slotEntry.getValue();
 
-				String time = TimeSlot.fromIndex(slot, intervalMinutes).toTimeString();
+				// ALL_DAY 타입인 경우 (slotIndex = -1)
+				String time = (slot == -1) ? "종일" : TimeSlot.fromIndex(slot, intervalMinutes).toTimeString();
+
 				List<ParticipantInfo> participantInfos = users.stream()
 					.map(user -> new ParticipantInfo(
 						user.getId(),
@@ -124,6 +126,11 @@ public class MeetingDetailResponse {
 		MeetingDetailData.SummaryData summaryData,
 		int intervalMinutes
 	) {
+		// bestSlots가 비어있으면 빈 리스트 반환
+		if (summaryData.getBestSlots().isEmpty()) {
+			return new SummaryInfo(summaryData.getTotalParticipants(), new ArrayList<>());
+		}
+
 		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
 			.map(slot -> {
 				// ALL_DAY 타입인 경우 slotIndex가 -1이므로 "종일"로 표시
