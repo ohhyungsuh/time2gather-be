@@ -198,10 +198,13 @@ public class MeetingController {
             @PathVariable String meetingCode,
             @Valid @RequestBody UpsertUserSelectionRequest request
     ) {
+        // 모임 조회하여 intervalMinutes 가져오기
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
         meetingFacadeService.upsertUserSelections(
                 meetingCode,
                 authentication.getUserId(),
-                request.toSlotIndexes()
+                request.toSlotIndexes(meeting.getIntervalMinutes())
         );
 
         return ApiResponse.success(null);

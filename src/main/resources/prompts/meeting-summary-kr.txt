@@ -118,10 +118,9 @@ OUTPUT FORMAT (Markdown):
 
 ### 📝 모임 정보
 - **모임명:**
-- **모임 설명:**
 - **모임 방장:**
 
-### ⭐ 최적 시간대 TOP 5
+### ⭐ 최적 시간대 TOP 3
 
 **For TIME Type:**
 1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm
@@ -153,8 +152,6 @@ OUTPUT FORMAT (Markdown):
 
 2. (continue with remaining top dates/time ranges)
 3.
-4.
-5.
 
 ### 👥 참여 현황
 - **투표 완료:**
@@ -165,9 +162,10 @@ OUTPUT FORMAT (Markdown):
 ### 💡 추천 사항
 [여기에 추천 내용을 작성합니다]
 
-**예시 1 (TIME 타입 - 명확한 TOP 5가 있는 경우):**
+**예시 1 (TIME 타입 - 명확한 TOP 3가 있는 경우):**
 - 1순위: 2025-12-15 (일) 14:00 ~ 16:00에 모임을 진행하시는 것을 추천드립니다. (5명 가능)
 - 2순위: 2025-12-16 (월) 19:00 ~ 20:00에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
+- 3순위: 2025-12-17 (화) 15:00 ~ 17:00에 모임을 진행하시는 것을 추천드립니다. (3명 가능)
 
 **예시 2 (TIME 타입 - 시간이 널널한 경우):**
 대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!
@@ -178,6 +176,7 @@ OUTPUT FORMAT (Markdown):
 **예시 3 (ALL_DAY 타입 - 명확한 TOP 날짜):**
 - 1순위: 2025-12-15 (일)에 모임을 진행하시는 것을 추천드립니다. (5명 전원 가능, 만장일치!)
 - 2순위: 2025-12-16 (월)에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
+- 3순위: 2025-12-17 (화)에 모임을 진행하시는 것을 추천드립니다. (3명 가능)
 
 **예시 4 (ALL_DAY 타입 - 여러 날짜 가능):**
 대부분 참여자들이 날짜가 유연해요! 가능한 날짜를 정리해드릴게요!
@@ -202,8 +201,8 @@ RULES:
        2. Weekends (Sat/Sun) over weekdays
        3. Earlier in the day
 
-   - **STEP 3: Select TOP 5**
-     * Show the TOP 5 ranked time ranges in "최적 시간대 TOP 5"
+   - **STEP 3: Select TOP 3**
+     * Show the TOP 3 ranked time ranges in "최적 시간대 TOP 3"
      * Format: `YYYY-MM-DD (요일) HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD (요일) HH:mm` for single slots
 
 1-1. **DATE RANKING (FOR ALL_DAY TYPE ONLY)**:
@@ -217,12 +216,12 @@ RULES:
        1. Weekends (Sat/Sun) over weekdays
        2. Earlier dates
 
-   - **STEP 3: Select TOP 5**
-     * Show the TOP 5 ranked dates in "최적 시간대 TOP 5"
+   - **STEP 3: Select TOP 3**
+     * Show the TOP 3 ranked dates in "최적 시간대 TOP 3"
      * Format: `YYYY-MM-DD (요일)` (NO TIME INFORMATION!)
-     * **Section title remains "최적 시간대 TOP 5" but content is date-only**
+     * **Section title remains "최적 시간대 TOP 3" but content is date-only**
 
-2. **For each top 5 time range - CRITICAL**:
+2. **For each top 3 time range - CRITICAL**:
    - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format
 
    - **가능 인원**:
@@ -253,11 +252,11 @@ RULES:
    - **IF most participants are very flexible (many time ranges with high counts)**:
      * Output:
        > "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!"
-     * Group by date and show merged time ranges:
+     * Group by date and show merged time ranges (up to TOP 3 dates):
        - `YYYY-MM-DD (요일) HH:mm ~ HH:mm (X명 가능)`
 
-   - **Else (normal case, clear top 5)**:
-     * For each ranked time range, provide:
+   - **Else (normal case, clear top 3)**:
+     * For each ranked time range (TOP 3 only), provide:
        - `- N순위: YYYY-MM-DD (요일) HH:mm ~ HH:mm에 모임을 진행하시는 것을 추천드립니다. (X명 가능)`
      * Use natural language for time ranges:
        - 1-2 slots: list times (e.g., "14:00 또는 14:30")

@@ -23,7 +23,6 @@ public class ReportInputTextBuilder {
     public static String build(Meeting meeting, List<MeetingUserSelection> selections, Map<Long, User> userMap) {
         StringBuilder sb = new StringBuilder();
         sb.append(INPUT_MEETING_TITLE).append(meeting.getTitle()).append("\n");
-        sb.append(INPUT_MEETING_DESCRIPTION).append(meeting.getDescription()).append("\n");
 
         User host = userMap.get(meeting.getHostUserId());
         String hostName = host != null ? host.getUsername() : UNKNOWN_USER;

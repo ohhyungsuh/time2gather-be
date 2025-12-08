@@ -383,8 +383,9 @@ public class UpsertUserSelectionRequest {
 
     /**
      * API 형식 → 도메인 slotIndex 변환
+     * @param intervalMinutes 모임의 시간 간격 (분 단위)
      */
-    public Map<String, int[]> toSlotIndexes() {
+    public Map<String, int[]> toSlotIndexes(int intervalMinutes) {
         if (selections == null || selections.isEmpty()) {
             throw new IllegalArgumentException("선택 데이터가 없습니다");
         }
@@ -414,7 +415,8 @@ public class UpsertUserSelectionRequest {
                                 if (timeStr == null || timeStr.trim().isEmpty()) {
                                     throw new IllegalArgumentException("시간 값이 비어있습니다");
                                 }
-                                return TimeSlot.fromTimeString(timeStr.trim()).getSlotIndex();
+                                // 모임의 intervalMinutes를 사용하여 변환
+                                return TimeSlot.fromTimeString(timeStr.trim(), intervalMinutes).getSlotIndex();
                             })
                             .toArray();
                     result.put(date, slots);
