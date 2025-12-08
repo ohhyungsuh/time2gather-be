@@ -393,9 +393,21 @@ public class UpsertUserSelectionRequest {
         Map<String, int[]> result = new HashMap<>();
 
         for (DateSelection selection : selections) {
+            if (selection == null) {
+                continue;
+            }
+
             String date = selection.getDate();
             String type = selection.getType();
             List<String> times = selection.getTimes();
+
+            // 필수 필드 검증
+            if (date == null || date.trim().isEmpty()) {
+                throw new IllegalArgumentException("날짜는 필수입니다");
+            }
+            if (type == null || type.trim().isEmpty()) {
+                throw new IllegalArgumentException("타입은 필수입니다");
+            }
 
             if ("ALL_DAY".equalsIgnoreCase(type)) {
                 // ALL_DAY: 빈 배열

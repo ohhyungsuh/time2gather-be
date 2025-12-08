@@ -45,6 +45,7 @@ public class MeetingController {
             @AuthenticationPrincipal JwtAuthentication authentication,
             @Valid @RequestBody CreateMeetingRequest request
     ) {
+
         // Service 호출 (비즈니스 로직)
         Meeting meeting = meetingService.createMeeting(
                 authentication.getUserId(),
@@ -80,6 +81,7 @@ public class MeetingController {
             @AuthenticationPrincipal JwtAuthentication authentication,
             @PathVariable String meetingCode
     ) {
+
         // Service 호출
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
         Map<String, int[]> selections = selectionService.getUserSelections(meeting.getId(), authentication.getUserId());
@@ -198,13 +200,23 @@ public class MeetingController {
             @PathVariable String meetingCode,
             @Valid @RequestBody UpsertUserSelectionRequest request
     ) {
+
         // 모임 조회하여 intervalMinutes 가져오기
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
+        if (meeting == null) {
+            throw new IllegalArgumentException("모임을 찾을 수 없습니다: " + meetingCode);
+        }
+
+        Integer intervalMinutes = meeting.getIntervalMinutes();
+        if (intervalMinutes == null) {
+            throw new IllegalArgumentException("모임의 시간 간격 정보가 없습니다");
+        }
 
         meetingFacadeService.upsertUserSelections(
                 meetingCode,
                 authentication.getUserId(),
-                request.toSlotIndexes(meeting.getIntervalMinutes())
+                request.toSlotIndexes(intervalMinutes)
         );
 
         return ApiResponse.success(null);

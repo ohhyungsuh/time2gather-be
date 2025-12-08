@@ -51,7 +51,12 @@ public class SecurityConfig {
     // API 엔드포인트 상수
     private static final String AUTH_API_PATTERN = "/api/v1/auth/**";
     private static final String MEETING_AUTH_PATTERN = "/api/v1/meetings/*/auth/**";
-    private static final String MEETING_PUBLIC_PATTERN = "/api/v1/meetings/*";
+
+    // Public endpoints (인증 불필요)
+    private static final String MEETING_DETAIL_PATTERN = "/api/v1/meetings/*"; // GET /meetings/{code}
+    private static final String MEETING_REPORT_PATTERN = "/api/v1/meetings/*/report"; // GET /meetings/{code}/report
+    private static final String MEETING_EXPORT_PATTERN = "/api/v1/meetings/*/export"; // POST /meetings/{code}/export
+
     private static final String SWAGGER_UI_PATTERN = "/swagger-ui/**";
     private static final String API_DOCS_PATTERN = "/v3/api-docs/**";
     private static final String ACTUATOR_PATTERN = "/actuator/**";
@@ -75,10 +80,21 @@ public class SecurityConfig {
                         .requestMatchers(HEALTH_CHECK_PATTERN).permitAll() // Health check for AWS
                         .requestMatchers(ROOT_PATTERN).permitAll() // Root endpoint
                         .requestMatchers(ACTUATOR_PATTERN).permitAll() // Actuator endpoints
+                        .requestMatchers(SWAGGER_UI_PATTERN, API_DOCS_PATTERN).permitAll() // Swagger UI
+
+                        // Auth endpoints
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
                         .requestMatchers(MEETING_AUTH_PATTERN).permitAll() // Anonymous login
-                        .requestMatchers(MEETING_PUBLIC_PATTERN).permitAll() // Public meeting view
-                        .requestMatchers(SWAGGER_UI_PATTERN, API_DOCS_PATTERN).permitAll() // Swagger UI
+
+                        // Public meeting endpoints (인증 불필요)
+                        .requestMatchers("GET", MEETING_DETAIL_PATTERN).permitAll() // GET /meetings/{code}
+                        .requestMatchers("GET", MEETING_REPORT_PATTERN).permitAll() // GET /meetings/{code}/report
+                        .requestMatchers("POST", MEETING_EXPORT_PATTERN).permitAll() // POST /meetings/{code}/export
+
+                        // All other requests require authentication (인증 필요)
+                        // - POST /meetings (모임 생성)
+                        // - GET /meetings/{code}/selections (내 선택 조회)
+                        // - PUT /meetings/{code}/selections (시간 선택/수정)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
