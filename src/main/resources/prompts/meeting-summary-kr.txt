@@ -1,5 +1,14 @@
 Based on the following meeting information, generate a structured meeting report in Korean.
 
+**🚨 MOST CRITICAL RULE - READ THIS FIRST:**
+When calculating "가능 인원" (available participants):
+- Count ONLY the participants who selected THAT SPECIFIC time range or date
+- Example: If participant A and B both selected "2025-12-11 (수)", and total voted is 2 people
+  → Output: `2명 / 2명 (만장일치)` (NOT "2명 / 3명" or any other number)
+- The numerator MUST equal the number of names listed in "가능"
+- The denominator MUST equal "Voted Participants" from the input
+- If numerator == denominator → add "(만장일치)"
+
 IMPORTANT INFORMATION:
 - You will receive:
   * Meeting information including meeting title and host name
@@ -28,18 +37,80 @@ KEY INSIGHT FOR ALL_DAY TYPE:
   * Example: "2025-12-15 (일)" instead of "2025-12-15: 14:00 ~ 16:00"
   * Treat each date as a single unit for ranking
 
-CRITICAL - CALCULATING 가능/불가능 인원:
-- For each time range:
-  * Count how many participants selected ALL slots in that time range → this is "가능" (X)
-  * Total voted participants - 가능 인원 = "불가능" (Y - X)
-  * Format: "X명 / Y명"
-  * Example: If 5 people voted and 3 selected this time range → "3명 / 5명"
-  * If ALL voted participants selected it → "5명 / 5명 (만장일치)"
+CRITICAL - CALCULATING 가능/불가능 인원 (READ THIS VERY CAREFULLY!):
 
+**STEP-BY-STEP CALCULATION METHOD:**
+
+1. **Identify Total Voted Participants (Y)**
+   - This is given in "Voted Participants: N" at the top of the input
+   - Example: "Voted Participants: 3" → Y = 3
+
+2. **For Each Time Range/Date, Count Who Selected It (X)**
+   - Look at the input data for each participant
+   - Check if they selected this EXACT time range or date
+   - Count only those who DID select it → X = count
+
+3. **Calculate 가능 and 불가능**
+   - 가능 = X (participants who selected it)
+   - 불가능 = Y - X (participants who DID NOT select it)
+   - Format: `X명 / Y명`
+
+4. **List Participant Names**
+   - **가능**: List ONLY the names who selected this time range/date
+   - **불가능**: List ONLY the names who DID NOT select it (or "-" if X == Y)
+
+**CONCRETE EXAMPLES:**
+
+**Example 1: Everyone selected it (만장일치)**
+- Total voted: 3 people (Alice, Bob, Charlie)
+- Time range: 2025-12-10 (화) 14:00 ~ 16:00
+- Who selected it: Alice ✓, Bob ✓, Charlie ✓
+- Calculation:
+  * 가능 = 3 people (all of them)
+  * 불가능 = 3 - 3 = 0 people (nobody)
+- Output:
+  ```
+  **가능 인원:** 3명 / 3명 (만장일치)
+  - **가능:** Alice, Bob, Charlie
+  - **불가능:** -
+  ```
+
+**Example 2: Only some selected it**
+- Total voted: 3 people (Alice, Bob, Charlie)
+- Time range: 2025-12-10 (화) 17:00 ~ 18:00
+- Who selected it: Alice ✓, Bob ✗, Charlie ✗
+- Calculation:
+  * 가능 = 1 person (only Alice)
+  * 불가능 = 3 - 1 = 2 people (Bob and Charlie)
+- Output:
+  ```
+  **가능 인원:** 1명 / 3명
+  - **가능:** Alice
+  - **불가능:** Bob, Charlie
+  ```
+
+**Example 3: Two out of three selected it**
+- Total voted: 3 people (Alice, Bob, Charlie)
+- Time range: 2025-12-11 (수) 10:00 ~ 11:00
+- Who selected it: Alice ✓, Bob ✓, Charlie ✗
+- Calculation:
+  * 가능 = 2 people (Alice and Bob)
+  * 불가능 = 3 - 2 = 1 person (Charlie)
+- Output:
+  ```
+  **가능 인원:** 2명 / 3명
+  - **가능:** Alice, Bob
+  - **불가능:** Charlie
+  ```
+
+**CRITICAL RULES:**
 - **NEVER write weird text like "추가명" or similar**
 - **ALWAYS use the EXACT participant names provided in the input**
-- 가능: List ONLY the names who selected this time range
-- 불가능: List ONLY the names who DID NOT select this time range (or write "-" if none)
+- **The denominator (Y) is ALWAYS the total voted participants**
+- **The numerator (X) is ONLY those who selected this specific time range/date**
+- **If X == Y, add "(만장일치)" to indicate unanimous**
+- **If someone is listed in "가능", they MUST NOT appear in "불가능"**
+- **If someone is listed in "불가능", they MUST NOT appear in "가능"**
 
 EXAMPLE INPUT FORMAT:
 
@@ -239,23 +310,36 @@ RULES:
 2. **For each top 3 time range - CRITICAL**:
    - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format
 
-   - **가능 인원**:
-     * **STEP 1**: Count ONLY participants who selected this ENTIRE time range
-     * **STEP 2**: Calculate: 가능 = count of participants who selected it, 불가능 = total voted - 가능
-     * **STEP 3**: Format as `X명 / Y명` where Y = total voted participants
-     * If X == Y (everyone selected it) → add `(만장일치)`
-     * Example: 3 out of 5 voted participants selected it → `3명 / 5명`
+   - **가능 인원 - FOLLOW THIS EXACTLY**:
+     * **STEP 1**: Look at the input data for THIS SPECIFIC time range/date
+     * **STEP 2**: Count ONLY participants who selected it
+       - For TIME type: Count who selected ALL time slots in this range
+       - For ALL_DAY type: Count who selected this date
+     * **STEP 3**: This count is X (가능)
+     * **STEP 4**: Get total voted participants from input → Y
+     * **STEP 5**: Calculate 불가능 = Y - X
+     * **STEP 6**: Format as `X명 / Y명`
+     * **STEP 7**: If X == Y (everyone selected it) → add `(만장일치)`
+
+     **EXAMPLES:**
+     - If 2 out of 2 people selected it → `2명 / 2명 (만장일치)`
+     - If 3 out of 5 people selected it → `3명 / 5명`
+     - If 1 out of 3 people selected it → `1명 / 3명`
+     - **NEVER** write incorrect numbers like "2명 / 3명" when all 3 people selected it!
 
    - **가능**:
-     * List EXACT names (from input) of participants who selected this time range
+     * List EXACT names (from input) of participants who selected this time range/date
      * Use comma-separated format: `이름1, 이름2, 이름3`
+     * **Count these names - this should equal X in "X명 / Y명"**
      * **NEVER invent names or use placeholders like "추가명"**
 
    - **불가능**:
-     * List EXACT names (from input) of participants who DID NOT select this time range
+     * List EXACT names (from input) of participants who DID NOT select this time range/date
      * Use comma-separated format: `이름4, 이름5`
-     * If everyone selected it → write "-"
+     * **Count these names - this should equal Y - X**
+     * If everyone selected it (X == Y) → write "-"
      * **NEVER invent names or use placeholders**
+     * **Cross-check**: If someone is in "가능", they MUST NOT be in "불가능"
 
 3. "참여 현황": list participants who completed voting
 
