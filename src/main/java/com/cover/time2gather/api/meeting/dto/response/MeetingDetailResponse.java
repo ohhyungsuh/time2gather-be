@@ -125,12 +125,19 @@ public class MeetingDetailResponse {
 		int intervalMinutes
 	) {
 		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
-			.map(slot -> new BestSlot(
-				slot.getDate(),
-				TimeSlot.fromIndex(slot.getSlotIndex(), intervalMinutes).toTimeString(),
-				slot.getCount(),
-				slot.getPercentage()
-			))
+			.map(slot -> {
+				// ALL_DAY 타입인 경우 slotIndex가 -1이므로 "종일"로 표시
+				String timeString = slot.getSlotIndex() == -1
+					? "종일"
+					: TimeSlot.fromIndex(slot.getSlotIndex(), intervalMinutes).toTimeString();
+
+				return new BestSlot(
+					slot.getDate(),
+					timeString,
+					slot.getCount(),
+					slot.getPercentage()
+				);
+			})
 			.collect(Collectors.toList());
 
 		return new SummaryInfo(summaryData.getTotalParticipants(), bestSlots);
