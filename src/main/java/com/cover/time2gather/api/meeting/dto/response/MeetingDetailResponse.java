@@ -145,16 +145,24 @@ public class MeetingDetailResponse {
 
 	/**
 	 * slotIndex → API "HH:mm" 변환
+	 * ALL_DAY 타입의 경우 빈 배열로 반환
 	 */
 	private static Map<String, String[]> convertSlotIndexesToTimeStrings(Map<String, int[]> slotIndexes, int intervalMinutes) {
 		Map<String, String[]> result = new HashMap<>();
 		for (Map.Entry<String, int[]> entry : slotIndexes.entrySet()) {
 			String date = entry.getKey();
 			int[] slots = entry.getValue();
-			String[] times = Arrays.stream(slots)
-				.mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex, intervalMinutes).toTimeString())
-				.toArray(String[]::new);
-			result.put(date, times);
+
+			// ALL_DAY 타입(빈 배열)인 경우 빈 배열 반환
+			if (slots.length == 0) {
+				result.put(date, new String[0]);
+			} else {
+				// TIME 타입인 경우 시간 문자열로 변환
+				String[] times = Arrays.stream(slots)
+					.mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex, intervalMinutes).toTimeString())
+					.toArray(String[]::new);
+				result.put(date, times);
+			}
 		}
 		return result;
 	}
