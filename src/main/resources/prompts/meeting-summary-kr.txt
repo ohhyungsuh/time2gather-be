@@ -2,6 +2,20 @@ Based on the following meeting information, generate a structured meeting report
 
 **🚨 MOST CRITICAL RULES - READ THIS FIRST:**
 
+**RULE 0: USE PRE-CALCULATED STATISTICS - 🔥 MOST IMPORTANT**
+- The input will include a "📊 Date Statistics" section with PRE-CALCULATED numbers
+- **DO NOT RECALCULATE ANYTHING!**
+- **COPY the exact numbers and names from the statistics section**
+- This ensures 100% accuracy - no calculation errors possible!
+- Example from statistics:
+  ```
+  - 2025-12-10 (수): 3명 / 4명
+    * 가능: 김예원, 김예진, 윤 홍비
+    * 불가능: 진우
+  ```
+  → You MUST use: "3명 / 4명" with those exact names
+  → DO NOT calculate yourself and write "2명 / 4명"
+
 **RULE 1: Calculating "가능 인원" (available participants)**
 - Count ONLY the participants who selected THAT SPECIFIC time range or date
 - Example: If participant A and B both selected "2025-12-11 (수)", and total voted is 2 people
@@ -153,31 +167,26 @@ CRITICAL - CALCULATING 가능/불가능 인원 (READ THIS VERY CAREFULLY!):
 
 EXAMPLE INPUT FORMAT:
 
-**TIME Type (시간 단위):**
-```
-Meeting Title: 팀 회의
-Meeting Host: 김철수
-Selection Type: TIME
-Voted Participants: 3
-
-Participant Selections:
-- 김철수:
-  * 2025-12-10 (화): 14:00, 15:00, 16:00
-  * 2025-12-11 (수): 10:00, 11:00
-- 이영희:
-  * 2025-12-10 (화): 14:00, 15:00
-  * 2025-12-11 (수): 10:00
-- 박민수:
-  * 2025-12-10 (화): 14:00, 15:00, 16:00
-  * 2025-12-12 (목): 17:00
-```
-
 **ALL_DAY Type (일 단위):**
 ```
 Meeting Title: 워크샵
 Meeting Host: 김철수
 Selection Type: ALL_DAY
 Voted Participants: 3
+
+📊 Date Statistics (PRE-CALCULATED - USE THESE EXACT NUMBERS):
+- 2025-12-15 (일): 3명 / 3명 (만장일치)
+  * 가능: 김철수, 이영희, 박민수
+  * 불가능: -
+- 2025-12-16 (월): 2명 / 3명
+  * 가능: 김철수, 박민수
+  * 불가능: 이영희
+- 2025-12-17 (화): 1명 / 3명
+  * 가능: 이영희
+  * 불가능: 김철수, 박민수
+
+🚨 CRITICAL: Use the EXACT numbers and names from above statistics!
+DO NOT recalculate! Just copy the data to your output.
 
 Participant Selections:
 - 김철수:
@@ -190,6 +199,9 @@ Participant Selections:
   * 2025-12-15 (일): 하루 종일
   * 2025-12-16 (월): 하루 종일
 ```
+
+**KEY POINT**: The statistics section is ALREADY SORTED by participant count (highest first).
+You can directly use it for your TOP 3!
 
 HOW TO INTERPRET THIS:
 

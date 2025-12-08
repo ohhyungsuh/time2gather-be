@@ -8,10 +8,7 @@ import com.cover.time2gather.domain.user.User;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.cover.time2gather.domain.meeting.constants.ReportConstants.*;
@@ -35,6 +32,10 @@ public class ReportInputTextBuilder {
         // 선택 타입 정보 추가
         sb.append("Selection Type: ").append(meeting.getSelectionType()).append("\n");
         sb.append(INPUT_VOTED_PARTICIPANTS).append(selections.size()).append("\n\n");
+
+        // 날짜별 집계 데이터 추가
+        sb.append(buildDateStatistics(selections, userMap, meeting.getSelectionType()));
+
         sb.append(INPUT_PARTICIPANT_SELECTIONS);
 
         for (MeetingUserSelection selection : selections) {
@@ -65,6 +66,83 @@ public class ReportInputTextBuilder {
                 }
             }
         }
+
+        return sb.toString();
+    }
+
+    /**
+     * 날짜별 참여자 집계 정보 생성
+     * GPT가 계산할 필요 없이 바로 사용할 수 있도록 정확한 통계 제공
+     */
+    private static String buildDateStatistics(
+            List<MeetingUserSelection> selections,
+            Map<Long, User> userMap,
+            SelectionType selectionType
+    ) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("📊 Date Statistics (PRE-CALCULATED - USE THESE EXACT NUMBERS):\n");
+
+        // 날짜별 참여자 집계
+        Map<String, Set<String>> dateParticipants = new HashMap<>();
+
+        for (MeetingUserSelection selection : selections) {
+            User user = userMap.get(selection.getUserId());
+            String username = user != null ? user.getUsername() : UNKNOWN_USER;
+
+            Map<String, int[]> userSelections = selection.getSelections();
+            for (String date : userSelections.keySet()) {
+                dateParticipants.putIfAbsent(date, new HashSet<>());
+                dateParticipants.get(date).add(username);
+            }
+        }
+
+        // 날짜별로 정렬 (가능 인원 내림차순, 같으면 날짜 오름차순)
+        List<Map.Entry<String, Set<String>>> sortedDates = dateParticipants.entrySet().stream()
+                .sorted((e1, e2) -> {
+                    int countCompare = Integer.compare(e2.getValue().size(), e1.getValue().size());
+                    if (countCompare != 0) {
+                        return countCompare;
+                    }
+                    return e1.getKey().compareTo(e2.getKey());
+                })
+                .collect(Collectors.toList());
+
+        // 통계 정보 출력
+        int totalVoted = selections.size();
+        for (Map.Entry<String, Set<String>> entry : sortedDates) {
+            String date = entry.getKey();
+            Set<String> participants = entry.getValue();
+            int availableCount = participants.size();
+            int notAvailableCount = totalVoted - availableCount;
+
+            String dateWithDayOfWeek = formatDateWithDayOfWeek(date);
+            sb.append("- ").append(dateWithDayOfWeek).append(": ");
+            sb.append(availableCount).append("명 / ").append(totalVoted).append("명");
+            if (availableCount == totalVoted) {
+                sb.append(" (만장일치)");
+            }
+            sb.append("\n");
+            sb.append("  * 가능: ").append(String.join(", ", participants)).append("\n");
+
+            // 불가능한 참여자 찾기
+            Set<String> notAvailable = new HashSet<>();
+            for (MeetingUserSelection selection : selections) {
+                User user = userMap.get(selection.getUserId());
+                String username = user != null ? user.getUsername() : UNKNOWN_USER;
+                if (!participants.contains(username)) {
+                    notAvailable.add(username);
+                }
+            }
+
+            if (notAvailable.isEmpty()) {
+                sb.append("  * 불가능: -\n");
+            } else {
+                sb.append("  * 불가능: ").append(String.join(", ", notAvailable)).append("\n");
+            }
+        }
+
+        sb.append("\n🚨 CRITICAL: Use the EXACT numbers and names from above statistics!\n");
+        sb.append("DO NOT recalculate! Just copy the data to your output.\n\n");
 
         return sb.toString();
     }
