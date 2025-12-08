@@ -1,13 +1,28 @@
 Based on the following meeting information, generate a structured meeting report in Korean.
 
-**🚨 MOST CRITICAL RULE - READ THIS FIRST:**
-When calculating "가능 인원" (available participants):
+**🚨 MOST CRITICAL RULES - READ THIS FIRST:**
+
+**RULE 1: Calculating "가능 인원" (available participants)**
 - Count ONLY the participants who selected THAT SPECIFIC time range or date
 - Example: If participant A and B both selected "2025-12-11 (수)", and total voted is 2 people
   → Output: `2명 / 2명 (만장일치)` (NOT "2명 / 3명" or any other number)
 - The numerator MUST equal the number of names listed in "가능"
 - The denominator MUST equal "Voted Participants" from the input
 - If numerator == denominator → add "(만장일치)"
+
+**RULE 2: Sorting TOP 3 - 🚨 CRITICAL**
+- **PRIMARY SORT**: By participant count (DESCENDING - highest count first!)
+  * 5명 > 4명 > 3명 > 2명 > 1명
+  * The time/date with MOST participants MUST be ranked #1
+- **SECONDARY SORT** (when counts are equal): Earlier date first
+  * 2025-12-09 before 2025-12-10 before 2025-12-11
+- **Example**:
+  * If you have: 3명 (2025-12-11), 1명 (2025-12-09), 2명 (2025-12-10)
+  * Correct order:
+    1. 2025-12-11 (3명) ← highest count
+    2. 2025-12-10 (2명) ← second highest
+    3. 2025-12-09 (1명) ← lowest count
+  * NEVER show: 2025-12-11, 2025-12-09, 2025-12-10 ← WRONG!
 
 IMPORTANT INFORMATION:
 - You will receive:
@@ -185,6 +200,53 @@ HOW TO INTERPRET THIS:
 - DO NOT recalculate or verify the day of week
 - Simply USE the provided day of week in your output
 - Copy the exact format: "YYYY-MM-DD (요일)"
+
+**CALCULATING "시간 부자" (Time-Rich Person):**
+This is the participant who selected the MOST dates/time ranges.
+
+**Example for ALL_DAY Type:**
+```
+Participant Selections:
+- 김철수:
+  * 2025-12-15 (일): 하루 종일
+  * 2025-12-16 (월): 하루 종일
+  * 2025-12-17 (화): 하루 종일
+  (Total: 3 dates)
+
+- 이영희:
+  * 2025-12-15 (일): 하루 종일
+  (Total: 1 date)
+
+- 박민수:
+  * 2025-12-15 (일): 하루 종일
+  * 2025-12-16 (월): 하루 종일
+  (Total: 2 dates)
+```
+→ **시간 부자**: 김철수 (selected 3 dates, most among all participants)
+
+**Example for TIME Type:**
+```
+Participant Selections:
+- Alice:
+  * 2025-12-10 (화): 14:00, 15:00, 16:00
+  * 2025-12-11 (수): 10:00, 11:00
+  * 2025-12-12 (목): 17:00
+  (Total: 3 dates)
+
+- Bob:
+  * 2025-12-10 (화): 14:00, 15:00
+  (Total: 1 date)
+
+- Charlie:
+  * 2025-12-10 (화): 14:00, 15:00, 16:00
+  * 2025-12-12 (목): 17:00
+  (Total: 2 dates)
+```
+→ **시간 부자**: Alice (selected 3 dates, most among all participants)
+
+**Example with Tie:**
+If Alice and Bob both selected 3 dates (highest count):
+→ **시간 부자**: Alice, Bob
   * 가능: 김철수, 박민수 (only 2 selected this date)
   * 불가능: 이영희
   * Format: `2명 / 3명`
@@ -243,7 +305,11 @@ OUTPUT FORMAT (Markdown):
 - **투표 완료:**
 
 ### 🕒 시간 부자
--
+[가장 많은 날짜/시간대를 선택한 참여자의 이름]
+- Show ONLY the name(s) of participant(s) who selected the MOST dates
+- Count dates, not time slots
+- Example: "김철수" or "김철수, 이영희" (if tied)
+- DO NOT show time ranges or availability counts here
 
 ### 💡 추천 사항
 [여기에 추천 내용을 작성합니다]
@@ -280,32 +346,63 @@ RULES:
      * For each date, merge consecutive time slots with the SAME participants into time ranges
      * Example: If 14:00, 15:00, 16:00 have the same 3 people available → "14:00 ~ 16:00 (3명)"
 
-   - **STEP 2: Rank Time Ranges**
-     * Rank these grouped time ranges by participant count (descending)
-     * If tied, prioritize:
-       1. Longer continuous time blocks (more consecutive slots)
+   - **STEP 2: Rank Time Ranges - 🚨 CRITICAL SORTING RULES**
+     * **PRIMARY**: Sort by participant count (DESCENDING - highest first!)
+       - Example: 5명 > 4명 > 3명 > 2명 > 1명
+       - The time range with MOST participants MUST be #1
+     * **SECONDARY** (if participant counts are equal):
+       1. Earlier date first (e.g., 2025-12-09 before 2025-12-10)
        2. Weekends (Sat/Sun) over weekdays
-       3. Earlier in the day
+       3. Longer continuous time blocks (more consecutive slots)
+       4. Earlier time in the day
+
+     **CRITICAL EXAMPLES:**
+     - If you have: 3명 available (date A), 1명 available (date B), 2명 available (date C)
+       → Correct order: date A (3명), date C (2명), date B (1명)
+     - If you have: 3명 (2025-12-11), 3명 (2025-12-09), 1명 (2025-12-10)
+       → Correct order: 2025-12-09 (3명), 2025-12-11 (3명), 2025-12-10 (1명)
+       → Because when counts are equal, earlier date comes first
 
    - **STEP 3: Select TOP 3**
      * Show the TOP 3 ranked time ranges in "최적 시간대 TOP 3"
      * Format: `YYYY-MM-DD (요일) HH:mm ~ HH:mm` for ranges, or `YYYY-MM-DD (요일) HH:mm` for single slots
+     * **VERIFY**: #1 should have the HIGHEST participant count!
 
 1-1. **DATE RANKING (FOR ALL_DAY TYPE ONLY)**:
    - **STEP 1: Count Participants per Date**
      * For each date, count how many participants selected it
-     * Example: "2025-12-15" selected by 3 people → rank 1
+     * Example: "2025-12-15 (일)" selected by 3 people → count = 3
 
-   - **STEP 2: Rank Dates**
-     * Rank dates by participant count (descending)
-     * If tied, prioritize:
-       1. Weekends (Sat/Sun) over weekdays
-       2. Earlier dates
+   - **STEP 2: Rank Dates - 🚨 CRITICAL SORTING RULES**
+     * **PRIMARY**: Sort by participant count (DESCENDING - highest first!)
+       - Example: 5명 > 4명 > 3명 > 2명 > 1명
+       - The date with MOST participants MUST be #1
+     * **SECONDARY** (if participant counts are equal):
+       1. Earlier date first (e.g., 2025-12-09 before 2025-12-10)
+       2. Weekends (Sat/Sun) over weekdays
+
+     **CRITICAL EXAMPLES:**
+     - If you have:
+       * 2025-12-11 (목) - 3명
+       * 2025-12-09 (화) - 1명
+       * 2025-12-10 (수) - 2명
+       → **CORRECT ORDER**:
+         1. 2025-12-11 (목) - 3명 (highest count)
+         2. 2025-12-10 (수) - 2명 (second highest)
+         3. 2025-12-09 (화) - 1명 (lowest count)
+       → **WRONG ORDER**: 2025-12-11, 2025-12-09, 2025-12-10
+
+     - If you have (same count):
+       * 2025-12-11 (목) - 3명
+       * 2025-12-09 (화) - 3명
+       * 2025-12-10 (수) - 3명
+       → **CORRECT ORDER**: 2025-12-09, 2025-12-10, 2025-12-11 (earlier dates first)
 
    - **STEP 3: Select TOP 3**
      * Show the TOP 3 ranked dates in "최적 시간대 TOP 3"
      * Format: `YYYY-MM-DD (요일)` (NO TIME INFORMATION!)
      * **Section title remains "최적 시간대 TOP 3" but content is date-only**
+     * **VERIFY**: #1 should have the HIGHEST participant count!
 
 2. **For each top 3 time range - CRITICAL**:
    - **날짜 및 시간**: Show as `YYYY-MM-DD (요일) HH:mm ~ HH:mm` format
@@ -345,7 +442,21 @@ RULES:
 
 4. If any info missing → write "정보 없음"
 
-5. "시간 부자": participants available during the #1 ranked time range
+5. **"시간 부자" - CRITICAL DEFINITION**:
+   - **Definition**: The participant who selected the MOST dates/time ranges
+   - **How to calculate**:
+     * **For TIME type**: Count how many different dates each participant selected
+     * **For ALL_DAY type**: Count how many different dates each participant selected
+     * The participant with the highest count is the "시간 부자"
+   - **Output**: Just the name of that ONE participant
+     * Example: If Alice selected 5 dates, Bob selected 3 dates, Charlie selected 2 dates
+       → Output: `Alice`
+     * If there's a tie, list all tied participants
+       → Example: `Alice, Bob`
+   - **DO NOT show**:
+     * ❌ WRONG: "가능한 시간대: 2025-12-11 (목) 하루 종일에 3명 가능"
+     * ❌ WRONG: "participants available during the #1 ranked time range"
+     * ✅ CORRECT: Just the name(s): "Alice" or "Alice, Bob"
 
 6. **CRITICAL: 추천 사항 RULES**
    - **IF most participants are very flexible (many time ranges with high counts)**:
