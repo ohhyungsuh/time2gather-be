@@ -353,101 +353,72 @@ Step 3: Verify
 OUTPUT FORMAT (Markdown):
 - Produce clean, professional Markdown suitable for PDF-level rendering.
 - DO NOT include "[MEETING_REPORT]" or any wrapper tags.
-- Use headings (##), bold, lists, and clear spacing.
+- Use headings (##, ###), bold, horizontal rules (---), and clear spacing.
+- No emojis.
 - No additional commentary outside the report.
 
 --------------------------------------------
 
-## 📅 투표 결과 요약
+# 투표 결과 요약
 
-### 📝 모임 정보
-- **모임명:**
-- **모임 방장:**
+---
 
-### ⭐ 최적 시간대 TOP 3
+## 모임 정보
 
-🚨 **CRITICAL: MUST BE SORTED BY PARTICIPANT COUNT (HIGHEST → LOWEST)**
-- #1 MUST have the MOST participants
-- #2 MUST have SECOND MOST participants
-- #3 MUST have THIRD MOST participants
-- If counts equal, sort by earlier date
-- Example: 4명 (#1) → 3명 (#2) → 2명 (#3) ✓ CORRECT
-- Example: 4명 (#1) → 2명 (#2) → 3명 (#3) ✗ WRONG!
+**모임명:** [모임 제목]
+**모임 방장:** [방장 이름]
 
-**For TIME Type:**
-1. **날짜 및 시간:** YYYY-MM-DD (요일) HH:mm ~ HH:mm [← HIGHEST participant count]
-   **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
-   - **가능:** [ONLY list names who selected this time range]
-   - **불가능:** [ONLY list names who DID NOT select this time range, or write "-" if all selected]
+---
 
-**For ALL_DAY Type:**
-1. **날짜:** YYYY-MM-DD (요일) [← HIGHEST participant count]
-   **가능 인원:** X명 / Y명 (or X명 / Y명 (만장일치) if X == Y)
-   - **가능:** [ONLY list names who selected this date]
-   - **불가능:** [ONLY list names who DID NOT select this date, or write "-" if all selected]
+## 최적 시간대 TOP 3
 
-   **Example (ALL_DAY) - CORRECT SORTING**:
-   ```
-   1. **날짜:** 2025-12-15 (일)  ← 3명 (HIGHEST count)
-      **가능 인원:** 3명 / 3명 (만장일치)
-      - **가능:** 김철수, 이영희, 박민수
-      - **불가능:** -
+**정렬 규칙:** 가능 인원이 많은 순서대로 정렬 (#1 = 가장 많음)
 
-   2. **날짜:** 2025-12-14 (토)  ← 2명 (SECOND highest)
-      **가능 인원:** 2명 / 3명
-      - **가능:** 김철수, 이영희
-      - **불가능:** 박민수
+### 1순위
+**날짜:** YYYY-MM-DD (요일)
+**가능 인원:** X명 / Y명 (만장일치 if X == Y)
 
-   3. **날짜:** 2025-12-16 (월)  ← 1명 (THIRD highest/LOWEST)
-      **가능 인원:** 1명 / 3명
-      - **가능:** 김철수
-      - **불가능:** 이영희, 박민수
-   ```
+- **가능:** [이름1, 이름2, ...]
+- **불가능:** [이름1, 이름2, ...] (or "-" if none)
 
-   **Example (TIME) - CORRECT SORTING**:
-   ```
-   1. **날짜 및 시간:** 2025-12-10 (화) 14:00 ~ 16:00  ← 5명 (HIGHEST count)
-      **가능 인원:** 5명 / 5명 (만장일치)
-      - **가능:** Alice, Bob, Charlie, David, Emma
-      - **불가능:** -
+### 2순위
+**날짜:** YYYY-MM-DD (요일)
+**가능 인원:** X명 / Y명
 
-   2. **날짜 및 시간:** 2025-12-11 (수) 10:00 ~ 11:00  ← 3명 (SECOND highest)
-      **가능 인원:** 3명 / 5명
-      - **가능:** Alice, Bob, Charlie
-      - **불가능:** David, Emma
+- **가능:** [이름1, 이름2, ...]
+- **불가능:** [이름1, 이름2, ...]
 
-   3. **날짜 및 시간:** 2025-12-12 (목) 17:00  ← 2명 (THIRD highest/LOWEST)
-      **가능 인원:** 2명 / 5명
-      - **가능:** Alice, Bob
-      - **불가능:** Charlie, David, Emma
-   ```
+### 3순위
+**날짜:** YYYY-MM-DD (요일)
+**가능 인원:** X명 / Y명
 
-2. (continue with remaining top dates/time ranges - ALWAYS SORTED BY COUNT)
-3.
+- **가능:** [이름1, 이름2, ...]
+- **불가능:** [이름1, 이름2, ...]
 
-### 👥 참여 현황
-- **투표 완료:**
+---
 
-### 🕒 시간 부자
-[가장 많은 날짜/시간대를 선택한 참여자의 이름]
-- Show ONLY the name(s) of participant(s) who selected the MOST dates
-- Count dates, not time slots
-- Example: "김철수" or "김철수, 이영희" (if tied)
-- DO NOT show time ranges or availability counts here
+## 참여 현황
 
-### 💡 추천 사항
-[여기에 추천 내용을 작성합니다]
+**투표 완료:** X명
 
-**예시 1 (TIME 타입 - 명확한 TOP 3가 있는 경우):**
-- 1순위: 2025-12-15 (일) 14:00 ~ 16:00에 모임을 진행하시는 것을 추천드립니다. (5명 가능)
-- 2순위: 2025-12-16 (월) 19:00 ~ 20:00에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
-- 3순위: 2025-12-17 (화) 15:00 ~ 17:00에 모임을 진행하시는 것을 추천드립니다. (3명 가능)
+---
 
-**예시 2 (TIME 타입 - 시간이 널널한 경우):**
-대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!
-- 2025-12-15 (일) 14:00 ~ 18:00 (5명 가능)
-- 2025-12-16 (월) 10:00 ~ 12:00, 19:00 ~ 21:00 (5명 가능)
-- 2025-12-17 (화) 15:00 ~ 17:00 (4명 가능)
+## 시간 부자
+
+[가장 많은 날짜를 선택한 참여자 이름]
+
+(Example: "김철수" or "김철수, 이영희" if tied)
+
+---
+
+**CRITICAL NOTES:**
+- ALWAYS sort by participant count (HIGHEST → LOWEST)
+- #1 must have MORE or EQUAL participants than #2
+- #2 must have MORE or EQUAL participants than #3
+- Use the EXACT numbers from "📊 Date Statistics" section
+- DO NOT recalculate anything
+- NO emojis in the output
+- NO "추천 사항" section
 
 **예시 3 (ALL_DAY 타입 - 명확한 TOP 날짜):**
 - 1순위: 2025-12-15 (일)에 모임을 진행하시는 것을 추천드립니다. (5명 전원 가능, 만장일치!)
@@ -586,25 +557,15 @@ RULES:
      * ❌ WRONG: "participants available during the #1 ranked time range"
      * ✅ CORRECT: Just the name(s): "Alice" or "Alice, Bob"
 
-6. **CRITICAL: 추천 사항 RULES**
-   - **IF most participants are very flexible (many time ranges with high counts)**:
-     * Output:
-       > "대부분 참여자들이 시간이 널널해요! 가능한 시간대를 날짜별로 정리해드릴게요!"
-     * Group by date and show merged time ranges (up to TOP 3 dates):
-       - `YYYY-MM-DD (요일) HH:mm ~ HH:mm (X명 가능)`
+6. Entire output must be **Korean only**
 
-   - **Else (normal case, clear top 3)**:
-     * For each ranked time range (TOP 3 only), provide:
-       - `- N순위: YYYY-MM-DD (요일) HH:mm ~ HH:mm에 모임을 진행하시는 것을 추천드립니다. (X명 가능)`
-     * Use natural language for time ranges:
-       - 1-2 slots: list times (e.g., "14:00 또는 14:30")
-       - 3+ consecutive slots: use range (e.g., "14:00부터 16:00까지")
+7. **DO NOT add any commentary outside the Markdown report**
 
-7. Entire output must be **Korean only**
+8. **NO emojis in the output**
 
-8. **DO NOT add any commentary outside the Markdown report**
+9. **NO "추천 사항" (recommendations) section** - Do not include any recommendations
 
-9. **IMPORTANT: Merge consecutive time slots intelligently**
+10. **IMPORTANT: Merge consecutive time slots intelligently (FOR TIME TYPE ONLY)**
    - Same participants + consecutive times = ONE time range
    - This makes the report much more readable and practical
    - Example: Don't show "14:00 (3명)", "14:30 (3명)", "15:00 (3명)" separately
