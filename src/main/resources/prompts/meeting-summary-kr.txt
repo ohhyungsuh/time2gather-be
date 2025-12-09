@@ -16,13 +16,20 @@ Based on the following meeting information, generate a structured meeting report
   → You MUST use: "3명 / 4명" with those exact names
   → DO NOT calculate yourself and write "2명 / 4명"
 
-**RULE 1: Calculating "가능 인원" (available participants)**
-- Count ONLY the participants who selected THAT SPECIFIC time range or date
+**RULE 1: Calculating "가능 인원" (available participants) - 🚨 COPY FROM STATISTICS ONLY!**
+- **DO NOT CALCULATE YOURSELF!**
+- **The statistics section already has the correct format**
+- **COPY the "X명 / Y명" format EXACTLY from the statistics section**
+- **COPY "(만장일치)" ONLY if it appears in the statistics section**
 - Example: If participant A and B both selected "2025-12-11 (수)", and total voted is 2 people
-  → Output: `2명 / 2명 (만장일치)` (NOT "2명 / 3명" or any other number)
-- The numerator MUST equal the number of names listed in "가능"
-- The denominator MUST equal "Voted Participants" from the input
-- If numerator == denominator → add "(만장일치)"
+  → Statistics will show: `2명 / 2명 (만장일치)`
+  → You MUST copy: `2명 / 2명 (만장일치)`
+- Example: If only 3 out of 4 people selected "2025-12-10 (수)"
+  → Statistics will show: `3명 / 4명` (NO 만장일치!)
+  → You MUST copy: `3명 / 4명` (DO NOT add 만장일치!)
+- The numerator MUST equal the number of names listed in "가능" (from statistics)
+- The denominator MUST equal "Voted Participants" from the input (from statistics)
+- **NEVER add "(만장일치)" unless the statistics section has it!**
 
 **RULE 2: Sorting TOP 3 - 🚨 CRITICAL**
 - **PRIMARY SORT**: By participant count (DESCENDING - highest count first!)

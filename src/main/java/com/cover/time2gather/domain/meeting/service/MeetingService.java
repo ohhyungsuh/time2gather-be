@@ -173,10 +173,10 @@ public class MeetingService {
             }
         }
 
-        // bestSlots 찾기 (가장 많은 사람이 가능한 시간대 또는 날짜)
-        List<MeetingDetailData.BestSlot> bestSlots = new ArrayList<>();
-        int maxCount = 0;
+        // bestSlots 찾기 (투표 수가 많은 순서대로 TOP 3)
+        List<MeetingDetailData.BestSlot> allSlots = new ArrayList<>();
 
+        // 모든 날짜/슬롯을 리스트로 수집
         for (Map.Entry<String, Map<Integer, Integer>> dateEntry : countMap.entrySet()) {
             String date = dateEntry.getKey();
             Map<Integer, Integer> slotCountMap = dateEntry.getValue();
@@ -185,25 +185,33 @@ public class MeetingService {
                 int slot = slotEntry.getKey();
                 int count = slotEntry.getValue();
 
-                if (count > maxCount) {
-                    maxCount = count;
-                    bestSlots.clear();
-                    bestSlots.add(new MeetingDetailData.BestSlot(
-                            date,
-                            slot,
-                            count,
-                            totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
-                    ));
-                } else if (count == maxCount && maxCount > 0) {
-                    bestSlots.add(new MeetingDetailData.BestSlot(
-                            date,
-                            slot,
-                            count,
-                            totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
-                    ));
-                }
+                allSlots.add(new MeetingDetailData.BestSlot(
+                        date,
+                        slot,
+                        count,
+                        totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
+                ));
             }
         }
+
+        // 정렬: 1) 투표 수 내림차순, 2) 날짜 오름차순 (가까운 날짜 우선)
+        List<MeetingDetailData.BestSlot> bestSlots = allSlots.stream()
+                .sorted((a, b) -> {
+                    // 투표 수 비교 (내림차순)
+                    int countCompare = Integer.compare(b.getCount(), a.getCount());
+                    if (countCompare != 0) {
+                        return countCompare;
+                    }
+                    // 투표 수가 같으면 날짜 비교 (오름차순 - 가까운 날짜 우선)
+                    int dateCompare = a.getDate().compareTo(b.getDate());
+                    if (dateCompare != 0) {
+                        return dateCompare;
+                    }
+                    // 날짜도 같으면 슬롯 인덱스 비교 (오름차순 - 이른 시간 우선)
+                    return Integer.compare(a.getSlotIndex(), b.getSlotIndex());
+                })
+                .limit(3)  // TOP 3만 선택
+                .collect(Collectors.toList());
 
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
     }

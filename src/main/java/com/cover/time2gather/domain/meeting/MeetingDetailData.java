@@ -51,6 +51,14 @@ public class MeetingDetailData {
         private final String date;
         private final int slotIndex;
         private final int count;
-        private final double percentage;
+        private final String percentage;
+
+        public BestSlot(String date, int slotIndex, int count, double percentageValue) {
+            this.date = date;
+            this.slotIndex = slotIndex;
+            this.count = count;
+            // 소수점 제거하고 %로 표시
+            this.percentage = Math.round(percentageValue) + "%";
+        }
     }
 }

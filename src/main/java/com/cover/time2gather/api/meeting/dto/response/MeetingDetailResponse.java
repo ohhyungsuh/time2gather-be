@@ -270,7 +270,7 @@ public class MeetingDetailResponse {
 		@Schema(description = "가능한 인원 수", example = "4")
 		private int count;
 
-		@Schema(description = "가능 비율 (%)", example = "80.0")
-		private double percentage;
+		@Schema(description = "가능 비율 (% 포함)", example = "80%")
+		private String percentage;
 	}
 }
