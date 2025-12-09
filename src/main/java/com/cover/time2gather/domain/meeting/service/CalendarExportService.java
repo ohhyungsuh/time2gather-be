@@ -89,46 +89,47 @@ public class CalendarExportService {
         LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
         ZoneId zoneId = ZoneId.of(timezoneStr);
 
-        // VEvent 생성
-        VEvent event = new VEvent();
-        event.getProperties().add(new Summary(title));
+        // PropertyList 생성
+        PropertyList properties = new PropertyList();
+        properties.add(new Summary(title));
 
-        // ALL_DAY 처리
+        // 시작/종료 시간 설정
         if ("ALL_DAY".equals(timeSlotStr)) {
             // 종일 일정으로 설정
             ZonedDateTime startDateTime = date.atStartOfDay(zoneId);
             ZonedDateTime endDateTime = date.plusDays(1).atStartOfDay(zoneId);
 
-            event.getProperties().add(new DtStart<>(startDateTime));
-            event.getProperties().add(new DtEnd<>(endDateTime));
+            properties.add(new DtStart<>(startDateTime));
+            properties.add(new DtEnd<>(endDateTime));
         } else {
             // 특정 시간대 처리
             TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr, intervalMinutes);
             ZonedDateTime startDateTime = date.atTime(timeSlot.getHour(), timeSlot.getMinute()).atZone(zoneId);
             ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
 
-            event.getProperties().add(new DtStart<>(startDateTime));
-            event.getProperties().add(new DtEnd<>(endDateTime));
+            properties.add(new DtStart<>(startDateTime));
+            properties.add(new DtEnd<>(endDateTime));
         }
 
         // UID 추가 (필수)
-        event.getProperties().add(uidGenerator.generateUid());
+        properties.add(uidGenerator.generateUid());
 
         // 설명 추가
         if (description != null && !description.isBlank()) {
-            event.getProperties().add(new Description(description));
+            properties.add(new Description(description));
         }
 
         // 생성 시간 (현재 시간을 Instant로)
         Instant now = Instant.now();
-        event.getProperties().add(new Created(now));
-        event.getProperties().add(new LastModified(now));
-        event.getProperties().add(new DtStamp(now));
+        properties.add(new Created(now));
+        properties.add(new LastModified(now));
+        properties.add(new DtStamp(now));
 
         // Status
-        event.getProperties().add(new Status("CONFIRMED"));
+        properties.add(new Status("CONFIRMED"));
 
-        return event;
+        // VEvent 생성 (PropertyList를 생성자에 전달)
+        return new VEvent(properties);
     }
 
     private byte[] outputCalendar(Calendar calendar) throws IOException {
