@@ -36,8 +36,9 @@ public class CalendarExportService {
      * @param meetingTitle 모임 제목
      * @param meetingDescription 모임 설명
      * @param dateStr 날짜 (yyyy-MM-dd)
-     * @param timeSlot 시간 슬롯 (HH:mm 형식)
+     * @param timeSlot 시간 슬롯 (HH:mm 형식 또는 "ALL_DAY")
      * @param timezone 타임존 (예: Asia/Seoul)
+     * @param intervalMinutes 시간 간격 (분 단위)
      * @return ICS 파일 바이트 배열
      */
     public byte[] createIcsFile(
@@ -45,7 +46,8 @@ public class CalendarExportService {
             String meetingDescription,
             String dateStr,
             String timeSlot,
-            String timezone
+            String timezone,
+            int intervalMinutes
     ) {
         try {
             // Calendar 생성
@@ -55,7 +57,7 @@ public class CalendarExportService {
             calendar.getProperties().add(new CalScale("GREGORIAN"));
 
             // Event 생성
-            VEvent event = createEvent(meetingTitle, meetingDescription, dateStr, timeSlot, timezone);
+            VEvent event = createEvent(meetingTitle, meetingDescription, dateStr, timeSlot, timezone, intervalMinutes);
             calendar.getComponents().add(event);
 
             // ICS 파일 생성
@@ -72,26 +74,34 @@ public class CalendarExportService {
             String description,
             String dateStr,
             String timeSlotStr,
-            String timezoneStr
+            String timezoneStr,
+            int intervalMinutes
     ) {
         // 날짜 파싱
         LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
-
-        // TimeSlot 값 객체 생성
-        TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr);
-
-        // 타임존 설정
         ZoneId zoneId = ZoneId.of(timezoneStr);
-        ZonedDateTime startDateTime = date.atTime(timeSlot.getHour(), timeSlot.getMinute()).atZone(zoneId);
-        ZonedDateTime endDateTime = startDateTime.plusMinutes(30); // 30분 단위
 
         // VEvent 생성
         VEvent event = new VEvent();
         event.getProperties().add(new Summary(title));
 
-        // 시작/종료 시간 설정
-        event.getProperties().add(new DtStart<>(startDateTime));
-        event.getProperties().add(new DtEnd<>(endDateTime));
+        // ALL_DAY 처리
+        if ("ALL_DAY".equals(timeSlotStr)) {
+            // 종일 일정으로 설정
+            ZonedDateTime startDateTime = date.atStartOfDay(zoneId);
+            ZonedDateTime endDateTime = date.plusDays(1).atStartOfDay(zoneId);
+
+            event.getProperties().add(new DtStart<>(startDateTime));
+            event.getProperties().add(new DtEnd<>(endDateTime));
+        } else {
+            // 특정 시간대 처리
+            TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr);
+            ZonedDateTime startDateTime = date.atTime(timeSlot.getHour(), timeSlot.getMinute()).atZone(zoneId);
+            ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
+
+            event.getProperties().add(new DtStart<>(startDateTime));
+            event.getProperties().add(new DtEnd<>(endDateTime));
+        }
 
         // UID 추가 (필수)
         event.getProperties().add(uidGenerator.generateUid());

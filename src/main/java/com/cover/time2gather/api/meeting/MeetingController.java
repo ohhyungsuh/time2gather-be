@@ -1,7 +1,6 @@
 package com.cover.time2gather.api.meeting;
 
 import com.cover.time2gather.api.common.ApiResponse;
-import com.cover.time2gather.api.meeting.dto.ExportCalendarRequest;
 import com.cover.time2gather.api.meeting.dto.request.CreateMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpsertUserSelectionRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
@@ -237,28 +236,60 @@ public class MeetingController {
         return ApiResponse.success(MeetingReportResponse.from(report));
     }
 
-    @PostMapping("/{meetingCode}/export")
-    @Operation(summary = "캘린더로 export",
-               description = "선택한 날짜/시간을 ICS 파일로 다운로드합니다. Google Calendar, iOS Calendar 등에서 import 가능합니다.")
-    public ResponseEntity<byte[]> exportToCalendar(
-            @PathVariable String meetingCode,
-            @Valid @RequestBody ExportCalendarRequest request
-    ) {
+    @GetMapping("/{meetingCode}/export")
+    @Operation(
+        summary = "캘린더로 export",
+        description = """
+            최적의 시간대를 자동으로 선택하여 ICS 파일로 다운로드합니다.
+            - Google Calendar, iOS Calendar 등에서 import 가능합니다.
+            - bestSlot의 첫 번째 항목(가장 많이 선택된 시간)을 사용합니다.
+            - ALL_DAY 타입인 경우 종일 일정으로 생성됩니다.
+            - 아직 아무도 시간을 선택하지 않은 경우 404 에러가 발생합니다.
+        """
+    )
+    public ResponseEntity<byte[]> exportToCalendar(@PathVariable String meetingCode) {
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
+        // MeetingDetailData 조회하여 bestSlot 가져오기
+        MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
+
+        // bestSlot이 비어있으면 에러
+        if (detailData.getSummary().getBestSlots().isEmpty()) {
+            throw new IllegalStateException("아직 투표한 참여자가 없어 캘린더를 생성할 수 없습니다.");
+        }
+
+        // 첫 번째 bestSlot 선택 (가장 많이 선택된 시간)
+        MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
+
+        // slotIndex를 시간 문자열로 변환
+        String timeString;
+        if (bestSlot.getSlotIndex() == -1) {
+            timeString = "ALL_DAY";
+        } else {
+            timeString = com.cover.time2gather.domain.meeting.vo.TimeSlot
+                .fromIndex(bestSlot.getSlotIndex(), meeting.getIntervalMinutes())
+                .toTimeString();
+        }
 
         // ICS 파일 생성
         byte[] icsFile = calendarExportService.createIcsFile(
                 meeting.getTitle(),
                 meeting.getDescription(),
-                request.getDate(),
-                request.getTime(),
-                meeting.getTimezone()
+                bestSlot.getDate(),
+                timeString,
+                meeting.getTimezone(),
+                meeting.getIntervalMinutes()
         );
 
-        // 파일명 생성 (예: meeting_2024-02-15_1430.ics)
-        String filename = String.format("meeting_%s_%s.ics",
-                request.getDate(),
-                request.getTime().replace(":", ""));
+        // 파일명 생성
+        String filename;
+        if ("ALL_DAY".equals(timeString)) {
+            filename = String.format("meeting_%s_all_day.ics", bestSlot.getDate());
+        } else {
+            filename = String.format("meeting_%s_%s.ics",
+                    bestSlot.getDate(),
+                    timeString.replace(":", ""));
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
