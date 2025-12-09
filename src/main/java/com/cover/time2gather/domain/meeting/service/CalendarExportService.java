@@ -4,8 +4,6 @@ import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
-import net.fortuna.ical4j.model.ComponentList;
-import net.fortuna.ical4j.model.PropertyList;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.*;
 import net.fortuna.ical4j.util.RandomUidGenerator;
@@ -19,7 +17,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * iCalendar(ICS) 파일 생성 서비스
@@ -53,20 +50,43 @@ public class CalendarExportService {
             int intervalMinutes
     ) {
         try {
-            // Event 생성
-            VEvent event = createEvent(meetingTitle, meetingDescription, dateStr, timeSlot, timezone, intervalMinutes);
+            // 날짜 파싱
+            LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
+            ZoneId zoneId = ZoneId.of(timezone);
 
-            // PropertyList 생성 (raw type 사용)
-            PropertyList properties = new PropertyList();
-            properties.add(new ProdId(PROD_ID));
-            properties.add(new Version());
-            properties.add(new CalScale("GREGORIAN"));
+            // VEvent 생성
+            VEvent event;
+            if ("ALL_DAY".equals(timeSlot)) {
+                // 종일 일정
+                ZonedDateTime startDateTime = date.atStartOfDay(zoneId);
+                ZonedDateTime endDateTime = date.plusDays(1).atStartOfDay(zoneId);
+                event = new VEvent(startDateTime, endDateTime, meetingTitle);
+            } else {
+                // 특정 시간대
+                TimeSlot ts = TimeSlot.fromTimeString(timeSlot, intervalMinutes);
+                ZonedDateTime startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
+                ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
+                event = new VEvent(startDateTime, endDateTime, meetingTitle);
+            }
 
-            // ComponentList 생성 및 이벤트 추가
-            ComponentList<VEvent> components = new ComponentList<>(List.of(event));
+            // Event properties 추가
+            event.getProperties().add(uidGenerator.generateUid());
+            event.getProperties().add(new DtStamp(Instant.now()));
+            event.getProperties().add(new Created(Instant.now()));
+            event.getProperties().add(new LastModified(Instant.now()));
+            event.getProperties().add(new Status("CONFIRMED"));
+
+            if (meetingDescription != null && !meetingDescription.isBlank()) {
+                event.getProperties().add(new Description(meetingDescription));
+            }
 
             // Calendar 생성
-            Calendar calendar = new Calendar(properties, components);
+            Calendar calendar = new Calendar();
+            calendar.getProperties().add(new ProdId(PROD_ID));
+			calendar.getProperties().add(new Version(Version.VALUE_2_0, Version.VALUE_2_0));
+			calendar.getProperties().add(new CalScale("GREGORIAN"));
+
+            calendar.getComponents().add(event);
 
             // ICS 파일 생성
             return outputCalendar(calendar);
@@ -75,61 +95,6 @@ public class CalendarExportService {
             log.error("Failed to create ICS file", e);
             throw new IllegalStateException("캘린더 파일 생성 중 오류가 발생했습니다.", e);
         }
-    }
-
-    private VEvent createEvent(
-            String title,
-            String description,
-            String dateStr,
-            String timeSlotStr,
-            String timezoneStr,
-            int intervalMinutes
-    ) {
-        // 날짜 파싱
-        LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
-        ZoneId zoneId = ZoneId.of(timezoneStr);
-
-        // PropertyList 생성
-        PropertyList properties = new PropertyList();
-        properties.add(new Summary(title));
-
-        // 시작/종료 시간 설정
-        if ("ALL_DAY".equals(timeSlotStr)) {
-            // 종일 일정으로 설정
-            ZonedDateTime startDateTime = date.atStartOfDay(zoneId);
-            ZonedDateTime endDateTime = date.plusDays(1).atStartOfDay(zoneId);
-
-            properties.add(new DtStart<>(startDateTime));
-            properties.add(new DtEnd<>(endDateTime));
-        } else {
-            // 특정 시간대 처리
-            TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr, intervalMinutes);
-            ZonedDateTime startDateTime = date.atTime(timeSlot.getHour(), timeSlot.getMinute()).atZone(zoneId);
-            ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
-
-            properties.add(new DtStart<>(startDateTime));
-            properties.add(new DtEnd<>(endDateTime));
-        }
-
-        // UID 추가 (필수)
-        properties.add(uidGenerator.generateUid());
-
-        // 설명 추가
-        if (description != null && !description.isBlank()) {
-            properties.add(new Description(description));
-        }
-
-        // 생성 시간 (현재 시간을 Instant로)
-        Instant now = Instant.now();
-        properties.add(new Created(now));
-        properties.add(new LastModified(now));
-        properties.add(new DtStamp(now));
-
-        // Status
-        properties.add(new Status("CONFIRMED"));
-
-        // VEvent 생성 (PropertyList를 생성자에 전달)
-        return new VEvent(properties);
     }
 
     private byte[] outputCalendar(Calendar calendar) throws IOException {
