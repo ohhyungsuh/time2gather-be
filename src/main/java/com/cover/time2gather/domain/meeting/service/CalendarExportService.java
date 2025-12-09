@@ -4,6 +4,8 @@ import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
+import net.fortuna.ical4j.model.ComponentList;
+import net.fortuna.ical4j.model.PropertyList;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.*;
 import net.fortuna.ical4j.util.RandomUidGenerator;
@@ -17,6 +19,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * iCalendar(ICS) 파일 생성 서비스
@@ -50,15 +53,20 @@ public class CalendarExportService {
             int intervalMinutes
     ) {
         try {
-            // Calendar 생성
-            Calendar calendar = new Calendar();
-            calendar.getProperties().add(new ProdId(PROD_ID));
-            calendar.getProperties().add(new Version());
-            calendar.getProperties().add(new CalScale("GREGORIAN"));
-
             // Event 생성
             VEvent event = createEvent(meetingTitle, meetingDescription, dateStr, timeSlot, timezone, intervalMinutes);
-            calendar.getComponents().add(event);
+
+            // PropertyList 생성 (raw type 사용)
+            PropertyList properties = new PropertyList();
+            properties.add(new ProdId(PROD_ID));
+            properties.add(new Version());
+            properties.add(new CalScale("GREGORIAN"));
+
+            // ComponentList 생성 및 이벤트 추가
+            ComponentList<VEvent> components = new ComponentList<>(List.of(event));
+
+            // Calendar 생성
+            Calendar calendar = new Calendar(properties, components);
 
             // ICS 파일 생성
             return outputCalendar(calendar);

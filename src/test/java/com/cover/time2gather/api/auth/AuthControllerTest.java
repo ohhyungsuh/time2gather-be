@@ -7,6 +7,7 @@ import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.cover.time2gather.domain.auth.service.OAuthLoginService;
 import com.cover.time2gather.domain.user.UserRepository;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
+import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private MeetingRepository meetingRepository;
+
+	@MockitoBean
+	private MeetingUserSelectionRepository meetingUserSelectionRepository;
 
     @Test
     @WithMockUser

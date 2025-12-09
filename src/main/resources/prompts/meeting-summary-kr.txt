@@ -20,16 +20,16 @@ Based on the following meeting information, generate a structured meeting report
 - **DO NOT CALCULATE YOURSELF!**
 - **The statistics section already has the correct format**
 - **COPY the "X명 / Y명" format EXACTLY from the statistics section**
-- **COPY "(만장일치)" ONLY if it appears in the statistics section**
+- **NEVER add "(만장일치)" - We don't use this label anymore!**
 - Example: If participant A and B both selected "2025-12-11 (수)", and total voted is 2 people
-  → Statistics will show: `2명 / 2명 (만장일치)`
-  → You MUST copy: `2명 / 2명 (만장일치)`
+  → Statistics will show: `2명 / 2명`
+  → You MUST copy: `2명 / 2명` (NO "(만장일치)"!)
 - Example: If only 3 out of 4 people selected "2025-12-10 (수)"
-  → Statistics will show: `3명 / 4명` (NO 만장일치!)
-  → You MUST copy: `3명 / 4명` (DO NOT add 만장일치!)
+  → Statistics will show: `3명 / 4명`
+  → You MUST copy: `3명 / 4명`
 - The numerator MUST equal the number of names listed in "가능" (from statistics)
 - The denominator MUST equal "Voted Participants" from the input (from statistics)
-- **NEVER add "(만장일치)" unless the statistics section has it!**
+- **CRITICAL: Format is ALWAYS "X명 / Y명" - NO additional labels like "(만장일치)"!**
 
 **RULE 2: Sorting TOP 3 - 🚨 CRITICAL**
 - **PRIMARY SORT**: By participant count (DESCENDING - highest count first!)
@@ -121,7 +121,7 @@ CRITICAL - CALCULATING 가능/불가능 인원 (READ THIS VERY CAREFULLY!):
 
 **CONCRETE EXAMPLES:**
 
-**Example 1: Everyone selected it (만장일치)**
+**Example 1: Everyone selected it**
 - Total voted: 3 people (Alice, Bob, Charlie)
 - Time range: 2025-12-10 (화) 14:00 ~ 16:00
 - Who selected it: Alice ✓, Bob ✓, Charlie ✓
@@ -130,7 +130,7 @@ CRITICAL - CALCULATING 가능/불가능 인원 (READ THIS VERY CAREFULLY!):
   * 불가능 = 3 - 3 = 0 people (nobody)
 - Output:
   ```
-  **가능 인원:** 3명 / 3명 (만장일치)
+  **가능 인원:** 3명 / 3명
   - **가능:** Alice, Bob, Charlie
   - **불가능:** -
   ```
@@ -168,7 +168,7 @@ CRITICAL - CALCULATING 가능/불가능 인원 (READ THIS VERY CAREFULLY!):
 - **ALWAYS use the EXACT participant names provided in the input**
 - **The denominator (Y) is ALWAYS the total voted participants**
 - **The numerator (X) is ONLY those who selected this specific time range/date**
-- **If X == Y, add "(만장일치)" to indicate unanimous**
+- **Format is ALWAYS "X명 / Y명" - NO additional text**
 - **If someone is listed in "가능", they MUST NOT appear in "불가능"**
 - **If someone is listed in "불가능", they MUST NOT appear in "가능"**
 
@@ -182,7 +182,7 @@ Selection Type: ALL_DAY
 Voted Participants: 3
 
 📊 Date Statistics (PRE-CALCULATED - USE THESE EXACT NUMBERS):
-- 2025-12-15 (일): 3명 / 3명 (만장일치)
+- 2025-12-15 (일): 3명 / 3명
   * 가능: 김철수, 이영희, 박민수
   * 불가능: -
 - 2025-12-16 (월): 2명 / 3명
@@ -217,7 +217,7 @@ HOW TO INTERPRET THIS:
 - For time range "2025-12-10 (화) 14:00 ~ 15:00":
   * 가능: 김철수, 이영희, 박민수 (all 3 selected it)
   * 불가능: - (none)
-  * Format: `3명 / 3명 (만장일치)`
+  * Format: `3명 / 3명`
 - For time range "2025-12-10 (화) 14:00 ~ 16:00":
   * 가능: 김철수, 박민수 (only 2 selected ALL slots 14:00, 15:00, 16:00)
   * 불가능: 이영희 (she only selected 14:00, 15:00, not 16:00)
@@ -228,7 +228,7 @@ HOW TO INTERPRET THIS:
 - For date "2025-12-15 (일)":
   * 가능: 김철수, 이영희, 박민수 (all 3 selected this date)
   * 불가능: - (none)
-  * Format: `3명 / 3명 (만장일치)`
+  * Format: `3명 / 3명`
 - For date "2025-12-16 (월)":
   * 가능: 김철수, 박민수 (only 2 selected this date)
   * 불가능: 이영희
@@ -381,7 +381,7 @@ OUTPUT FORMAT (Markdown):
 
 ### 1순위
 **날짜:** YYYY-MM-DD (요일)
-**가능 인원:** X명 / Y명 (만장일치 if X == Y)
+**가능 인원:** X명 / Y명
 
 - **가능:** [이름1, 이름2, ...]
 - **불가능:** [이름1, 이름2, ...] (or "-" if none)
@@ -426,7 +426,7 @@ OUTPUT FORMAT (Markdown):
 - NO "추천 사항" section
 
 **예시 3 (ALL_DAY 타입 - 명확한 TOP 날짜):**
-- 1순위: 2025-12-15 (일)에 모임을 진행하시는 것을 추천드립니다. (5명 전원 가능, 만장일치!)
+- 1순위: 2025-12-15 (일)에 모임을 진행하시는 것을 추천드립니다. (5명 전원 가능)
 - 2순위: 2025-12-16 (월)에 모임을 진행하시는 것을 추천드립니다. (4명 가능)
 - 3순위: 2025-12-17 (화)에 모임을 진행하시는 것을 추천드립니다. (3명 가능)
 
@@ -520,10 +520,9 @@ RULES:
      * **STEP 4**: Get total voted participants from input → Y
      * **STEP 5**: Calculate 불가능 = Y - X
      * **STEP 6**: Format as `X명 / Y명`
-     * **STEP 7**: If X == Y (everyone selected it) → add `(만장일치)`
 
      **EXAMPLES:**
-     - If 2 out of 2 people selected it → `2명 / 2명 (만장일치)`
+     - If 2 out of 2 people selected it → `2명 / 2명`
      - If 3 out of 5 people selected it → `3명 / 5명`
      - If 1 out of 3 people selected it → `1명 / 3명`
      - **NEVER** write incorrect numbers like "2명 / 3명" when all 3 people selected it!
