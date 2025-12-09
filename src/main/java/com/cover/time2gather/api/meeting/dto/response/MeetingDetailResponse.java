@@ -102,7 +102,7 @@ public class MeetingDetailResponse {
 				List<User> users = slotEntry.getValue();
 
 				// ALL_DAY 타입인 경우 (slotIndex = -1)
-				String time = (slot == -1) ? "종일" : TimeSlot.fromIndex(slot, intervalMinutes).toTimeString();
+				String time = (slot == -1) ? "ALL_DAY" : TimeSlot.fromIndex(slot, intervalMinutes).toTimeString();
 
 				List<ParticipantInfo> participantInfos = users.stream()
 					.map(user -> new ParticipantInfo(
@@ -133,9 +133,9 @@ public class MeetingDetailResponse {
 
 		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
 			.map(slot -> {
-				// ALL_DAY 타입인 경우 slotIndex가 -1이므로 "종일"로 표시
+				// ALL_DAY 타입인 경우 slotIndex가 -1이므로 "ALL_DAY"로 표시
 				String timeString = slot.getSlotIndex() == -1
-					? "종일"
+					? "ALL_DAY"
 					: TimeSlot.fromIndex(slot.getSlotIndex(), intervalMinutes).toTimeString();
 
 				return new BestSlot(
