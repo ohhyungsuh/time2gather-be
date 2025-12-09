@@ -4,6 +4,8 @@ import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
+import net.fortuna.ical4j.model.ComponentList;
+import net.fortuna.ical4j.model.PropertyList;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.*;
 import net.fortuna.ical4j.util.RandomUidGenerator;
@@ -69,7 +71,7 @@ public class CalendarExportService {
                 event = new VEvent(startDateTime, endDateTime, meetingTitle);
             }
 
-            // Event properties 추가
+            // Event properties 추가 (직접 List에 추가)
             event.getProperties().add(uidGenerator.generateUid());
             event.getProperties().add(new DtStamp(Instant.now()));
             event.getProperties().add(new Created(Instant.now()));
@@ -80,13 +82,18 @@ public class CalendarExportService {
                 event.getProperties().add(new Description(meetingDescription));
             }
 
-            // Calendar 생성
-            Calendar calendar = new Calendar();
-            calendar.getProperties().add(new ProdId(PROD_ID));
-			calendar.getProperties().add(new Version(Version.VALUE_2_0, Version.VALUE_2_0));
-			calendar.getProperties().add(new CalScale("GREGORIAN"));
+            // Calendar PropertyList 생성
+            PropertyList calendarProperties = new PropertyList();
+            calendarProperties.add(new ProdId(PROD_ID));
+            calendarProperties.add(new Version(Version.VALUE_2_0, Version.VALUE_2_0));
+            calendarProperties.add(new CalScale("GREGORIAN"));
 
-            calendar.getComponents().add(event);
+            // ComponentList 생성
+            ComponentList<VEvent> components = new ComponentList<>();
+            components.add(event);
+
+            // Calendar 생성
+            Calendar calendar = new Calendar(calendarProperties, components);
 
             // ICS 파일 생성
             return outputCalendar(calendar);
