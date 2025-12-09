@@ -95,7 +95,7 @@ public class CalendarExportService {
             event.getProperties().add(new DtEnd<>(endDateTime));
         } else {
             // 특정 시간대 처리
-            TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr);
+            TimeSlot timeSlot = TimeSlot.fromTimeString(timeSlotStr, intervalMinutes);
             ZonedDateTime startDateTime = date.atTime(timeSlot.getHour(), timeSlot.getMinute()).atZone(zoneId);
             ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
 

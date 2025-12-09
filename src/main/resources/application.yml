@@ -75,10 +75,13 @@ management:
 # Logging
 logging:
   level:
+    root: INFO
+    com.cover.time2gather: INFO
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
     org.hibernate.orm.jdbc.bind: WARN
     org.springframework.web.servlet.resource: ERROR
     org.springframework.security.web: WARN
-
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%t] %-40.40logger{39} : %m%n%wEx"
 
