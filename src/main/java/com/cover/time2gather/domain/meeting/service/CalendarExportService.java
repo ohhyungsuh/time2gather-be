@@ -113,6 +113,9 @@ public class CalendarExportService {
 
     private byte[] outputCalendar(Calendar calendar) throws IOException {
         CalendarOutputter outputter = new CalendarOutputter();
+        // iOS 호환성을 위해 validation 비활성화
+        outputter.setValidating(false);
+
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             outputter.output(calendar, out);
             return out.toByteArray();

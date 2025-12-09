@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -281,7 +280,7 @@ public class MeetingController {
                 meeting.getIntervalMinutes()
         );
 
-        // 파일명 생성
+        // 파일명 생성 (iOS Safari 호환)
         String filename;
         if ("ALL_DAY".equals(timeString)) {
             filename = String.format("meeting_%s_all_day.ics", bestSlot.getDate());
@@ -291,9 +290,14 @@ public class MeetingController {
                     timeString.replace(":", ""));
         }
 
+        // iOS Safari를 위한 HTTP 헤더 설정
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.parseMediaType("text/calendar"))
+                .header(HttpHeaders.CONTENT_TYPE, "text/calendar; charset=utf-8")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(icsFile.length))
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
                 .body(icsFile);
     }
 }
