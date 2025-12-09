@@ -291,9 +291,11 @@ public class MeetingController {
         }
 
         // iOS Safari를 위한 HTTP 헤더 설정
+        // Safari는 text/calendar를 텍스트로 열려고 하므로 application/octet-stream 사용
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, "text/calendar; charset=utf-8")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + filename)
+                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                .header("X-Download-Options", "noopen")
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(icsFile.length))
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
                 .header(HttpHeaders.PRAGMA, "no-cache")

@@ -94,6 +94,7 @@ public class CalendarExportService {
             calendarProperties.add(new ProdId(PROD_ID));
             calendarProperties.add(new Version(Version.VALUE_2_0, Version.VALUE_2_0));
             calendarProperties.add(new CalScale("GREGORIAN"));
+            calendarProperties.add(new Method("PUBLISH"));
 
             // ComponentList 생성
             ComponentList<VEvent> components = new ComponentList<>();
