@@ -56,31 +56,38 @@ public class CalendarExportService {
             LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
             ZoneId zoneId = ZoneId.of(timezone);
 
-            // VEvent 생성
-            VEvent event;
+            // 시작/종료 시간 계산
+            ZonedDateTime startDateTime;
+            ZonedDateTime endDateTime;
+
             if ("ALL_DAY".equals(timeSlot)) {
                 // 종일 일정
-                ZonedDateTime startDateTime = date.atStartOfDay(zoneId);
-                ZonedDateTime endDateTime = date.plusDays(1).atStartOfDay(zoneId);
-                event = new VEvent(startDateTime, endDateTime, meetingTitle);
+                startDateTime = date.atStartOfDay(zoneId);
+                endDateTime = date.plusDays(1).atStartOfDay(zoneId);
             } else {
                 // 특정 시간대
                 TimeSlot ts = TimeSlot.fromTimeString(timeSlot, intervalMinutes);
-                ZonedDateTime startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
-                ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
-                event = new VEvent(startDateTime, endDateTime, meetingTitle);
+                startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
+                endDateTime = startDateTime.plusMinutes(intervalMinutes);
             }
 
-            // Event properties 추가 (직접 List에 추가)
-            event.getProperties().add(uidGenerator.generateUid());
-            event.getProperties().add(new DtStamp(Instant.now()));
-            event.getProperties().add(new Created(Instant.now()));
-            event.getProperties().add(new LastModified(Instant.now()));
-            event.getProperties().add(new Status("CONFIRMED"));
+            // Event PropertyList 생성 (VEvent 생성 전에)
+            PropertyList eventProperties = new PropertyList();
+            eventProperties.add(new DtStart<>(startDateTime));
+            eventProperties.add(new DtEnd<>(endDateTime));
+            eventProperties.add(new Summary(meetingTitle));
+            eventProperties.add(uidGenerator.generateUid());
+            eventProperties.add(new DtStamp(Instant.now()));
+            eventProperties.add(new Created(Instant.now()));
+            eventProperties.add(new LastModified(Instant.now()));
+            eventProperties.add(new Status("CONFIRMED"));
 
             if (meetingDescription != null && !meetingDescription.isBlank()) {
-                event.getProperties().add(new Description(meetingDescription));
+                eventProperties.add(new Description(meetingDescription));
             }
+
+            // VEvent 생성 (PropertyList를 포함하여)
+            VEvent event = new VEvent(eventProperties);
 
             // Calendar PropertyList 생성
             PropertyList calendarProperties = new PropertyList();
