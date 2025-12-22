@@ -12,9 +12,14 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users", indexes = {
-        @Index(name = "idx_provider", columnList = "provider, provider_id")
-})
+@Table(name = "users",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_provider_provider_id", columnNames = {"provider", "provider_id"})
+    },
+    indexes = {
+        @Index(name = "idx_username", columnList = "username")
+    }
+)
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -26,7 +31,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 100)
+    @Column(nullable = false, length = 100)
     private String username;
 
     @Column(length = 255)

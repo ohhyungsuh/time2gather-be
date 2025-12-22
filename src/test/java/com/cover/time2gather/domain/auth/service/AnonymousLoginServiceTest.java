@@ -63,10 +63,11 @@ class AnonymousLoginServiceTest {
                 .thenReturn(Optional.empty());
 
         User savedUser = User.builder()
-                .username(providerId)
+                .username(username)  // 사용자 입력 이름만 저장
                 .password("$2a$10$hashed")
                 .provider(User.AuthProvider.ANONYMOUS)
                 .providerId(providerId)
+                .profileImageUrl("https://ui-avatars.com/api/?name=" + username + "&background=random&size=200")
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -86,8 +87,10 @@ class AnonymousLoginServiceTest {
         User capturedUser = userCaptor.getValue();
         assertThat(capturedUser.getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
         assertThat(capturedUser.getProviderId()).isEqualTo(providerId);
-        assertThat(capturedUser.getUsername()).isEqualTo(providerId);
+        assertThat(capturedUser.getUsername()).isEqualTo(username);  // 사용자 입력 이름 검증
         assertThat(capturedUser.getPassword()).isEqualTo("$2a$10$hashed");
+        assertThat(capturedUser.getEmail()).isNull();  // 이메일은 null
+        assertThat(capturedUser.getProfileImageUrl()).isNotNull();  // 프로필 이미지 생성됨
 
         verify(passwordEncoder).encode(password);
     }
@@ -101,7 +104,7 @@ class AnonymousLoginServiceTest {
         String providerId = "mtg_abc123:철수";
 
         User existingUser = User.builder()
-                .username(providerId)
+                .username(username)  // 사용자 입력 이름
                 .password("$2a$10$hashed")
                 .provider(User.AuthProvider.ANONYMOUS)
                 .providerId(providerId)
@@ -133,7 +136,7 @@ class AnonymousLoginServiceTest {
         String providerId = "mtg_abc123:철수";
 
         User existingUser = User.builder()
-                .username(providerId)
+                .username(username)  // 사용자 입력 이름
                 .password("$2a$10$hashed")
                 .provider(User.AuthProvider.ANONYMOUS)
                 .providerId(providerId)

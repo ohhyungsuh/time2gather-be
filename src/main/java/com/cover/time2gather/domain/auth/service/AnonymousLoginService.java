@@ -59,8 +59,8 @@ public class AnonymousLoginService {
         boolean isNewUser;
 
         if (existingUser.isEmpty()) {
-            // 신규 유저 생성
-            user = createNewUser(providerId, password);
+            // 신규 유저 생성 (username을 displayName으로 전달)
+            user = createNewUser(providerId, password, username);
             isNewUser = true;
         } else {
             // 기존 유저 비밀번호 검증
@@ -84,17 +84,44 @@ public class AnonymousLoginService {
         );
     }
 
-    private User createNewUser(String providerId, String password) {
+    /**
+     * 익명 사용자 생성
+     *
+     * @param providerId meetingCode:username 형식의 고유 ID
+     * @param password 사용자 비밀번호
+     * @param displayName 사용자가 입력한 표시 이름
+     * @return 생성된 User 엔티티
+     */
+    private User createNewUser(String providerId, String password, String displayName) {
         String hashedPassword = passwordEncoder.encode(password);
+        String profileImageUrl = generateDefaultProfileImage(displayName);
 
         User newUser = User.builder()
-                .username(providerId)  // username도 providerId로 설정
+                .username(displayName)  // 사용자 입력 이름만 저장
                 .password(hashedPassword)
+                .email(null)  // 익명 사용자는 이메일 없음
+                .profileImageUrl(profileImageUrl)
                 .provider(User.AuthProvider.ANONYMOUS)
-                .providerId(providerId)
+                .providerId(providerId)  // meetingCode:displayName 저장
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    /**
+     * 기본 프로필 이미지 생성
+     * UI Avatars API를 사용하여 사용자 이름 기반 아바타 생성
+     *
+     * @param username 사용자 이름
+     * @return 프로필 이미지 URL
+     */
+    private String generateDefaultProfileImage(String username) {
+        try {
+            String encoded = java.net.URLEncoder.encode(username, java.nio.charset.StandardCharsets.UTF_8);
+            return String.format("https://ui-avatars.com/api/?name=%s&background=random&size=200", encoded);
+        } catch (Exception e) {
+            return "https://ui-avatars.com/api/?name=User&background=cccccc&size=200";
+        }
     }
 }
 

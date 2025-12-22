@@ -69,7 +69,7 @@ class AnonymousLoginIntegrationTest {
         User user = users.get(0);
         assertThat(user.getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
         assertThat(user.getProviderId()).isEqualTo("mtg_abc123:철수");
-        assertThat(user.getUsername()).isEqualTo("mtg_abc123:철수");
+        assertThat(user.getUsername()).isEqualTo("철수");
         assertThat(user.getPassword()).isNotNull();
         assertThat(user.getPassword()).startsWith("$2a$"); // BCrypt hash
     }
