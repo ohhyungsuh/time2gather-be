@@ -10,7 +10,7 @@ import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.cover.time2gather.domain.auth.service.OAuthLoginService;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.user.User;
-import com.cover.time2gather.infra.meeting.MeetingRepository;
+import com.cover.time2gather.domain.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,8 +44,7 @@ public class AuthController {
     private static final String RESPONSE_DESC_PROVIDER_ERROR = "OAuth Provider 통신 실패";
 
     private final OAuthLoginService oAuthLoginService;
-    private final MeetingRepository meetingRepository;
-    private final com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository meetingUserSelectionRepository;
+    private final UserService userService;
 
     @Value("${oauth.redirect.default}")
     private String defaultRedirectUrl;
@@ -116,16 +115,8 @@ public class AuthController {
     })
     @GetMapping("/me")
     public ApiResponse<UserInfoResponse> getCurrentUser(@CurrentUser User user) {
-        // 생성한 모임 목록
-        List<Meeting> createdMeetings = meetingRepository.findByHostUserId(user.getId());
-
-        // 참여한 모임 목록 (시간 선택을 한 모임들)
-        List<Meeting> participatedMeetings = meetingUserSelectionRepository.findAllByUserId(user.getId())
-                .stream()
-                .map(selection -> meetingRepository.findById(selection.getMeetingId()).orElse(null))
-                .filter(meeting -> meeting != null && !meeting.getHostUserId().equals(user.getId())) // 자신이 만든 모임 제외
-                .distinct()
-                .collect(java.util.stream.Collectors.toList());
+        List<Meeting> createdMeetings = userService.getCreatedMeetings(user.getId());
+        List<Meeting> participatedMeetings = userService.getParticipatedMeetings(user.getId());
 
         UserInfoResponse response = UserInfoResponse.from(user, createdMeetings, participatedMeetings);
         return ApiResponse.success(response);

@@ -71,23 +71,20 @@ public class CalendarExportService {
                 endDateTime = startDateTime.plusMinutes(intervalMinutes);
             }
 
-            // Event PropertyList 생성 (VEvent 생성 전에)
-            PropertyList eventProperties = new PropertyList();
-            eventProperties.add(new DtStart<>(startDateTime));
-            eventProperties.add(new DtEnd<>(endDateTime));
-            eventProperties.add(new Summary(meetingTitle));
-            eventProperties.add(uidGenerator.generateUid());
-            eventProperties.add(new DtStamp(Instant.now()));
-            eventProperties.add(new Created(Instant.now()));
-            eventProperties.add(new LastModified(Instant.now()));
-            eventProperties.add(new Status("CONFIRMED"));
+            // VEvent 생성 (간단한 생성자 사용)
+            VEvent event = new VEvent(startDateTime, endDateTime, meetingTitle);
+
+            // 필수 properties를 직접 add (replace 대신 add 사용)
+            event.add(uidGenerator.generateUid());
+            event.add(new DtStamp(Instant.now()));
+            event.add(new Created(Instant.now()));
+            event.add(new LastModified(Instant.now()));
+            event.add(new Status("CONFIRMED"));
+            event.add(new Sequence(0));
 
             if (meetingDescription != null && !meetingDescription.isBlank()) {
-                eventProperties.add(new Description(meetingDescription));
+                event.add(new Description(meetingDescription));
             }
-
-            // VEvent 생성 (PropertyList를 포함하여)
-            VEvent event = new VEvent(eventProperties);
 
             // Calendar PropertyList 생성
             PropertyList calendarProperties = new PropertyList();
@@ -119,7 +116,13 @@ public class CalendarExportService {
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             outputter.output(calendar, out);
-            return out.toByteArray();
+            byte[] result = out.toByteArray();
+
+            // 생성된 ICS 내용 로깅 (디버깅용)
+            String icsContent = new String(result, java.nio.charset.StandardCharsets.UTF_8);
+            log.info("Generated ICS file content:\n{}", icsContent);
+
+            return result;
         }
     }
 }

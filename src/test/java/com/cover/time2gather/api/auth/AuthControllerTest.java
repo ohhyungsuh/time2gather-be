@@ -6,6 +6,7 @@ import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
 import com.cover.time2gather.domain.auth.service.OAuthLoginService;
 import com.cover.time2gather.domain.user.UserRepository;
+import com.cover.time2gather.domain.user.UserService;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
@@ -52,7 +53,7 @@ class AuthControllerTest {
 	private MeetingRepository meetingRepository;
 
 	@MockitoBean
-	private MeetingUserSelectionRepository meetingUserSelectionRepository;
+	private UserService userService;
 
     @Test
     @WithMockUser
