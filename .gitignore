@@ -35,4 +35,16 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment Variables ###
 .env
+.env.local
+.env.prod
+
+### Docker Compose Override (로컬 개발용) ###
+docker-compose.override.yml
+
+### Logs ###
+*.log
+logs/
+

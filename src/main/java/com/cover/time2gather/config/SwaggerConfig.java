@@ -11,10 +11,12 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -23,16 +25,33 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig implements WebMvcConfigurer {
 
+    private final Environment environment;
+
     @Value("${server.port:8080}")
     private String serverPort;
+
+    public SwaggerConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public OpenAPI openAPI() {
         List<Server> servers = new ArrayList<>();
-        servers.add(new Server().url("http://localhost:" + serverPort).description("Local Server"));
-        servers.add(new Server().url("http://localhost:8080").description("Local Server (Default)"));
-        servers.add(new Server().url("https://api.time2gather.org").description("Production Server"));
-        
+
+        // 활성 프로파일 확인 (prod 환경 판단)
+        boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+
+        // 프로덕션 환경에서는 API 도메인을 첫 번째 (기본값)로 설정
+        if (isProd) {
+            servers.add(new Server().url("https://api.time2gather.org").description("Production Server"));
+            servers.add(new Server().url("http://localhost:8080").description("Local Server (for testing)"));
+        } else {
+            // 로컬/개발 환경에서는 localhost를 기본값으로 설정
+            servers.add(new Server().url("http://localhost:" + serverPort).description("Local Server"));
+            servers.add(new Server().url("http://localhost:8080").description("Local Server (Default)"));
+            servers.add(new Server().url("https://api.time2gather.org").description("Production Server"));
+        }
+
         return new OpenAPI()
                 .info(apiInfo())
                 .servers(servers)
