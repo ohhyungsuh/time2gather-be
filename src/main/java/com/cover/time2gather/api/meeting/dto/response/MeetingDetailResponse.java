@@ -43,6 +43,19 @@ public class MeetingDetailResponse {
 		int intervalMinutes = meeting.getIntervalMinutes();
 
 		// Meeting 정보 변환
+		String confirmedDate = meeting.getConfirmedDate() != null
+			? meeting.getConfirmedDate().toString()
+			: null;
+		String confirmedTime = null;
+		if (meeting.getConfirmedDate() != null) {
+			Integer confirmedSlotIndex = meeting.getConfirmedSlotIndex();
+			if (confirmedSlotIndex == null || confirmedSlotIndex == -1) {
+				confirmedTime = "ALL_DAY";
+			} else {
+				confirmedTime = TimeSlot.fromIndex(confirmedSlotIndex, intervalMinutes).toTimeString();
+			}
+		}
+
 		MeetingInfo meetingInfo = new MeetingInfo(
 			meeting.getId(),
 			meeting.getMeetingCode(),
@@ -56,7 +69,9 @@ public class MeetingDetailResponse {
 			meeting.getTimezone(),
 			meeting.getSelectionType().name(),
 			intervalMinutes,
-			convertSlotIndexesToTimeStrings(meeting.getAvailableDates(), intervalMinutes)
+			convertSlotIndexesToTimeStrings(meeting.getAvailableDates(), intervalMinutes),
+			confirmedDate,
+			confirmedTime
 		);
 
 		// 참여자 정보 변환
@@ -211,6 +226,12 @@ public class MeetingDetailResponse {
 		@Schema(description = "가능한 날짜/시간대. ALL_DAY인 경우 빈 배열",
 			example = "{\"2024-02-15\": [\"09:00\", \"10:00\", \"11:00\"], \"2024-02-16\": [\"14:00\", \"15:00\"]}")
 		private Map<String, String[]> availableDates;
+
+		@Schema(description = "확정된 날짜 (없으면 null)", example = "2024-02-15")
+		private String confirmedDate;
+
+		@Schema(description = "확정된 시간 (없으면 null, ALL_DAY인 경우 'ALL_DAY')", example = "09:00")
+		private String confirmedTime;
 	}
 
 	@Getter
