@@ -248,53 +248,6 @@ HOW TO INTERPRET THIS:
 - Simply USE the provided day of week in your output
 - Copy the exact format: "YYYY-MM-DD (요일)"
 
-**CALCULATING "시간 부자" (Time-Rich Person):**
-This is the participant who selected the MOST dates/time ranges.
-
-**Example for ALL_DAY Type:**
-```
-Participant Selections:
-- 김철수:
-  * 2025-12-15 (일): 하루 종일
-  * 2025-12-16 (월): 하루 종일
-  * 2025-12-17 (화): 하루 종일
-  (Total: 3 dates)
-
-- 이영희:
-  * 2025-12-15 (일): 하루 종일
-  (Total: 1 date)
-
-- 박민수:
-  * 2025-12-15 (일): 하루 종일
-  * 2025-12-16 (월): 하루 종일
-  (Total: 2 dates)
-```
-→ **시간 부자**: 김철수 (selected 3 dates, most among all participants)
-
-**Example for TIME Type:**
-```
-Participant Selections:
-- Alice:
-  * 2025-12-10 (화): 14:00, 15:00, 16:00
-  * 2025-12-11 (수): 10:00, 11:00
-  * 2025-12-12 (목): 17:00
-  (Total: 3 dates)
-
-- Bob:
-  * 2025-12-10 (화): 14:00, 15:00
-  (Total: 1 date)
-
-- Charlie:
-  * 2025-12-10 (화): 14:00, 15:00, 16:00
-  * 2025-12-12 (목): 17:00
-  (Total: 2 dates)
-```
-→ **시간 부자**: Alice (selected 3 dates, most among all participants)
-
-**Example with Tie:**
-If Alice and Bob both selected 3 dates (highest count):
-→ **시간 부자**: Alice, Bob
-
 --------------------------------------------
 
 **🚨 FINAL CHECK BEFORE GENERATING OUTPUT:**
@@ -409,14 +362,6 @@ OUTPUT FORMAT (Markdown):
 ## 참여 현황
 
 **투표 완료:** X명
-
----
-
-## 시간 부자
-
-[가장 많은 날짜를 선택한 참여자 이름]
-
-(Example: "김철수" or "김철수, 이영희" if tied)
 
 ---
 
@@ -549,31 +494,15 @@ RULES:
 
 4. If any info missing → write "정보 없음"
 
-5. **"시간 부자" - CRITICAL DEFINITION**:
-   - **Definition**: The participant who selected the MOST dates/time ranges
-   - **How to calculate**:
-     * **For TIME type**: Count how many different dates each participant selected
-     * **For ALL_DAY type**: Count how many different dates each participant selected
-     * The participant with the highest count is the "시간 부자"
-   - **Output**: Just the name of that ONE participant
-     * Example: If Alice selected 5 dates, Bob selected 3 dates, Charlie selected 2 dates
-       → Output: `Alice`
-     * If there's a tie, list all tied participants
-       → Example: `Alice, Bob`
-   - **DO NOT show**:
-     * ❌ WRONG: "가능한 시간대: 2025-12-11 (목) 하루 종일에 3명 가능"
-     * ❌ WRONG: "participants available during the #1 ranked time range"
-     * ✅ CORRECT: Just the name(s): "Alice" or "Alice, Bob"
+5. Entire output must be **Korean only**
 
-6. Entire output must be **Korean only**
+6. **DO NOT add any commentary outside the Markdown report**
 
-7. **DO NOT add any commentary outside the Markdown report**
+7. **NO emojis in the output**
 
-8. **NO emojis in the output**
+8. **NO "추천 사항" (recommendations) section** - Do not include any recommendations
 
-9. **NO "추천 사항" (recommendations) section** - Do not include any recommendations
-
-10. **IMPORTANT: Merge consecutive time slots intelligently (FOR TIME TYPE ONLY)**
+9. **IMPORTANT: Merge consecutive time slots intelligently (FOR TIME TYPE ONLY)**
    - Same participants + consecutive times = ONE time range
    - This makes the report much more readable and practical
    - Example: Don't show "14:00 (3명)", "14:30 (3명)", "15:00 (3명)" separately
