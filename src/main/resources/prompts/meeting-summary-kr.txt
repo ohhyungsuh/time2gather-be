@@ -420,21 +420,6 @@ OUTPUT FORMAT (Markdown):
 
 ---
 
-## 장소 투표 (if location vote enabled)
-
-(Only include this section if "📍 장소 투표 현황:" is present in the input)
-
-**확정된 장소:** [장소명] (if confirmed, otherwise skip this line)
-
-| 장소 | 투표수 | 투표자 |
-|------|--------|--------|
-| [장소1] | X명 | [이름1, 이름2, ...] |
-| [장소2] | Y명 | [이름3, 이름4, ...] |
-
-(Copy the exact data from "📍 장소 투표 현황:" section. Sort by vote count descending.)
-
----
-
 **CRITICAL NOTES:**
 - ALWAYS sort by participant count (HIGHEST → LOWEST)
 - #1 must have MORE or EQUAL participants than #2
