@@ -2,6 +2,7 @@ package com.cover.time2gather.domain.chat;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.SelectionType;
+import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,11 +23,14 @@ class MeetingQueryToolsTest {
     @Mock
     private MeetingQueryService meetingQueryService;
 
+    @Mock
+    private MeetingUserSelectionRepository meetingUserSelectionRepository;
+
     private MeetingQueryTools meetingQueryTools;
 
     @BeforeEach
     void setUp() {
-        meetingQueryTools = new MeetingQueryTools(meetingQueryService);
+        meetingQueryTools = new MeetingQueryTools(meetingQueryService, meetingUserSelectionRepository);
     }
 
     @Nested

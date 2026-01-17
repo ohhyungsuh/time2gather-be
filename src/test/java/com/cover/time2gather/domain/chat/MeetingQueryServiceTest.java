@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -200,6 +201,146 @@ class MeetingQueryServiceTest {
 
             // Then
             assertThat(result).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("findUpcomingMeetings")
+    class FindUpcomingMeetings {
+
+        @Test
+        @DisplayName("오늘 이후 날짜가 포함된 미팅만 반환한다")
+        void shouldReturnOnlyUpcomingMeetings() {
+            // Given
+            Long userId = 1L;
+            LocalDate today = LocalDate.now();
+            String futureDate = today.plusDays(7).toString();
+            String pastDate = today.minusDays(7).toString();
+
+            Meeting upcomingMeeting = Meeting.create(
+                "mtg_upcoming", "다가오는 미팅", null, userId, "Asia/Seoul",
+                SelectionType.TIME, 60, Map.of(futureDate, new int[]{18, 19})
+            );
+            Meeting pastMeeting = Meeting.create(
+                "mtg_past", "지난 미팅", null, userId, "Asia/Seoul",
+                SelectionType.TIME, 60, Map.of(pastDate, new int[]{18, 19})
+            );
+
+            when(meetingRepository.findByHostUserIdAndIsActiveTrue(userId))
+                .thenReturn(List.of(upcomingMeeting, pastMeeting));
+            when(meetingUserSelectionRepository.findAllByUserId(userId))
+                .thenReturn(List.of());
+
+            // When
+            List<Meeting> result = meetingQueryService.findUpcomingMeetings(userId);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTitle()).isEqualTo("다가오는 미팅");
+        }
+
+        @Test
+        @DisplayName("오늘 날짜도 다가오는 미팅에 포함된다")
+        void shouldIncludeTodayAsUpcoming() {
+            // Given
+            Long userId = 1L;
+            String today = LocalDate.now().toString();
+
+            Meeting todayMeeting = Meeting.create(
+                "mtg_today", "오늘 미팅", null, userId, "Asia/Seoul",
+                SelectionType.TIME, 60, Map.of(today, new int[]{18})
+            );
+
+            when(meetingRepository.findByHostUserIdAndIsActiveTrue(userId))
+                .thenReturn(List.of(todayMeeting));
+            when(meetingUserSelectionRepository.findAllByUserId(userId))
+                .thenReturn(List.of());
+
+            // When
+            List<Meeting> result = meetingQueryService.findUpcomingMeetings(userId);
+
+            // Then
+            assertThat(result).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("findPastMeetings")
+    class FindPastMeetings {
+
+        @Test
+        @DisplayName("모든 날짜가 오늘 이전인 미팅만 반환한다")
+        void shouldReturnOnlyPastMeetings() {
+            // Given
+            Long userId = 1L;
+            LocalDate today = LocalDate.now();
+            String futureDate = today.plusDays(7).toString();
+            String pastDate = today.minusDays(7).toString();
+
+            Meeting upcomingMeeting = Meeting.create(
+                "mtg_upcoming", "다가오는 미팅", null, userId, "Asia/Seoul",
+                SelectionType.TIME, 60, Map.of(futureDate, new int[]{18, 19})
+            );
+            Meeting pastMeeting = Meeting.create(
+                "mtg_past", "지난 미팅", null, userId, "Asia/Seoul",
+                SelectionType.TIME, 60, Map.of(pastDate, new int[]{18, 19})
+            );
+
+            when(meetingRepository.findByHostUserIdAndIsActiveTrue(userId))
+                .thenReturn(List.of(upcomingMeeting, pastMeeting));
+            when(meetingUserSelectionRepository.findAllByUserId(userId))
+                .thenReturn(List.of());
+
+            // When
+            List<Meeting> result = meetingQueryService.findPastMeetings(userId);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTitle()).isEqualTo("지난 미팅");
+        }
+    }
+
+    @Nested
+    @DisplayName("findMeetingByCode")
+    class FindMeetingByCode {
+
+        @Test
+        @DisplayName("미팅 코드로 사용자의 미팅을 조회한다")
+        void shouldFindMeetingByCode() {
+            // Given
+            Long userId = 1L;
+            String meetingCode = "mtg_hosted";
+
+            when(meetingRepository.findByHostUserIdAndIsActiveTrue(userId))
+                .thenReturn(List.of(hostedMeeting));
+            when(meetingUserSelectionRepository.findAllByUserId(userId))
+                .thenReturn(List.of());
+
+            // When
+            Meeting result = meetingQueryService.findMeetingByCode(userId, meetingCode);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getMeetingCode()).isEqualTo(meetingCode);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 미팅 코드는 null을 반환한다")
+        void shouldReturnNullForNonExistentCode() {
+            // Given
+            Long userId = 1L;
+            String meetingCode = "non_existent";
+
+            when(meetingRepository.findByHostUserIdAndIsActiveTrue(userId))
+                .thenReturn(List.of(hostedMeeting));
+            when(meetingUserSelectionRepository.findAllByUserId(userId))
+                .thenReturn(List.of());
+
+            // When
+            Meeting result = meetingQueryService.findMeetingByCode(userId, meetingCode);
+
+            // Then
+            assertThat(result).isNull();
         }
     }
 }
