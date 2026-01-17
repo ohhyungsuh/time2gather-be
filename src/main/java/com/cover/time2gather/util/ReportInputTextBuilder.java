@@ -1,6 +1,8 @@
 package com.cover.time2gather.util;
 
 import com.cover.time2gather.domain.meeting.Meeting;
+import com.cover.time2gather.domain.meeting.MeetingLocation;
+import com.cover.time2gather.domain.meeting.MeetingLocationSelection;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.SelectionType;
 import com.cover.time2gather.domain.user.User;
@@ -22,6 +24,16 @@ public class ReportInputTextBuilder {
     }
 
     public static String build(Meeting meeting, List<MeetingUserSelection> selections, Map<Long, User> userMap) {
+        return build(meeting, selections, userMap, Collections.emptyList(), Collections.emptyList());
+    }
+
+    public static String build(
+            Meeting meeting,
+            List<MeetingUserSelection> selections,
+            Map<Long, User> userMap,
+            List<MeetingLocation> locations,
+            List<MeetingLocationSelection> locationSelections
+    ) {
         StringBuilder sb = new StringBuilder();
         sb.append(INPUT_MEETING_TITLE).append(meeting.getTitle()).append("\n");
 
@@ -32,6 +44,14 @@ public class ReportInputTextBuilder {
         // 선택 타입 정보 추가
         sb.append("Selection Type: ").append(meeting.getSelectionType()).append("\n");
         sb.append(INPUT_VOTED_PARTICIPANTS).append(selections.size()).append("\n\n");
+
+        // 확정된 시간/날짜 정보 추가
+        sb.append(buildConfirmedTimeInfo(meeting));
+
+        // 장소 투표 정보 추가 (활성화된 경우에만)
+        if (Boolean.TRUE.equals(meeting.getLocationVoteEnabled()) && !locations.isEmpty()) {
+            sb.append(buildLocationStatistics(meeting, locations, locationSelections, userMap));
+        }
 
         // 날짜별 집계 데이터 추가
         sb.append(buildDateStatistics(selections, userMap, meeting.getSelectionType()));
@@ -71,8 +91,98 @@ public class ReportInputTextBuilder {
     }
 
     /**
-     * 날짜별 참여자 집계 정보 생성
-     * GPT가 계산할 필요 없이 바로 사용할 수 있도록 정확한 통계 제공
+     * 장소 투표 정보 생성
+     */
+    private static String buildLocationStatistics(
+            Meeting meeting,
+            List<MeetingLocation> locations,
+            List<MeetingLocationSelection> locationSelections,
+            Map<Long, User> userMap
+    ) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("📍 장소 투표 현황:\n");
+
+        // 확정된 장소가 있는 경우
+        Long confirmedLocationId = meeting.getConfirmedLocationId();
+        if (confirmedLocationId != null) {
+            String confirmedLocationName = locations.stream()
+                    .filter(loc -> loc.getId().equals(confirmedLocationId))
+                    .map(MeetingLocation::getName)
+                    .findFirst()
+                    .orElse("알 수 없음");
+            sb.append("✅ 확정된 장소: ").append(confirmedLocationName).append("\n\n");
+        }
+
+        // 장소별 투표 집계
+        Map<Long, Set<Long>> locationVotes = new HashMap<>();
+        for (MeetingLocation location : locations) {
+            locationVotes.put(location.getId(), new HashSet<>());
+        }
+        for (MeetingLocationSelection selection : locationSelections) {
+            locationVotes.computeIfAbsent(selection.getLocationId(), k -> new HashSet<>())
+                    .add(selection.getUserId());
+        }
+
+        // 투표 수 내림차순으로 정렬
+        List<MeetingLocation> sortedLocations = locations.stream()
+                .sorted((loc1, loc2) -> {
+                    int votes1 = locationVotes.getOrDefault(loc1.getId(), Collections.emptySet()).size();
+                    int votes2 = locationVotes.getOrDefault(loc2.getId(), Collections.emptySet()).size();
+                    return Integer.compare(votes2, votes1);
+                })
+                .toList();
+
+        for (MeetingLocation location : sortedLocations) {
+            Set<Long> voterIds = locationVotes.getOrDefault(location.getId(), Collections.emptySet());
+            int voteCount = voterIds.size();
+
+            sb.append("- ").append(location.getName()).append(": ").append(voteCount).append("명");
+
+            if (!voterIds.isEmpty()) {
+                String voterNames = voterIds.stream()
+                        .map(userId -> {
+                            User user = userMap.get(userId);
+                            return user != null ? user.getUsername() : UNKNOWN_USER;
+                        })
+                        .collect(Collectors.joining(", "));
+                sb.append(" (").append(voterNames).append(")");
+            }
+            sb.append("\n");
+        }
+
+        sb.append("\n");
+        return sb.toString();
+    }
+
+    /**
+     * 확정된 시간/날짜 정보 생성
+     */
+    private static String buildConfirmedTimeInfo(Meeting meeting) {
+        LocalDate confirmedDate = meeting.getConfirmedDate();
+        if (confirmedDate == null) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String dateWithDayOfWeek = formatDateWithDayOfWeek(confirmedDate.toString());
+
+        if (meeting.getSelectionType() == SelectionType.ALL_DAY) {
+            sb.append("✅ 확정된 날짜: ").append(dateWithDayOfWeek).append("\n\n");
+        } else {
+            Integer confirmedSlotIndex = meeting.getConfirmedSlotIndex();
+            if (confirmedSlotIndex != null) {
+                String timeStr = TimeSlotConverter.slotIndexToTimeStr(confirmedSlotIndex);
+                sb.append("✅ 확정된 시간: ").append(dateWithDayOfWeek).append(" ").append(timeStr).append("\n\n");
+            } else {
+                sb.append("✅ 확정된 날짜: ").append(dateWithDayOfWeek).append("\n\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 장소 투표 정보 생성
      */
     private static String buildDateStatistics(
             List<MeetingUserSelection> selections,

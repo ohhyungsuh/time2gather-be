@@ -7,6 +7,7 @@ import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.SelectionType;
 import com.cover.time2gather.domain.meeting.service.CalendarExportService;
 import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
+import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.user.UserRepository;
@@ -51,6 +52,9 @@ class MeetingControllerExportTest {
 
     @MockitoBean
     private CalendarExportService calendarExportService;
+
+    @MockitoBean
+    private MeetingLocationService locationService;
 
     @MockitoBean
     private JwtTokenService jwtTokenService;

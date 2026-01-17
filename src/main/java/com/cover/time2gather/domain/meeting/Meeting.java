@@ -75,6 +75,16 @@ public class Meeting extends BaseEntity {
     @Column(name = "confirmed_at")
     private LocalDateTime confirmedAt;
 
+    // 장소 투표 관련 필드
+    @Column(name = "location_vote_enabled", nullable = false)
+    private Boolean locationVoteEnabled = false;
+
+    @Column(name = "confirmed_location_id")
+    private Long confirmedLocationId;
+
+    @Column(name = "location_confirmed_at")
+    private LocalDateTime locationConfirmedAt;
+
     public static Meeting create(
             String meetingCode,
             String title,
@@ -84,6 +94,21 @@ public class Meeting extends BaseEntity {
             SelectionType selectionType,
             Integer intervalMinutes,
             Map<String, int[]> availableDates
+    ) {
+        return create(meetingCode, title, description, hostUserId, timezone,
+                selectionType, intervalMinutes, availableDates, false);
+    }
+
+    public static Meeting create(
+            String meetingCode,
+            String title,
+            String description,
+            Long hostUserId,
+            String timezone,
+            SelectionType selectionType,
+            Integer intervalMinutes,
+            Map<String, int[]> availableDates,
+            Boolean locationVoteEnabled
     ) {
         Meeting meeting = new Meeting();
         meeting.meetingCode = meetingCode;
@@ -95,6 +120,7 @@ public class Meeting extends BaseEntity {
         meeting.intervalMinutes = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
         meeting.availableDates = availableDates;
         meeting.isActive = true;
+        meeting.locationVoteEnabled = locationVoteEnabled != null ? locationVoteEnabled : false;
 
         // TimeSlot 검증 (타입에 따라)
         if (meeting.selectionType == SelectionType.TIME) {
@@ -199,5 +225,50 @@ public class Meeting extends BaseEntity {
         this.confirmedDate = null;
         this.confirmedSlotIndex = null;
         this.confirmedAt = null;
+    }
+
+    // 장소 투표 관련 메서드
+
+    public boolean isLocationVoteEnabled() {
+        return Boolean.TRUE.equals(locationVoteEnabled);
+    }
+
+    public boolean isLocationConfirmed() {
+        return confirmedLocationId != null;
+    }
+
+    public void confirmLocation(Long locationId) {
+        if (!isLocationVoteEnabled()) {
+            throw new IllegalStateException("장소 투표가 활성화되지 않은 미팅입니다.");
+        }
+        if (isLocationConfirmed()) {
+            throw new IllegalStateException("이미 장소가 확정된 미팅입니다. 먼저 장소 확정을 취소해주세요.");
+        }
+        if (locationId == null) {
+            throw new IllegalArgumentException("장소 ID는 필수입니다.");
+        }
+
+        this.confirmedLocationId = locationId;
+        this.locationConfirmedAt = LocalDateTime.now();
+    }
+
+    public void cancelLocationConfirmation() {
+        if (!isLocationConfirmed()) {
+            throw new IllegalStateException("장소가 확정되지 않은 미팅입니다.");
+        }
+
+        this.confirmedLocationId = null;
+        this.locationConfirmedAt = null;
+    }
+
+    public void enableLocationVote() {
+        this.locationVoteEnabled = true;
+    }
+
+    public void disableLocationVote() {
+        if (isLocationConfirmed()) {
+            throw new IllegalStateException("장소가 확정된 미팅은 장소 투표를 비활성화할 수 없습니다.");
+        }
+        this.locationVoteEnabled = false;
     }
 }

@@ -31,6 +31,9 @@ public class MeetingDetailResponse {
 	@Schema(description = "현재 사용자의 참여 여부 (미인증 시 false)")
 	private boolean isParticipated;
 
+	@Schema(description = "장소 투표 정보 (장소 투표 비활성화 시 null)")
+	private LocationVoteInfo locationVote;
+
 	/**
 	 * 도메인 모델로부터 DTO 생성
 	 */
@@ -77,7 +80,10 @@ public class MeetingDetailResponse {
 			intervalMinutes
 		);
 
-		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary, detailData.isParticipated());
+		// 장소 투표 정보 변환
+		LocationVoteInfo locationVote = convertLocationDataToResponse(detailData.getLocationData());
+
+		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary, detailData.isParticipated(), locationVote);
 	}
 
 	/**
@@ -272,5 +278,89 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "가능 비율 (% 포함)", example = "80%")
 		private String percentage;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "장소 투표 정보")
+	public static class LocationVoteInfo {
+		@Schema(description = "장소 투표 활성화 여부", example = "true")
+		private boolean enabled;
+
+		@Schema(description = "장소 목록")
+		private List<LocationInfo> locations;
+
+		@Schema(description = "확정된 장소 (없으면 null)")
+		private LocationInfo confirmedLocation;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	@Schema(description = "장소 정보")
+	public static class LocationInfo {
+		@Schema(description = "장소 ID", example = "1")
+		private Long id;
+
+		@Schema(description = "장소 이름", example = "강남역 스타벅스")
+		private String name;
+
+		@Schema(description = "표시 순서", example = "0")
+		private int displayOrder;
+
+		@Schema(description = "투표 수", example = "3")
+		private int voteCount;
+
+		@Schema(description = "투표 비율", example = "60%")
+		private String percentage;
+
+		@Schema(description = "투표한 참여자 목록")
+		private List<ParticipantInfo> voters;
+	}
+
+	/**
+	 * 장소 투표 데이터 → DTO 변환
+	 */
+	private static LocationVoteInfo convertLocationDataToResponse(MeetingDetailData.LocationData locationData) {
+		if (locationData == null) {
+			return null;
+		}
+
+		List<LocationInfo> locations = locationData.getLocations().stream()
+			.map(loc -> new LocationInfo(
+				loc.getId(),
+				loc.getName(),
+				loc.getDisplayOrder(),
+				loc.getVoteCount(),
+				loc.getPercentage(),
+				loc.getVoters().stream()
+					.map(user -> new ParticipantInfo(
+						user.getId(),
+						user.getUsername(),
+						user.getProfileImageUrl()
+					))
+					.collect(Collectors.toList())
+			))
+			.collect(Collectors.toList());
+
+		LocationInfo confirmedLocation = null;
+		if (locationData.getConfirmedLocation() != null) {
+			MeetingDetailData.LocationInfo confirmed = locationData.getConfirmedLocation();
+			confirmedLocation = new LocationInfo(
+				confirmed.getId(),
+				confirmed.getName(),
+				confirmed.getDisplayOrder(),
+				confirmed.getVoteCount(),
+				confirmed.getPercentage(),
+				confirmed.getVoters().stream()
+					.map(user -> new ParticipantInfo(
+						user.getId(),
+						user.getUsername(),
+						user.getProfileImageUrl()
+					))
+					.collect(Collectors.toList())
+			);
+		}
+
+		return new LocationVoteInfo(locationData.isEnabled(), locations, confirmedLocation);
 	}
 }

@@ -2,6 +2,10 @@ package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
+import com.cover.time2gather.domain.meeting.MeetingLocation;
+import com.cover.time2gather.domain.meeting.MeetingLocationSelection;
+import com.cover.time2gather.infra.meeting.MeetingLocationRepository;
+import com.cover.time2gather.infra.meeting.MeetingLocationSelectionRepository;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
@@ -26,6 +30,8 @@ public class MeetingService {
     private static final String CODE_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
     private final MeetingRepository meetingRepository;
+    private final MeetingLocationRepository locationRepository;
+    private final MeetingLocationSelectionRepository locationSelectionRepository;
     private final UserRepository userRepository;
     private final MeetingUserSelectionRepository selectionRepository;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -40,9 +46,31 @@ public class MeetingService {
             Integer intervalMinutes,
             Map<String, int[]> availableDates
     ) {
+        return createMeeting(hostUserId, title, description, timezone, selectionType, 
+                intervalMinutes, availableDates, false, null);
+    }
+
+    @Transactional
+    public Meeting createMeeting(
+            Long hostUserId,
+            String title,
+            String description,
+            String timezone,
+            com.cover.time2gather.domain.meeting.SelectionType selectionType,
+            Integer intervalMinutes,
+            Map<String, int[]> availableDates,
+            Boolean locationVoteEnabled,
+            List<String> locations
+    ) {
         // 사용자가 존재하는지 검증
         if (!userRepository.existsById(hostUserId)) {
             throw new IllegalArgumentException("User not found");
+        }
+
+        // 장소 투표 활성화 시 검증
+        boolean enableLocationVote = Boolean.TRUE.equals(locationVoteEnabled);
+        if (enableLocationVote) {
+            validateLocations(locations);
         }
 
         String meetingCode = generateUniqueMeetingCode();
@@ -55,10 +83,39 @@ public class MeetingService {
                 timezone,
                 selectionType,
                 intervalMinutes,
-                availableDates
+                availableDates,
+                enableLocationVote
         );
 
-        return meetingRepository.save(meeting);
+        Meeting savedMeeting = meetingRepository.save(meeting);
+
+        // 장소 후보 저장
+        if (enableLocationVote && locations != null) {
+            for (int i = 0; i < locations.size(); i++) {
+                MeetingLocation location = MeetingLocation.create(
+                        savedMeeting.getId(),
+                        locations.get(i),
+                        i  // displayOrder
+                );
+                locationRepository.save(location);
+            }
+        }
+
+        return savedMeeting;
+    }
+
+    private void validateLocations(List<String> locations) {
+        if (locations == null || locations.size() < 2) {
+            throw new IllegalArgumentException("장소 투표를 활성화하려면 최소 2개의 장소가 필요합니다.");
+        }
+        if (locations.size() > 5) {
+            throw new IllegalArgumentException("장소는 최대 5개까지 추가할 수 있습니다.");
+        }
+        for (String location : locations) {
+            if (location == null || location.trim().isEmpty()) {
+                throw new IllegalArgumentException("장소 이름은 비어있을 수 없습니다.");
+            }
+        }
     }
 
     public Meeting getMeetingByCode(String meetingCode) {
@@ -112,7 +169,10 @@ public class MeetingService {
         // Summary 데이터 구성 (참여자 수는 시간 선택이 있는 사용자만)
         MeetingDetailData.SummaryData summary = buildSummaryData(meeting, selections, participantIds.size());
 
-        return new MeetingDetailData(meeting, host, participants, selections, schedule, summary, isParticipated);
+        // 장소 데이터 구성
+        MeetingDetailData.LocationData locationData = buildLocationData(meeting, userMap);
+
+        return new MeetingDetailData(meeting, host, participants, selections, schedule, summary, isParticipated, locationData);
     }
 
     /**
@@ -227,6 +287,68 @@ public class MeetingService {
                 .collect(Collectors.toList());
 
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
+    }
+
+    /**
+     * 장소 투표 데이터 구성
+     */
+    private MeetingDetailData.LocationData buildLocationData(Meeting meeting, Map<Long, User> userMap) {
+        if (!meeting.isLocationVoteEnabled()) {
+            return null;
+        }
+
+        // 1. 장소 목록 조회
+        List<MeetingLocation> locations = locationRepository.selectByMeetingIdOrderByDisplayOrderAsc(meeting.getId());
+
+        // 2. 장소별 투표 조회
+        List<MeetingLocationSelection> locationSelections = locationSelectionRepository.selectByMeetingId(meeting.getId());
+
+        // 3. 장소별 투표 수 및 투표자 집계
+        Map<Long, List<User>> locationVotersMap = new HashMap<>();
+        for (MeetingLocationSelection selection : locationSelections) {
+            Long locationId = selection.getLocationId();
+            locationVotersMap.putIfAbsent(locationId, new ArrayList<>());
+
+            User voter = userMap.get(selection.getUserId());
+            if (voter != null) {
+                locationVotersMap.get(locationId).add(voter);
+            }
+        }
+
+        // 4. 총 투표자 수 (중복 제거)
+        Set<Long> uniqueVoterIds = locationSelections.stream()
+                .map(MeetingLocationSelection::getUserId)
+                .collect(Collectors.toSet());
+        int totalVoters = uniqueVoterIds.size();
+
+        // 5. LocationInfo 목록 생성
+        List<MeetingDetailData.LocationInfo> locationInfos = new ArrayList<>();
+        MeetingDetailData.LocationInfo confirmedLocation = null;
+
+        for (MeetingLocation location : locations) {
+            List<User> voters = locationVotersMap.getOrDefault(location.getId(), new ArrayList<>());
+            int voteCount = voters.size();
+            double percentageValue = totalVoters > 0 ? (voteCount * 100.0 / totalVoters) : 0;
+            String percentage = Math.round(percentageValue) + "%";
+
+            MeetingDetailData.LocationInfo locationInfo = new MeetingDetailData.LocationInfo(
+                    location.getId(),
+                    location.getName(),
+                    location.getDisplayOrder(),
+                    voteCount,
+                    percentage,
+                    voters
+            );
+
+            locationInfos.add(locationInfo);
+
+            // 확정된 장소 찾기
+            if (meeting.isLocationConfirmed() && location.getId().equals(meeting.getConfirmedLocationId())) {
+                confirmedLocation = locationInfo;
+            }
+        }
+
+        return new MeetingDetailData.LocationData(true, locationInfos, confirmedLocation);
     }
 
     private String generateUniqueMeetingCode() {

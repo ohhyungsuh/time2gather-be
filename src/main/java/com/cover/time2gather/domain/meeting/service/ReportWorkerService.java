@@ -2,11 +2,9 @@ package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingReport;
-import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.ReportData;
 import com.cover.time2gather.domain.meeting.client.ReportSummaryClient;
 import com.cover.time2gather.domain.meeting.event.ReportGenerateEvent;
-import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.infra.meeting.MeetingReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,12 +50,10 @@ public class ReportWorkerService {
         }
 
         Meeting meeting = reportData.meeting();
-        List<MeetingUserSelection> allSelections = reportData.selections();
-        Map<Long, User> userMap = reportData.userMap();
 
         String summaryText;
         try {
-            summaryText = summaryClient.generateSummary(meeting, allSelections, userMap);
+            summaryText = summaryClient.generateSummary(reportData);
             if (summaryText == null || summaryText.isBlank()) {
                 log.warn("Received empty summary for meetingId={}", meetingId);
                 summaryText = "";

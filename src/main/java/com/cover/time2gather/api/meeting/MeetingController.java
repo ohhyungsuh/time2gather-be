@@ -2,18 +2,25 @@ package com.cover.time2gather.api.meeting;
 
 import com.cover.time2gather.api.common.ApiResponse;
 import com.cover.time2gather.api.meeting.dto.ConfirmMeetingRequest;
+import com.cover.time2gather.api.meeting.dto.request.AddLocationRequest;
+import com.cover.time2gather.api.meeting.dto.request.ConfirmLocationRequest;
 import com.cover.time2gather.api.meeting.dto.request.CreateMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpsertUserSelectionRequest;
+import com.cover.time2gather.api.meeting.dto.request.VoteLocationsRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
+import com.cover.time2gather.api.meeting.dto.response.LocationResponse;
 import com.cover.time2gather.api.meeting.dto.response.MeetingDetailResponse;
 import com.cover.time2gather.api.meeting.dto.response.MeetingReportResponse;
+import com.cover.time2gather.api.meeting.dto.response.UserLocationSelectionsResponse;
 import com.cover.time2gather.api.meeting.dto.response.UserSelectionResponse;
 import com.cover.time2gather.config.security.JwtAuthentication;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
+import com.cover.time2gather.domain.meeting.MeetingLocation;
 import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
 import com.cover.time2gather.domain.meeting.service.CalendarExportService;
+import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -37,6 +45,7 @@ public class MeetingController {
     private final MeetingSelectionService selectionService;
     private final MeetingFacadeService meetingFacadeService;
     private final CalendarExportService calendarExportService;
+    private final MeetingLocationService locationService;
 
     @PostMapping
     @Operation(summary = "모임 생성", description = "새로운 모임을 생성합니다.")
@@ -44,6 +53,8 @@ public class MeetingController {
             @AuthenticationPrincipal JwtAuthentication authentication,
             @Valid @RequestBody CreateMeetingRequest request
     ) {
+        // 장소 검증
+        request.validateLocations();
 
         // Service 호출 (비즈니스 로직)
         Meeting meeting = meetingService.createMeeting(
@@ -53,7 +64,9 @@ public class MeetingController {
                 request.getTimezone(),
                 request.getSelectionTypeEnum(),
                 request.getIntervalMinutes(),
-                request.toSlotIndexes()  // DTO에서 변환
+                request.toSlotIndexes(),  // DTO에서 변환
+                request.isLocationVoteEnabled(),
+                request.getLocations()
         );
 
         // 도메인 → DTO 변환
@@ -356,6 +369,143 @@ public class MeetingController {
 
         // 취소 처리 (도메인 메서드에서 검증 수행)
         meetingService.cancelConfirmation(meeting);
+
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{meetingCode}/locations")
+    @Operation(
+        summary = "장소 추가",
+        description = """
+            호스트가 미팅에 새로운 장소를 추가합니다.
+            - 호스트만 장소를 추가할 수 있습니다.
+            - 장소 투표가 활성화된 미팅에서만 추가 가능합니다.
+            - 최대 5개까지 추가할 수 있습니다.
+        """
+    )
+    public ApiResponse<LocationResponse> addLocation(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody AddLocationRequest request
+    ) {
+        MeetingLocation location = locationService.addLocation(
+            meetingCode,
+            authentication.getUserId(),
+            request.getName()
+        );
+
+        return ApiResponse.success(LocationResponse.from(location));
+    }
+
+    @DeleteMapping("/{meetingCode}/locations/{locationId}")
+    @Operation(
+        summary = "장소 삭제",
+        description = """
+            호스트가 미팅에서 장소를 삭제합니다.
+            - 호스트만 장소를 삭제할 수 있습니다.
+            - 장소 투표가 활성화된 미팅에서만 삭제 가능합니다.
+            - 최소 2개는 유지해야 합니다.
+            - 해당 장소에 대한 투표도 함께 삭제됩니다.
+        """
+    )
+    public ApiResponse<Void> deleteLocation(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @PathVariable Long locationId
+    ) {
+        locationService.deleteLocation(
+            meetingCode,
+            authentication.getUserId(),
+            locationId
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/{meetingCode}/location-selections")
+    @Operation(
+        summary = "장소 투표",
+        description = """
+            사용자의 장소 투표를 저장합니다.
+            - 복수 선택 가능합니다.
+            - 빈 배열을 전송하면 기존 투표가 삭제됩니다 (투표 스킵).
+            - 기존 투표는 새로운 투표로 완전히 대체됩니다.
+        """
+    )
+    public ApiResponse<Void> voteLocations(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody VoteLocationsRequest request
+    ) {
+        locationService.voteLocations(
+            meetingCode,
+            authentication.getUserId(),
+            request.getLocationIds()
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @GetMapping("/{meetingCode}/location-selections")
+    @Operation(
+        summary = "내 장소 투표 조회",
+        description = """
+            현재 사용자의 장소 투표를 조회합니다.
+            - 투표하지 않은 경우 빈 배열이 반환됩니다.
+        """
+    )
+    public ApiResponse<UserLocationSelectionsResponse> getMyLocationSelections(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode
+    ) {
+        List<Long> locationIds = locationService.selectUserLocationIds(
+            meetingCode,
+            authentication.getUserId()
+        );
+
+        return ApiResponse.success(UserLocationSelectionsResponse.from(locationIds));
+    }
+
+    @PutMapping("/{meetingCode}/confirm-location")
+    @Operation(
+        summary = "장소 확정",
+        description = """
+            호스트가 미팅 장소를 확정합니다.
+            - 호스트만 확정할 수 있습니다.
+            - 이미 확정된 미팅은 먼저 취소해야 재확정할 수 있습니다.
+        """
+    )
+    public ApiResponse<Void> confirmLocation(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody ConfirmLocationRequest request
+    ) {
+        locationService.confirmLocation(
+            meetingCode,
+            authentication.getUserId(),
+            request.getLocationId()
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/{meetingCode}/confirm-location")
+    @Operation(
+        summary = "장소 확정 취소",
+        description = """
+            호스트가 미팅 장소 확정을 취소합니다.
+            - 호스트만 취소할 수 있습니다.
+            - 확정되지 않은 미팅은 취소할 수 없습니다.
+        """
+    )
+    public ApiResponse<Void> cancelLocationConfirmation(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode
+    ) {
+        locationService.cancelLocationConfirmation(
+            meetingCode,
+            authentication.getUserId()
+        );
 
         return ApiResponse.success(null);
     }
