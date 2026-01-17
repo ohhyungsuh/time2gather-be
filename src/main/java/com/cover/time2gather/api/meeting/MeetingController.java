@@ -1,6 +1,7 @@
 package com.cover.time2gather.api.meeting;
 
 import com.cover.time2gather.api.common.ApiResponse;
+import com.cover.time2gather.api.meeting.dto.ConfirmMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.CreateMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpsertUserSelectionRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
@@ -301,6 +302,62 @@ public class MeetingController {
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(icsFile.length))
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
                 .body(icsFile);
+    }
+
+    @PutMapping("/{meetingCode}/confirm")
+    @Operation(
+        summary = "미팅 일정 확정",
+        description = """
+            호스트가 미팅 일정을 확정합니다.
+            - 호스트만 확정할 수 있습니다.
+            - 이미 확정된 미팅은 먼저 취소해야 재확정할 수 있습니다.
+            - 확정 후에는 참여자들이 투표를 수정할 수 없습니다.
+            - ALL_DAY 타입 미팅은 slotIndex를 null로 전달합니다.
+        """
+    )
+    public ApiResponse<Void> confirmMeeting(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody ConfirmMeetingRequest request
+    ) {
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
+        // 호스트 권한 확인
+        if (!meeting.getHostUserId().equals(authentication.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("호스트만 미팅을 확정할 수 있습니다.");
+        }
+
+        // 확정 처리 (도메인 메서드에서 검증 수행)
+        meetingService.confirmMeeting(meeting, request.getDate(), request.getSlotIndex());
+
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/{meetingCode}/confirm")
+    @Operation(
+        summary = "미팅 일정 확정 취소",
+        description = """
+            호스트가 미팅 일정 확정을 취소합니다.
+            - 호스트만 취소할 수 있습니다.
+            - 확정되지 않은 미팅은 취소할 수 없습니다.
+            - 취소 후에는 참여자들이 다시 투표를 수정할 수 있습니다.
+        """
+    )
+    public ApiResponse<Void> cancelConfirmation(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode
+    ) {
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+
+        // 호스트 권한 확인
+        if (!meeting.getHostUserId().equals(authentication.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("호스트만 미팅 확정을 취소할 수 있습니다.");
+        }
+
+        // 취소 처리 (도메인 메서드에서 검증 수행)
+        meetingService.cancelConfirmation(meeting);
+
+        return ApiResponse.success(null);
     }
 
     private String validateAndParseDate(String date, Meeting meeting) {

@@ -87,6 +87,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * IllegalStateException 처리 (잘못된 상태에서의 요청)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException e) {
+        log.warn("Illegal state exception: {}", e.getMessage());
+        String message = e.getMessage() != null ? e.getMessage() : "현재 상태에서 수행할 수 없는 요청입니다";
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(message));
+    }
+
+    /**
      * NullPointerException 처리
      */
     @ExceptionHandler(NullPointerException.class)

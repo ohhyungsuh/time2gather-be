@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Entity
@@ -63,6 +65,15 @@ public class Meeting extends BaseEntity {
 
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Column(name = "confirmed_date")
+    private LocalDate confirmedDate;
+
+    @Column(name = "confirmed_slot_index")
+    private Integer confirmedSlotIndex;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
 
     public static Meeting create(
             String meetingCode,
@@ -133,5 +144,60 @@ public class Meeting extends BaseEntity {
                 throw new IllegalArgumentException("일 단위 선택(ALL_DAY)인 경우 시간대는 빈 배열이어야 합니다.");
             }
         }
+    }
+
+    public boolean isConfirmed() {
+        return confirmedDate != null;
+    }
+
+    public void confirm(LocalDate date, Integer slotIndex) {
+        if (isConfirmed()) {
+            throw new IllegalStateException("이미 확정된 미팅입니다. 먼저 확정을 취소해주세요.");
+        }
+
+        String dateString = date.toString();
+        if (!availableDates.containsKey(dateString)) {
+            throw new IllegalArgumentException("유효하지 않은 날짜입니다: " + dateString);
+        }
+
+        if (selectionType == SelectionType.TIME) {
+            validateSlotIndex(dateString, slotIndex);
+        } else {
+            // ALL_DAY 타입인 경우 slotIndex는 무시되거나 null이어야 함
+            slotIndex = null;
+        }
+
+        this.confirmedDate = date;
+        this.confirmedSlotIndex = slotIndex;
+        this.confirmedAt = LocalDateTime.now();
+    }
+
+    private void validateSlotIndex(String dateString, Integer slotIndex) {
+        if (slotIndex == null) {
+            throw new IllegalArgumentException("TIME 타입 미팅은 slotIndex가 필요합니다.");
+        }
+
+        int[] availableSlots = availableDates.get(dateString);
+        boolean slotExists = false;
+        for (int slot : availableSlots) {
+            if (slot == slotIndex) {
+                slotExists = true;
+                break;
+            }
+        }
+
+        if (!slotExists) {
+            throw new IllegalArgumentException("유효하지 않은 슬롯 인덱스입니다: " + slotIndex);
+        }
+    }
+
+    public void cancelConfirmation() {
+        if (!isConfirmed()) {
+            throw new IllegalStateException("확정되지 않은 미팅입니다.");
+        }
+
+        this.confirmedDate = null;
+        this.confirmedSlotIndex = null;
+        this.confirmedAt = null;
     }
 }

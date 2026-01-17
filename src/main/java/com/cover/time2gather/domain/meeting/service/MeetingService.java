@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,6 +64,18 @@ public class MeetingService {
     public Meeting getMeetingByCode(String meetingCode) {
         return meetingRepository.findByMeetingCode(meetingCode)
                 .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+    }
+
+    @Transactional
+    public void confirmMeeting(Meeting meeting, LocalDate date, Integer slotIndex) {
+        meeting.confirm(date, slotIndex);
+        meetingRepository.save(meeting);
+    }
+
+    @Transactional
+    public void cancelConfirmation(Meeting meeting) {
+        meeting.cancelConfirmation();
+        meetingRepository.save(meeting);
     }
 
     /**
