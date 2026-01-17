@@ -292,15 +292,14 @@ public class MeetingController {
         // 파일명 생성 (iOS Safari 호환)
         String filename = generateFilename(targetDate, timeString);
 
-        // iOS Safari를 위한 HTTP 헤더 설정
+        // iOS/macOS에서 캘린더 앱이 자동으로 열리도록 설정
+        // - Content-Type: text/calendar → 브라우저가 ICS 파일로 인식
+        // - Content-Disposition: inline → 다운로드 대신 앱에서 바로 열기
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + filename)
-                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
-                .header("X-Download-Options", "noopen")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"; filename*=UTF-8''" + filename)
+                .header(HttpHeaders.CONTENT_TYPE, "text/calendar; charset=utf-8")
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(icsFile.length))
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
-                .header(HttpHeaders.PRAGMA, "no-cache")
-                .header(HttpHeaders.EXPIRES, "0")
                 .body(icsFile);
     }
 

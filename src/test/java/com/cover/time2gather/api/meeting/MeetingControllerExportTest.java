@@ -82,7 +82,7 @@ class MeetingControllerExportTest {
             // When & Then
             mockMvc.perform(get("/api/v1/meetings/{meetingCode}/export", meetingCode))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/octet-stream"))
+                .andExpect(header().string("Content-Type", "text/calendar; charset=utf-8"))
                 .andExpect(header().exists("Content-Disposition"));
         }
 
@@ -112,7 +112,7 @@ class MeetingControllerExportTest {
                     .param("date", date)
                     .param("slotIndex", String.valueOf(slotIndex)))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/octet-stream"));
+                .andExpect(header().string("Content-Type", "text/calendar; charset=utf-8"));
         }
 
         @Test
@@ -141,7 +141,7 @@ class MeetingControllerExportTest {
                     .param("date", date)
                     .param("slotIndex", String.valueOf(slotIndex)))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/octet-stream"));
+                .andExpect(header().string("Content-Type", "text/calendar; charset=utf-8"));
         }
 
         @Test
