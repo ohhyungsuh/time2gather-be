@@ -5,11 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.property.CalScale;
 import net.fortuna.ical4j.model.property.Description;
-import net.fortuna.ical4j.model.property.Method;
 import net.fortuna.ical4j.model.property.ProdId;
-import net.fortuna.ical4j.model.property.Version;
+import net.fortuna.ical4j.model.property.immutable.ImmutableCalScale;
+import net.fortuna.ical4j.model.property.immutable.ImmutableMethod;
+import net.fortuna.ical4j.model.property.immutable.ImmutableVersion;
 import net.fortuna.ical4j.util.RandomUidGenerator;
 import net.fortuna.ical4j.util.UidGenerator;
 import org.springframework.stereotype.Service;
@@ -83,9 +83,9 @@ public class CalendarExportService {
             // Calendar 생성 - ical4j 4.x 방식
             Calendar calendar = new Calendar();
             calendar.add(new ProdId(PROD_ID));
-            calendar.add(Version.VERSION_2_0);
-            calendar.add(CalScale.GREGORIAN);
-            calendar.add(Method.PUBLISH);
+            calendar.add(ImmutableVersion.VERSION_2_0);
+            calendar.add(ImmutableCalScale.GREGORIAN);
+            calendar.add(ImmutableMethod.PUBLISH);
             calendar.add(event);
 
             // ICS 파일 생성
