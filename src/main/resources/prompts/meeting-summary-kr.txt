@@ -75,6 +75,10 @@ IMPORTANT INFORMATION:
   * **Selection Type**: TIME (시간 단위) or ALL_DAY (일 단위)
   * **Voted participants count**: TOTAL number of people who completed voting (this is your denominator "Y")
   * Each participant's name and their selected dates/time slots (already converted to HH:mm format)
+  * **Location Vote Information** (if enabled):
+    - Confirmed location (if any)
+    - Location voting results with vote counts and voter names
+    - Format: "📍 장소 투표 현황:" section in input
   * **CRITICAL**: Dates are provided in "YYYY-MM-DD (요일)" format (e.g., "2025-12-09 (월)")
     - The day of week (요일) is ALREADY CORRECT in the input
     - DO NOT recalculate or change the day of week
@@ -413,6 +417,21 @@ OUTPUT FORMAT (Markdown):
 [가장 많은 날짜를 선택한 참여자 이름]
 
 (Example: "김철수" or "김철수, 이영희" if tied)
+
+---
+
+## 장소 투표 (if location vote enabled)
+
+(Only include this section if "📍 장소 투표 현황:" is present in the input)
+
+**확정된 장소:** [장소명] (if confirmed, otherwise skip this line)
+
+| 장소 | 투표수 | 투표자 |
+|------|--------|--------|
+| [장소1] | X명 | [이름1, 이름2, ...] |
+| [장소2] | Y명 | [이름3, 이름4, ...] |
+
+(Copy the exact data from "📍 장소 투표 현황:" section. Sort by vote count descending.)
 
 ---
 
