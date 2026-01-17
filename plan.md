@@ -195,11 +195,11 @@ time2gather 앱에 Function Calling 기반 일정 조회 챗봇을 추가합니�
 - [x] `getAllMeetings` - 사용자의 모든 미팅 조회
 - [x] `searchMeetingsByTitle` - 제목으로 검색
 - [x] `getMeetingCount` - 미팅 개수 조회
-- [ ] `getUpcomingMeetings` - 다가오는 미팅 조회
-- [ ] `getPastMeetings` - 지난 미팅 조회
-- [ ] `getMeetingDetail` - 미팅 상세 조회
-- [ ] `getMeetingParticipants` - 참석자 조회
-- [ ] `getMeetingStats` - 통계 조회
+- [x] `getUpcomingMeetings` - 다가오는 미팅 조회
+- [x] `getPastMeetings` - 지난 미팅 조회
+- [x] `getMeetingDetail` - 미팅 상세 조회
+- [x] `getMeetingParticipants` - 참석자 조회
+- [x] `getMeetingStats` - 통계 조회
 
 #### 4-2. ChatClient 설정
 
