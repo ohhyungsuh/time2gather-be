@@ -2,6 +2,16 @@ spring:
   application:
     name: time2gather
 
+  # Spring AI Configuration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:dummy-key}
+      base-url: ${OPENAI_API_BASE:https://api.openai.com}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4}
+          temperature: 0.7
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -50,7 +60,12 @@ springdoc:
       enabled: false
     tryItOutEnabled: true
 
-# OpenAPI
+# AI Provider Configuration
+ai:
+  provider: ${AI_PROVIDER:openai}  # openai, anthropic, ollama
+
+
+# Legacy OpenAI Config (for backward compatibility)
 openai:
   api-key: ${OPENAI_API_KEY:dummy-key}
   api-base: ${OPENAI_API_BASE:https://api.openai.com}

@@ -4,17 +4,18 @@ import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
-import net.fortuna.ical4j.model.ComponentList;
-import net.fortuna.ical4j.model.PropertyList;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.property.*;
+import net.fortuna.ical4j.model.property.CalScale;
+import net.fortuna.ical4j.model.property.Description;
+import net.fortuna.ical4j.model.property.Method;
+import net.fortuna.ical4j.model.property.ProdId;
+import net.fortuna.ical4j.model.property.Version;
 import net.fortuna.ical4j.util.RandomUidGenerator;
 import net.fortuna.ical4j.util.UidGenerator;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -71,34 +72,21 @@ public class CalendarExportService {
                 endDateTime = startDateTime.plusMinutes(intervalMinutes);
             }
 
-            // VEvent 생성 (간단한 생성자 사용)
+            // VEvent 생성
             VEvent event = new VEvent(startDateTime, endDateTime, meetingTitle);
-
-            // 필수 properties를 직접 add (replace 대신 add 사용)
             event.add(uidGenerator.generateUid());
-            event.add(new DtStamp(Instant.now()));
-            event.add(new Created(Instant.now()));
-            event.add(new LastModified(Instant.now()));
-            event.add(new Status("CONFIRMED"));
-            event.add(new Sequence(0));
 
             if (meetingDescription != null && !meetingDescription.isBlank()) {
                 event.add(new Description(meetingDescription));
             }
 
-            // Calendar PropertyList 생성
-            PropertyList calendarProperties = new PropertyList();
-            calendarProperties.add(new ProdId(PROD_ID));
-            calendarProperties.add(new Version(Version.VALUE_2_0, Version.VALUE_2_0));
-            calendarProperties.add(new CalScale("GREGORIAN"));
-            calendarProperties.add(new Method("PUBLISH"));
-
-            // ComponentList 생성
-            ComponentList<VEvent> components = new ComponentList<>();
-            components.add(event);
-
-            // Calendar 생성
-            Calendar calendar = new Calendar(calendarProperties, components);
+            // Calendar 생성 - ical4j 4.x 방식
+            Calendar calendar = new Calendar();
+            calendar.add(new ProdId(PROD_ID));
+            calendar.add(Version.VERSION_2_0);
+            calendar.add(CalScale.GREGORIAN);
+            calendar.add(Method.PUBLISH);
+            calendar.add(event);
 
             // ICS 파일 생성
             return outputCalendar(calendar);
