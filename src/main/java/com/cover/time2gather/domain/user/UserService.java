@@ -21,9 +21,10 @@ public class UserService {
 
     /**
      * 사용자가 생성한 모임 목록 조회
+     * - 최근 생성순(createdAt 기준)으로 정렬
      */
     public List<Meeting> getCreatedMeetings(Long userId) {
-        return meetingRepository.findByHostUserId(userId);
+        return meetingRepository.findByHostUserIdOrderByCreatedAtDesc(userId);
     }
 
     /**

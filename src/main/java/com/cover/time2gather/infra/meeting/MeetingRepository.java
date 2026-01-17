@@ -16,6 +16,8 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
     List<Meeting> findByHostUserId(Long hostUserId);
 
+    List<Meeting> findByHostUserIdOrderByCreatedAtDesc(Long hostUserId);
+
     List<Meeting> findByHostUserIdAndIsActiveTrue(Long hostUserId);
 
     List<Meeting> findAllByIdIn(Collection<Long> ids);
