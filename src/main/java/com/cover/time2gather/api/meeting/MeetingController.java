@@ -239,59 +239,60 @@ public class MeetingController {
     @Operation(
         summary = "캘린더로 export",
         description = """
-            최적의 시간대를 자동으로 선택하여 ICS 파일로 다운로드합니다.
+            선택한 시간대를 ICS 파일로 다운로드합니다.
             - Google Calendar, iOS Calendar 등에서 import 가능합니다.
-            - bestSlot의 첫 번째 항목(가장 많이 선택된 시간)을 사용합니다.
-            - ALL_DAY 타입인 경우 종일 일정으로 생성됩니다.
-            - 아직 아무도 시간을 선택하지 않은 경우 404 에러가 발생합니다.
+            - date와 slotIndex를 지정하면 해당 시간대로 ICS 파일을 생성합니다.
+            - 파라미터가 없으면 bestSlot의 첫 번째 항목(가장 많이 선택된 시간)을 사용합니다.
+            - slotIndex가 -1이면 ALL_DAY(종일 일정)로 생성됩니다.
+            - 아직 아무도 시간을 선택하지 않은 경우(파라미터 없을 때) 에러가 발생합니다.
         """
     )
-    public ResponseEntity<byte[]> exportToCalendar(@PathVariable String meetingCode) {
+    public ResponseEntity<byte[]> exportToCalendar(
+            @PathVariable String meetingCode,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) Integer slotIndex
+    ) {
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
 
-        // MeetingDetailData 조회하여 bestSlot 가져오기
-        MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
+        String targetDate;
+        String timeString;
 
-        // bestSlot이 비어있으면 에러
-        if (detailData.getSummary().getBestSlots().isEmpty()) {
-            throw new IllegalStateException("아직 투표한 참여자가 없어 캘린더를 생성할 수 없습니다.");
+        // date 또는 slotIndex 중 하나만 있는 경우 에러
+        if ((date != null && slotIndex == null) || (date == null && slotIndex != null)) {
+            throw new IllegalArgumentException("date와 slotIndex는 함께 지정해야 합니다.");
         }
 
-        // 첫 번째 bestSlot 선택 (가장 많이 선택된 시간)
-        MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
-
-        // slotIndex를 시간 문자열로 변환
-        String timeString;
-        if (bestSlot.getSlotIndex() == -1) {
-            timeString = "ALL_DAY";
+        if (date != null) {
+            // 파라미터가 있으면 해당 날짜/시간으로 ICS 생성
+            targetDate = validateAndParseDate(date, meeting);
+            timeString = convertSlotIndexToTimeString(slotIndex, meeting.getIntervalMinutes());
         } else {
-            timeString = com.cover.time2gather.domain.meeting.vo.TimeSlot
-                .fromIndex(bestSlot.getSlotIndex(), meeting.getIntervalMinutes())
-                .toTimeString();
+            // 파라미터가 없으면 기존 로직 (bestSlot 첫번째)
+            MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
+
+            if (detailData.getSummary().getBestSlots().isEmpty()) {
+                throw new IllegalStateException("아직 투표한 참여자가 없어 캘린더를 생성할 수 없습니다.");
+            }
+
+            MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
+            targetDate = bestSlot.getDate();
+            timeString = convertSlotIndexToTimeString(bestSlot.getSlotIndex(), meeting.getIntervalMinutes());
         }
 
         // ICS 파일 생성
         byte[] icsFile = calendarExportService.createIcsFile(
                 meeting.getTitle(),
                 meeting.getDescription(),
-                bestSlot.getDate(),
+                targetDate,
                 timeString,
                 meeting.getTimezone(),
                 meeting.getIntervalMinutes()
         );
 
         // 파일명 생성 (iOS Safari 호환)
-        String filename;
-        if ("ALL_DAY".equals(timeString)) {
-            filename = String.format("meeting_%s_all_day.ics", bestSlot.getDate());
-        } else {
-            filename = String.format("meeting_%s_%s.ics",
-                    bestSlot.getDate(),
-                    timeString.replace(":", ""));
-        }
+        String filename = generateFilename(targetDate, timeString);
 
         // iOS Safari를 위한 HTTP 헤더 설정
-        // Safari는 text/calendar를 텍스트로 열려고 하므로 application/octet-stream 사용
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + filename)
                 .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
@@ -301,6 +302,38 @@ public class MeetingController {
                 .header(HttpHeaders.PRAGMA, "no-cache")
                 .header(HttpHeaders.EXPIRES, "0")
                 .body(icsFile);
+    }
+
+    private String validateAndParseDate(String date, Meeting meeting) {
+        // 날짜 형식 검증 (yyyy-MM-dd)
+        try {
+            java.time.LocalDate.parse(date, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다. yyyy-MM-dd 형식으로 입력해주세요.");
+        }
+
+        // Meeting에 해당 날짜가 있는지 검증
+        if (!meeting.getAvailableDates().containsKey(date)) {
+            throw new IllegalArgumentException("해당 날짜는 모임의 가능한 날짜에 포함되어 있지 않습니다: " + date);
+        }
+
+        return date;
+    }
+
+    private String convertSlotIndexToTimeString(int slotIndex, int intervalMinutes) {
+        if (slotIndex == -1) {
+            return "ALL_DAY";
+        }
+        return com.cover.time2gather.domain.meeting.vo.TimeSlot
+                .fromIndex(slotIndex, intervalMinutes)
+                .toTimeString();
+    }
+
+    private String generateFilename(String date, String timeString) {
+        if ("ALL_DAY".equals(timeString)) {
+            return String.format("meeting_%s_all_day.ics", date);
+        }
+        return String.format("meeting_%s_%s.ics", date, timeString.replace(":", ""));
     }
 }
 
