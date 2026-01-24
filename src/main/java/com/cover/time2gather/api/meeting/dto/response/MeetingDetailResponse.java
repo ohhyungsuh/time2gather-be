@@ -154,21 +154,51 @@ public class MeetingDetailResponse {
 
 		List<BestSlot> bestSlots = summaryData.getBestSlots().stream()
 			.map(slot -> {
-				// ALL_DAY 타입인 경우 slotIndex가 -1이므로 "ALL_DAY"로 표시
-				String timeString = slot.getSlotIndex() == -1
-					? "ALL_DAY"
-					: TimeSlot.fromIndex(slot.getSlotIndex(), intervalMinutes).toTimeString();
+				String timeString = formatTimeRange(slot, intervalMinutes);
+
+				List<ParticipantInfo> participants = slot.getParticipants().stream()
+					.map(user -> new ParticipantInfo(
+						user.getId(),
+						user.getUsername(),
+						user.getProfileImageUrl()
+					))
+					.collect(Collectors.toList());
 
 				return new BestSlot(
 					slot.getDate(),
 					timeString,
 					slot.getCount(),
-					slot.getPercentage()
+					slot.getPercentage(),
+					participants
 				);
 			})
 			.collect(Collectors.toList());
 
 		return new SummaryInfo(summaryData.getTotalParticipants(), bestSlots);
+	}
+
+	/**
+	 * BestSlot의 시간 범위를 문자열로 변환
+	 * - ALL_DAY: "ALL_DAY"
+	 * - 단일 슬롯: "09:00"
+	 * - 연속 슬롯: "09:00 ~ 12:00" (endSlotIndex + 1의 시작 시간)
+	 */
+	private static String formatTimeRange(MeetingDetailData.BestSlot slot, int intervalMinutes) {
+		// ALL_DAY 타입인 경우
+		if (slot.getStartSlotIndex() == -1) {
+			return "ALL_DAY";
+		}
+
+		String startTime = TimeSlot.fromIndex(slot.getStartSlotIndex(), intervalMinutes).toTimeString();
+
+		// 단일 슬롯인 경우
+		if (!slot.isRange()) {
+			return startTime;
+		}
+
+		// 연속 슬롯인 경우: 종료 시간은 endSlotIndex + 1의 시작 시간
+		String endTime = TimeSlot.fromIndex(slot.getEndSlotIndex() + 1, intervalMinutes).toTimeString();
+		return startTime + " ~ " + endTime;
 	}
 
 	/**
@@ -291,7 +321,7 @@ public class MeetingDetailResponse {
 		@Schema(description = "날짜", example = "2024-02-15")
 		private String date;
 
-		@Schema(description = "시간", example = "09:00")
+		@Schema(description = "시간 (연속 시간대인 경우 범위 형식)", example = "09:00 ~ 12:00")
 		private String time;
 
 		@Schema(description = "가능한 인원 수", example = "4")
@@ -299,6 +329,9 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "가능 비율 (% 포함)", example = "80%")
 		private String percentage;
+
+		@Schema(description = "해당 시간대에 참여 가능한 참여자 목록")
+		private List<ParticipantInfo> participants;
 	}
 
 	@Getter

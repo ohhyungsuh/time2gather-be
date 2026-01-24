@@ -34,6 +34,7 @@ public class MeetingService {
     private final MeetingLocationSelectionRepository locationSelectionRepository;
     private final UserRepository userRepository;
     private final MeetingUserSelectionRepository selectionRepository;
+    private final BestSlotBuilder bestSlotBuilder;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -166,8 +167,9 @@ public class MeetingService {
         // Schedule 데이터 구성
         MeetingDetailData.ScheduleData schedule = buildScheduleData(selections, userMap);
 
-        // Summary 데이터 구성 (참여자 수는 시간 선택이 있는 사용자만)
-        MeetingDetailData.SummaryData summary = buildSummaryData(meeting, selections, participantIds.size());
+        // Summary 데이터 구성 (BestSlotBuilder를 통해 연속 슬롯 병합 및 참여자 명단 포함)
+        MeetingDetailData.SummaryData summary = bestSlotBuilder.buildSummaryData(
+                meeting, selections, userMap, participantIds.size());
 
         // 장소 데이터 구성
         MeetingDetailData.LocationData locationData = buildLocationData(meeting, userMap);
@@ -210,83 +212,6 @@ public class MeetingService {
         }
 
         return new MeetingDetailData.ScheduleData(dateTimeUserMap);
-    }
-
-    /**
-     * 요약 정보 구성 (비즈니스 로직)
-     */
-    private MeetingDetailData.SummaryData buildSummaryData(
-            Meeting meeting,
-            List<MeetingUserSelection> selections,
-            int totalParticipants
-    ) {
-        boolean isAllDay = meeting.getSelectionType() == com.cover.time2gather.domain.meeting.SelectionType.ALL_DAY;
-
-        // 날짜-시간별 카운트 (ALL_DAY는 날짜별, TIME은 시간별)
-        Map<String, Map<Integer, Integer>> countMap = new HashMap<>();
-
-        for (MeetingUserSelection selection : selections) {
-            Map<String, int[]> userSelections = selection.getSelections();
-            for (Map.Entry<String, int[]> entry : userSelections.entrySet()) {
-                String date = entry.getKey();
-                int[] slots = entry.getValue();
-
-                countMap.putIfAbsent(date, new HashMap<>());
-                Map<Integer, Integer> slotCountMap = countMap.get(date);
-
-                if (isAllDay) {
-                    // ALL_DAY: 날짜별로 카운트 (슬롯 인덱스 -1 사용)
-                    slotCountMap.put(-1, slotCountMap.getOrDefault(-1, 0) + 1);
-                } else {
-                    // TIME: 시간별로 카운트
-                    for (int slot : slots) {
-                        slotCountMap.put(slot, slotCountMap.getOrDefault(slot, 0) + 1);
-                    }
-                }
-            }
-        }
-
-        // bestSlots 찾기 (투표 수가 많은 순서대로 TOP 3)
-        List<MeetingDetailData.BestSlot> allSlots = new ArrayList<>();
-
-        // 모든 날짜/슬롯을 리스트로 수집
-        for (Map.Entry<String, Map<Integer, Integer>> dateEntry : countMap.entrySet()) {
-            String date = dateEntry.getKey();
-            Map<Integer, Integer> slotCountMap = dateEntry.getValue();
-
-            for (Map.Entry<Integer, Integer> slotEntry : slotCountMap.entrySet()) {
-                int slot = slotEntry.getKey();
-                int count = slotEntry.getValue();
-
-                allSlots.add(new MeetingDetailData.BestSlot(
-                        date,
-                        slot,
-                        count,
-                        totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0
-                ));
-            }
-        }
-
-        // 정렬: 1) 투표 수 내림차순, 2) 날짜 오름차순 (가까운 날짜 우선)
-        List<MeetingDetailData.BestSlot> bestSlots = allSlots.stream()
-                .sorted((a, b) -> {
-                    // 투표 수 비교 (내림차순)
-                    int countCompare = Integer.compare(b.getCount(), a.getCount());
-                    if (countCompare != 0) {
-                        return countCompare;
-                    }
-                    // 투표 수가 같으면 날짜 비교 (오름차순 - 가까운 날짜 우선)
-                    int dateCompare = a.getDate().compareTo(b.getDate());
-                    if (dateCompare != 0) {
-                        return dateCompare;
-                    }
-                    // 날짜도 같으면 슬롯 인덱스 비교 (오름차순 - 이른 시간 우선)
-                    return Integer.compare(a.getSlotIndex(), b.getSlotIndex());
-                })
-                .limit(3)  // TOP 3만 선택
-                .collect(Collectors.toList());
-
-        return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
     }
 
     /**

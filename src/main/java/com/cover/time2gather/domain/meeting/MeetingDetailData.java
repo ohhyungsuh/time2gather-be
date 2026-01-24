@@ -53,22 +53,56 @@ public class MeetingDetailData {
     }
 
     /**
-     * 베스트 슬롯 정보
+     * 베스트 슬롯 정보 (연속 시간 병합 지원)
+     * 
+     * 연속된 시간 슬롯은 하나로 병합되어 startSlotIndex ~ endSlotIndex 범위로 표현됨
+     * 예: 14:00, 15:00, 16:00 연속 → startSlotIndex=14, endSlotIndex=16
+     * 
+     * 단일 슬롯인 경우 startSlotIndex == endSlotIndex
      */
     @Getter
-    @AllArgsConstructor
     public static class BestSlot {
         private final String date;
-        private final int slotIndex;
+        private final int startSlotIndex;
+        private final int endSlotIndex;
         private final int count;
         private final String percentage;
+        private final List<User> participants;
 
-        public BestSlot(String date, int slotIndex, int count, double percentageValue) {
+        /**
+         * 연속 슬롯 병합용 생성자
+         */
+        public BestSlot(String date, int startSlotIndex, int endSlotIndex, 
+                        int count, double percentageValue, List<User> participants) {
             this.date = date;
-            this.slotIndex = slotIndex;
+            this.startSlotIndex = startSlotIndex;
+            this.endSlotIndex = endSlotIndex;
             this.count = count;
-            // 소수점 제거하고 %로 표시
             this.percentage = Math.round(percentageValue) + "%";
+            this.participants = participants != null ? participants : List.of();
+        }
+
+        /**
+         * 단일 슬롯용 생성자 (기존 호환)
+         */
+        public BestSlot(String date, int slotIndex, int count, double percentageValue) {
+            this(date, slotIndex, slotIndex, count, percentageValue, List.of());
+        }
+
+        /**
+         * 기존 호환용: slotIndex 반환 (단일 슬롯인 경우 startSlotIndex 반환)
+         * @deprecated startSlotIndex, endSlotIndex 사용 권장
+         */
+        @Deprecated
+        public int getSlotIndex() {
+            return startSlotIndex;
+        }
+
+        /**
+         * 연속 슬롯 범위인지 확인
+         */
+        public boolean isRange() {
+            return startSlotIndex != endSlotIndex;
         }
     }
 
