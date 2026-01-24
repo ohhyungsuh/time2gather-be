@@ -5,6 +5,7 @@ import com.cover.time2gather.domain.meeting.MeetingLocation;
 import com.cover.time2gather.domain.meeting.MeetingLocationSelection;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.SelectionType;
+import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import com.cover.time2gather.domain.user.User;
 
 import java.time.DayOfWeek;
@@ -73,13 +74,14 @@ public class ReportInputTextBuilder {
                 }
             } else {
                 // TIME 타입 처리 (기존)
+                int intervalMinutes = selection.getIntervalMinutes();
                 for (Map.Entry<String, int[]> entry : userSelections.entrySet()) {
                     String date = entry.getKey();
                     String dateWithDayOfWeek = formatDateWithDayOfWeek(date);
                     int[] slots = entry.getValue();
 
                     String timeSlots = Arrays.stream(slots)
-                            .mapToObj(TimeSlotConverter::slotIndexToTimeStr)
+                            .mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex, intervalMinutes).toTimeString())
                             .collect(Collectors.joining(", "));
 
                     sb.append("  * ").append(dateWithDayOfWeek).append(": ").append(timeSlots).append("\n");
@@ -171,7 +173,10 @@ public class ReportInputTextBuilder {
         } else {
             Integer confirmedSlotIndex = meeting.getConfirmedSlotIndex();
             if (confirmedSlotIndex != null) {
-                String timeStr = TimeSlotConverter.slotIndexToTimeStr(confirmedSlotIndex);
+                int intervalMinutes = meeting.getIntervalMinutes() != null
+                        ? meeting.getIntervalMinutes()
+                        : TimeSlot.DEFAULT_INTERVAL_MINUTES;
+                String timeStr = TimeSlot.fromIndex(confirmedSlotIndex, intervalMinutes).toTimeString();
                 sb.append("✅ 확정된 시간: ").append(dateWithDayOfWeek).append(" ").append(timeStr).append("\n\n");
             } else {
                 sb.append("✅ 확정된 날짜: ").append(dateWithDayOfWeek).append("\n\n");

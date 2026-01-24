@@ -129,7 +129,7 @@ class ReportInputTextBuilderLocationTest {
         // given
         Meeting meeting = createMeeting(false);
         ReflectionTestUtils.setField(meeting, "confirmedDate", LocalDate.of(2025, 1, 20));
-        ReflectionTestUtils.setField(meeting, "confirmedSlotIndex", 36); // 18:00 (36 * 30분 = 1080분 = 18시간)
+        ReflectionTestUtils.setField(meeting, "confirmedSlotIndex", 18); // 18:00 (intervalMinutes=60, 18 * 60분 = 1080분 = 18시간)
 
         User host = createUser(1L, "host");
         Map<Long, User> userMap = Map.of(1L, host);
