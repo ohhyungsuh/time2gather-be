@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.mcp;
 
+import com.cover.time2gather.config.security.AuthenticatedUserService;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.SelectionType;
@@ -8,7 +9,6 @@ import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
 import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
-import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +37,7 @@ public class McpMeetingTools {
     private final MeetingLocationService meetingLocationService;
     private final CalendarExportService calendarExportService;
     private final MeetingRepository meetingRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
     @McpTool(name = "get_meeting", description = "모임 상세 정보를 조회합니다. 모임 코드로 해당 모임의 제목, 설명, 날짜 옵션, 참여자 투표 현황, 확정 여부 등을 확인할 수 있습니다.")
     public MeetingDetailResponse getMeeting(
@@ -48,7 +49,7 @@ public class McpMeetingTools {
         return MeetingDetailResponse.from(detailData);
     }
 
-    @McpTool(name = "create_meeting", description = "새로운 모임을 생성합니다. 모임 제목, 선택 가능한 날짜들, 타임존, 선택 타입(시간 단위/종일)을 지정할 수 있습니다. 생성된 모임 코드를 반환합니다.")
+    @McpTool(name = "create_meeting", description = "새로운 모임을 생성합니다. 모임 제목, 선택 가능한 날짜들, 타임존, 선택 타입(시간 단위/종일)을 지정할 수 있습니다. 생성된 모임 코드를 반환합니다. 인증된 사용자가 호스트가 됩니다.")
     public CreateMeetingResponse createMeeting(
             @McpToolParam(description = "모임 제목") String title,
             @McpToolParam(description = "모임 설명 (선택사항)") String description,
@@ -56,10 +57,10 @@ public class McpMeetingTools {
             @McpToolParam(description = "타임존 (기본값: Asia/Seoul)") String timezone,
             @McpToolParam(description = "선택 타입: TIME(시간 단위) 또는 ALL_DAY(종일). 기본값: ALL_DAY") String selectionType,
             @McpToolParam(description = "TIME 타입인 경우 시간 슬롯들 (예: 09:00,10:00,11:00). ALL_DAY인 경우 무시됩니다.") String timeSlots,
-            @McpToolParam(description = "시간 간격(분). 기본값: 60") Integer intervalMinutes,
-            @McpToolParam(description = "호스트 사용자 ID") Long hostUserId
+            @McpToolParam(description = "시간 간격(분). 기본값: 60") Integer intervalMinutes
     ) {
-        log.info("MCP createMeeting called with title: {}, dates: {}", title, dates);
+        Long hostUserId = authenticatedUserService.getRequiredCurrentUserId();
+        log.info("MCP createMeeting called by userId: {}, title: {}, dates: {}", hostUserId, title, dates);
         
         // 파라미터 기본값 처리
         String tz = timezone != null ? timezone : "Asia/Seoul";
@@ -100,13 +101,13 @@ public class McpMeetingTools {
         );
     }
 
-    @McpTool(name = "vote_time", description = "모임에 시간 투표를 합니다. 사용자가 가능한 날짜와 시간대를 선택합니다.")
+    @McpTool(name = "vote_time", description = "모임에 시간 투표를 합니다. 인증된 사용자가 가능한 날짜와 시간대를 선택합니다.")
     public VoteResponse voteTime(
             @McpToolParam(description = "모임 코드") String meetingCode,
-            @McpToolParam(description = "투표할 사용자 ID") Long userId,
             @McpToolParam(description = "선택한 날짜와 시간 (형식: 날짜1:시간1,시간2;날짜2:시간1,시간2 예: 2024-02-15:09:00,10:00;2024-02-16:14:00,15:00). ALL_DAY 타입이면 시간 부분 생략 (예: 2024-02-15;2024-02-16)") String selections
     ) {
-        log.info("MCP voteTime called with meetingCode: {}, userId: {}", meetingCode, userId);
+        Long userId = authenticatedUserService.getRequiredCurrentUserId();
+        log.info("MCP voteTime called by userId: {}, meetingCode: {}", userId, meetingCode);
         
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
         Map<String, int[]> slotIndexes = parseSelections(selections, meeting.getSelectionType(), meeting.getIntervalMinutes());
@@ -116,13 +117,13 @@ public class McpMeetingTools {
         return new VoteResponse(true, "투표가 성공적으로 저장되었습니다.");
     }
 
-    @McpTool(name = "vote_location", description = "모임 장소에 투표합니다. 장소 투표가 활성화된 모임에서만 사용 가능합니다.")
+    @McpTool(name = "vote_location", description = "모임 장소에 투표합니다. 장소 투표가 활성화된 모임에서만 사용 가능합니다. 인증된 사용자가 투표합니다.")
     public VoteResponse voteLocation(
             @McpToolParam(description = "모임 코드") String meetingCode,
-            @McpToolParam(description = "투표할 사용자 ID") Long userId,
             @McpToolParam(description = "선택한 장소 ID 목록 (쉼표로 구분)") String locationIds
     ) {
-        log.info("MCP voteLocation called with meetingCode: {}, userId: {}", meetingCode, userId);
+        Long userId = authenticatedUserService.getRequiredCurrentUserId();
+        log.info("MCP voteLocation called by userId: {}, meetingCode: {}", userId, meetingCode);
         
         List<Long> ids = parseLocationIds(locationIds);
         meetingLocationService.voteLocations(meetingCode, userId, ids);
@@ -146,13 +147,13 @@ public class McpMeetingTools {
         return new ConfirmResponse(true, "모임 일정이 확정되었습니다.", date, slotIndex);
     }
 
-    @McpTool(name = "confirm_location", description = "모임 장소를 확정합니다. 호스트만 사용할 수 있으며, 장소 투표가 활성화된 모임에서만 사용 가능합니다.")
+    @McpTool(name = "confirm_location", description = "모임 장소를 확정합니다. 호스트만 사용할 수 있으며, 장소 투표가 활성화된 모임에서만 사용 가능합니다. 인증된 사용자가 호스트여야 합니다.")
     public ConfirmResponse confirmLocation(
             @McpToolParam(description = "모임 코드") String meetingCode,
-            @McpToolParam(description = "호스트 사용자 ID") Long hostUserId,
             @McpToolParam(description = "확정할 장소 ID") Long locationId
     ) {
-        log.info("MCP confirmLocation called with meetingCode: {}, locationId: {}", meetingCode, locationId);
+        Long hostUserId = authenticatedUserService.getRequiredCurrentUserId();
+        log.info("MCP confirmLocation called by userId: {}, meetingCode: {}, locationId: {}", hostUserId, meetingCode, locationId);
         
         meetingLocationService.confirmLocation(meetingCode, hostUserId, locationId);
         
