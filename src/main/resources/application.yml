@@ -49,13 +49,22 @@ jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-this-in-production
   expiration-ms: 3600000
 
-# OAuth - Kakao
+# OAuth - Kakao (Client)
 oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:4ea5e31b7c9fd5131c30f91acac4abb0}
     client-secret: ${KAKAO_CLIENT_SECRET:Ftk2nyEdPIsgBBJFlqstGO3X1r1teH9L}
   redirect:
     default: ${OAUTH_REDIRECT_URL:https://time2gather.com/login/oauth2/code/kakao}
+
+# OAuth2 Authorization Server (for PlayMCP)
+oauth2:
+  server:
+    issuer: ${OAUTH2_ISSUER:https://api.time2gather.org}
+    playmcp:
+      client-id: ${PLAYMCP_CLIENT_ID:playmcp-time2gather}
+      client-secret: ${PLAYMCP_CLIENT_SECRET:time2gather-mcp-secret-2024}
+      redirect-uri: ${PLAYMCP_REDIRECT_URI:https://playmcp.com/oauth/callback}
 
 # Swagger
 springdoc:

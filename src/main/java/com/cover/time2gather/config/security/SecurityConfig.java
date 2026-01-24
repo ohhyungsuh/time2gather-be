@@ -3,6 +3,7 @@ package com.cover.time2gather.config.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -33,7 +34,8 @@ public class SecurityConfig {
 			"http://localhost:3000",
 			"https://localhost:3000",
             "https://www.time2gather.org",
-            "https://*.time2gather.org"
+            "https://*.time2gather.org",
+            "https://playmcp.com"
     );
 
     private static final List<String> ALLOWED_METHODS = Arrays.asList(
@@ -68,9 +70,40 @@ public class SecurityConfig {
 
     // MCP Server endpoints
     private static final String MCP_PATTERN = "/mcp/**";
+    private static final String SSE_PATTERN = "/sse";
 
+    /**
+     * OAuth2 로그인용 Security Filter Chain
+     * 폼 로그인 및 세션 기반 인증 (OAuth2 Authorization Server용)
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(2)
+    public SecurityFilterChain loginSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/login", "/login/**", "/oauth2/**", "/userinfo", "/.well-known/**")
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/login", "/login/**").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/.well-known/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .permitAll()
+                );
+
+        return http.build();
+    }
+
+    /**
+     * API용 Security Filter Chain
+     * JWT 기반 Stateless 인증
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -88,6 +121,7 @@ public class SecurityConfig {
 
                         // MCP Server endpoints (for PlayMCP integration)
                         .requestMatchers(MCP_PATTERN).permitAll()
+                        .requestMatchers(SSE_PATTERN).permitAll()
 
                         // Auth endpoints
                         .requestMatchers(AUTH_API_PATTERN).permitAll()

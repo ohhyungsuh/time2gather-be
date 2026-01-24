@@ -38,6 +38,7 @@ dependencyManagement {
 dependencies {
     // web
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
     // actuator for health check
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -66,6 +67,7 @@ dependencies {
 
     // oauth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-authorization-server'
 
 
     // jwt
