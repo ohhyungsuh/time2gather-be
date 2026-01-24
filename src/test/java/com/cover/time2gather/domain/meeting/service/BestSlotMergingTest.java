@@ -200,7 +200,7 @@ class BestSlotMergingTest {
     class StrictCountCalculation {
 
         @Test
-        @DisplayName("병합된 슬롯의 count는 모든 슬롯에 참여한 인원만 카운트")
+        @DisplayName("사용자별로 다른 범위를 선택한 경우 최대 연속 범위 기준으로 카운트")
         void shouldCountOnlyUsersWhoSelectedAllSlots() {
             // Given: 
             // user1: 14:00, 15:00, 16:00 모두 선택
@@ -218,15 +218,21 @@ class BestSlotMergingTest {
                 timeMeeting, selections, userMap, 3);
 
             // Then: 
-            // 가장 높은 count를 가진 슬롯이 Top1
-            // 14 단독: 3명, 14~15: 2명, 15 단독: 2명, 14~16: 1명, ...
+            // 최대 연속 범위는 14~16 (user1의 범위와 일치하는 부분)
+            // 하지만 14~16 전체에 참여한 사람은 user1만 (count=1)
+            // user2의 최대 연속 범위는 14~15 (이미 14~16에 포함됨)
+            // user3의 범위는 14 단독
+            // 
+            // 실제 최대 연속 범위: 14~16 (count=1, user1만)
             assertThat(summary.getBestSlots()).isNotEmpty();
             
             MeetingDetailData.BestSlot topSlot = summary.getBestSlots().get(0);
             
-            assertThat(topSlot.getCount()).isEqualTo(3);
+            // 14~16 범위가 최대 연속 범위, 모든 슬롯에 참여한 user1만 count됨
             assertThat(topSlot.getStartSlotIndex()).isEqualTo(14);
-            assertThat(topSlot.getEndSlotIndex()).isEqualTo(14); // 단일 슬롯
+            assertThat(topSlot.getEndSlotIndex()).isEqualTo(16);
+            assertThat(topSlot.getCount()).isEqualTo(1);
+            assertThat(topSlot.getParticipants()).containsExactly(user1);
         }
 
         @Test
@@ -280,7 +286,7 @@ class BestSlotMergingTest {
         }
 
         @Test
-        @DisplayName("병합된 슬롯의 참여자는 모든 슬롯에 참여한 사용자만 포함")
+        @DisplayName("최대 연속 범위의 참여자는 해당 범위 전체에 참여한 사용자만 포함")
         void shouldIncludeOnlyUsersWhoSelectedAllSlotsInRange() {
             // Given:
             // user1: 14, 15, 16 모두 선택
@@ -295,17 +301,15 @@ class BestSlotMergingTest {
             MeetingDetailData.SummaryData summary = bestSlotBuilder.buildSummaryData(
                 timeMeeting, selections, userMap, 2);
 
-            // Then: 14~15 범위의 참여자는 user1, user2 둘 다
-            // 14~16 범위의 참여자는 user1만
-            List<MeetingDetailData.BestSlot> bestSlots = summary.getBestSlots();
+            // Then: 최대 연속 범위는 14~16 (전체 선택이 14~16까지 있으므로)
+            // 하지만 14~16 전체에 참여한 사람은 user1만
+            assertThat(summary.getBestSlots()).isNotEmpty();
             
-            // 가장 높은 카운트의 슬롯 찾기 (14~15: 2명)
-            MeetingDetailData.BestSlot topSlot = bestSlots.stream()
-                .filter(s -> s.getCount() == 2)
-                .findFirst()
-                .orElseThrow();
-            
-            assertThat(topSlot.getParticipants()).containsExactlyInAnyOrder(user1, user2);
+            MeetingDetailData.BestSlot topSlot = summary.getBestSlots().get(0);
+            assertThat(topSlot.getStartSlotIndex()).isEqualTo(14);
+            assertThat(topSlot.getEndSlotIndex()).isEqualTo(16);
+            assertThat(topSlot.getCount()).isEqualTo(1);
+            assertThat(topSlot.getParticipants()).containsExactly(user1);
         }
     }
 

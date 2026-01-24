@@ -50,7 +50,10 @@ public class BestSlotBuilder {
     }
 
     /**
-     * TIME 타입: 모든 연속 범위 조합 평가 후 최적 선택
+     * TIME 타입: 최대 연속 범위만 평가 후 최적 선택
+     * 
+     * 같은 날짜에서 겹치는 범위가 Top3에 중복 표시되는 것을 방지하기 위해
+     * 최대 연속 범위만 생성합니다.
      */
     private MeetingDetailData.SummaryData buildTimeSummary(
             List<MeetingUserSelection> selections,
@@ -60,17 +63,17 @@ public class BestSlotBuilder {
         // 1. 날짜-슬롯별 참여자 Set 생성
         Map<String, Map<Integer, Set<Long>>> dateSlotUsersMap = buildDateSlotUsersMap(selections);
 
-        // 2. 가능한 모든 연속 범위 조합 평가
+        // 2. 최대 연속 범위만 평가
         List<MeetingDetailData.BestSlot> allSlots = new ArrayList<>();
 
         for (Map.Entry<String, Map<Integer, Set<Long>>> dateEntry : dateSlotUsersMap.entrySet()) {
             String date = dateEntry.getKey();
             Map<Integer, Set<Long>> slotUsersMap = dateEntry.getValue();
 
-            // 해당 날짜의 모든 가능한 연속 범위 생성
-            List<SlotRange> allRanges = generateAllConsecutiveRanges(slotUsersMap);
+            // 해당 날짜의 최대 연속 범위만 생성
+            List<SlotRange> maxRanges = findMaxConsecutiveRanges(slotUsersMap);
 
-            for (SlotRange range : allRanges) {
+            for (SlotRange range : maxRanges) {
                 // 모든 슬롯에 참여한 사용자만 필터링 (엄격한 카운트)
                 Set<Long> commonUserIds = findCommonUsers(slotUsersMap, range);
                 
@@ -195,11 +198,53 @@ public class BestSlotBuilder {
     }
 
     /**
+     * 최대 연속 범위만 찾기
+     * 
+     * 연속된 슬롯을 그룹화하여 각 그룹의 최대 범위만 반환합니다.
+     * 예: slotIndex [14, 15, 16, 18, 19] → [(14,16), (18,19)]
+     */
+    private List<SlotRange> findMaxConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
+        if (slotUsersMap.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> sortedSlots = slotUsersMap.keySet().stream()
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<SlotRange> ranges = new ArrayList<>();
+        int start = sortedSlots.get(0);
+        int end = start;
+
+        for (int i = 1; i < sortedSlots.size(); i++) {
+            int current = sortedSlots.get(i);
+
+            if (current == end + 1) {
+                // 연속됨
+                end = current;
+            } else {
+                // 끊김 → 현재 범위 저장
+                ranges.add(new SlotRange(start, end));
+                start = current;
+                end = current;
+            }
+        }
+
+        // 마지막 범위 저장
+        ranges.add(new SlotRange(start, end));
+
+        return ranges;
+    }
+
+    /**
      * 가능한 모든 연속 범위 조합 생성
      * 
      * 예: slotIndex [14, 15, 16] → [(14,14), (15,15), (16,16), (14,15), (15,16), (14,16)]
      * 비연속 슬롯은 개별로만 생성: [14, 16] → [(14,14), (16,16)]
+     * 
+     * @deprecated 같은 날짜에서 겹치는 범위가 Top3에 중복 표시됨. findMaxConsecutiveRanges 사용 권장
      */
+    @Deprecated
     private List<SlotRange> generateAllConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
         if (slotUsersMap.isEmpty()) {
             return List.of();
@@ -232,45 +277,6 @@ public class BestSlotBuilder {
                 }
             }
         }
-
-        return ranges;
-    }
-
-    /**
-     * 연속 슬롯 그룹 찾기 (최대 범위만)
-     * 
-     * 예: slotIndex [14, 15, 16, 18, 19] → [(14,16), (18,19)]
-     */
-    @Deprecated
-    private List<SlotRange> findConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
-        if (slotUsersMap.isEmpty()) {
-            return List.of();
-        }
-
-        List<Integer> sortedSlots = slotUsersMap.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
-        List<SlotRange> ranges = new ArrayList<>();
-        int start = sortedSlots.get(0);
-        int end = start;
-
-        for (int i = 1; i < sortedSlots.size(); i++) {
-            int current = sortedSlots.get(i);
-
-            if (current == end + 1) {
-                // 연속됨
-                end = current;
-            } else {
-                // 끊김 → 현재 범위 저장
-                ranges.add(new SlotRange(start, end));
-                start = current;
-                end = current;
-            }
-        }
-
-        // 마지막 범위 저장
-        ranges.add(new SlotRange(start, end));
 
         return ranges;
     }

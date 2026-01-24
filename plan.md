@@ -69,7 +69,7 @@ GET /api/v1/meetings/{meetingCode}/export?date=2024-02-15&slotIndex=-1  # ALL_DA
 - [x] BE: 모든 테스트 케이스 통과
 - [x] FE: 결과 페이지에서 캘린더 export 버튼 동작
 - [x] iOS Safari에서 ICS 파일 다운로드 및 캘린더 앱 연동 확인
-- [ ] Android Chrome에서 ICS 파일 다운로드 및 캘린더 앱 연동 확인
+- [ ] Android Chrome에서 ICS 파일 다운로드 및 캘린더 앱 연동 확인 (보류 - 테스트 기기 없음)
 
 ---
 ---
@@ -309,3 +309,72 @@ MVP 완료 후 추가할 기능:
 - 미팅 생성/수정 Tools
 - 알림 기능
 - RAG 확장 (미팅 메모 기반 의미 검색)
+
+---
+---
+
+# 요약 탭 개선: 연속 시간 병합 + 참여자 명단
+
+## 개요
+
+결과탭의 Top3 BestSlot을 개선하여:
+1. 연속된 시간 슬롯을 하나로 병합 (예: 14:00, 15:00, 16:00 → "14:00 ~ 17:00")
+2. 각 시간대별 참여자 명단 추가
+
+## 기술 결정사항
+
+| 항목 | 결정 |
+|------|------|
+| 병합 조건 | 2개 이상 연속된 슬롯 |
+| count 계산 | 모든 슬롯에 참여한 인원만 카운트 (엄격) |
+| 참여자 표시 | BestSlot에 participants 필드 추가 |
+| TDD | 적용 (Red-Green-Refactor) |
+
+---
+
+## Backend 구현
+
+### Phase 1: 도메인 모델 수정
+
+#### 1.1 MeetingDetailData.BestSlot 모델 변경
+
+- [ ] startSlotIndex 필드 추가 (기존 slotIndex → startSlotIndex)
+- [ ] endSlotIndex 필드 추가
+- [ ] participants 필드 추가 (List<User>)
+
+#### 1.2 테스트 케이스
+
+- [ ] 연속 슬롯 2개 → 병합됨 (14:00, 15:00 → 14:00~16:00)
+- [ ] 연속 슬롯 3개 → 병합됨 (14:00, 15:00, 16:00 → 14:00~17:00)
+- [ ] 비연속 슬롯 → 병합 안됨 (14:00, 16:00 → 개별 유지)
+- [ ] 다른 날짜 → 병합 안됨
+- [ ] ALL_DAY 타입 → 병합 없음 (기존 동작 유지)
+- [ ] 병합된 슬롯의 count는 모든 슬롯 참여 인원만 카운트
+- [ ] participants 필드에 참여자 목록 포함
+
+---
+
+### Phase 2: 연속 시간 병합 로직
+
+#### 2.1 MeetingService.buildSummaryData 수정
+
+- [ ] 연속 슬롯 그룹 탐지 로직 추가
+- [ ] 그룹 내 공통 참여자 계산 로직
+- [ ] Top3 선정 후 participants 매핑
+
+---
+
+### Phase 3: API 응답 DTO 수정
+
+#### 3.1 MeetingDetailResponse.BestSlot 변경
+
+- [ ] time 필드 → "14:00 ~ 17:00" 형식 지원
+- [ ] participants 필드 추가 (List<ParticipantInfo>)
+
+---
+
+## 완료 조건
+
+- [ ] 모든 테스트 케이스 통과
+- [ ] 기존 API 응답 호환성 유지
+- [ ] Swagger 문서 업데이트
