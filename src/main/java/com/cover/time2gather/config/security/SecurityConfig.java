@@ -66,6 +66,9 @@ public class SecurityConfig {
     private static final String FAVICON_PATTERN = "/favicon.ico";
     private static final String CORS_ALL_PATHS = "/**";
 
+    // MCP Server endpoints
+    private static final String MCP_PATTERN = "/mcp/**";
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -82,6 +85,9 @@ public class SecurityConfig {
                         .requestMatchers(ROOT_PATTERN).permitAll() // Root endpoint
                         .requestMatchers(ACTUATOR_PATTERN).permitAll() // Actuator endpoints
                         .requestMatchers(SWAGGER_UI_PATTERN, API_DOCS_PATTERN).permitAll() // Swagger UI
+
+                        // MCP Server endpoints (for PlayMCP integration)
+                        .requestMatchers(MCP_PATTERN).permitAll()
 
                         // Auth endpoints
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
