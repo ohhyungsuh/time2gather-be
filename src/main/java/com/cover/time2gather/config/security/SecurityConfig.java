@@ -48,7 +48,8 @@ public class SecurityConfig {
             "Authorization",
             "Set-Cookie",
             "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials"
+            "Access-Control-Allow-Credentials",
+            "Mcp-Session-Id"  // MCP Streamable HTTP 세션 ID
     );
 
     private static final long CORS_MAX_AGE_SECONDS = 3600L;

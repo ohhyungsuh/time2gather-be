@@ -16,12 +16,17 @@ spring:
         name: time2gather
         version: 1.0.0
         type: SYNC
-        protocol: SSE
+        # Streamable HTTP for PlayMCP compatibility (단일 /mcp 엔드포인트)
+        protocol: streamable-http
+        streamable-http:
+          mcp-endpoint: /mcp
+        # SSE 설정 (레거시 호환용, streamable-http 사용 시 무시됨)
         sse-message-endpoint: /mcp/message
         sse-endpoint: /sse
         annotation-scanner:
           enabled: true
           base-packages: com.cover.time2gather.api.mcp
+        instructions: "Time2Gather는 모임 일정 조율 서비스입니다. 모임 생성, 시간 투표, 장소 투표, 일정 확정 등의 기능을 제공합니다."
 
   jpa:
     hibernate:
