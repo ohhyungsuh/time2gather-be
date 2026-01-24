@@ -1,6 +1,8 @@
 package com.cover.time2gather.api.common;
 
 import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
+import com.cover.time2gather.util.MessageProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +18,11 @@ import java.util.stream.Collectors;
 
 /**
  * 전역 예외 처리기
+ * Accept-Language 헤더 기반으로 다국어 에러 메시지를 반환합니다.
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final String VALIDATION_ERROR_MESSAGE = "입력값 검증에 실패했습니다";
-    private static final String AUTHENTICATION_ERROR_MESSAGE = "인증이 필요합니다";
-    private static final String ACCESS_DENIED_ERROR_MESSAGE = "접근 권한이 없습니다";
-    private static final String INTERNAL_SERVER_ERROR_MESSAGE = "서버 내부 오류가 발생했습니다";
 
     /**
      * 비즈니스 로직 예외 처리
@@ -32,9 +30,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("Business exception: {}", e.getMessage());
+
+        String message;
+        if (e.hasErrorCode()) {
+            message = MessageProvider.getMessage(e.getErrorCode().getMessageKey(), e.getArgs());
+        } else {
+            message = e.getMessage();
+        }
+
         return ResponseEntity
                 .status(e.getHttpStatus())
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -47,9 +53,11 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
 
         log.warn("Validation exception: {}", errorMessage);
+
+        String fallbackMessage = MessageProvider.getMessage(ErrorCode.INVALID_INPUT.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(errorMessage.isEmpty() ? VALIDATION_ERROR_MESSAGE : errorMessage));
+                .body(ApiResponse.error(errorMessage.isEmpty() ? fallbackMessage : errorMessage));
     }
 
     /**
@@ -58,9 +66,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException e) {
         log.warn("Authentication exception: {}", e.getMessage());
+        String message = MessageProvider.getMessage(ErrorCode.AUTH_REQUIRED_LOGIN.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(AUTHENTICATION_ERROR_MESSAGE + ". 로그인이 필요한 서비스입니다."));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -69,9 +78,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("Access denied exception: {}", e.getMessage());
+        String message = MessageProvider.getMessage(ErrorCode.ACCESS_DENIED.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(ACCESS_DENIED_ERROR_MESSAGE + ". 해당 리소스에 접근할 권한이 없습니다."));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -80,10 +90,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("Illegal argument exception: {}", e.getMessage());
-        String message = e.getMessage() != null ? e.getMessage() : "잘못된 요청 파라미터입니다";
+        String detailMessage = e.getMessage() != null ? e.getMessage() : "";
+        String message = MessageProvider.getMessage(ErrorCode.INVALID_REQUEST.getMessageKey(), detailMessage);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("요청이 올바르지 않습니다. " + message));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -92,7 +103,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException e) {
         log.warn("Illegal state exception: {}", e.getMessage());
-        String message = e.getMessage() != null ? e.getMessage() : "현재 상태에서 수행할 수 없는 요청입니다";
+        String message = e.getMessage() != null 
+                ? e.getMessage() 
+                : MessageProvider.getMessage(ErrorCode.INVALID_STATE.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(message));
@@ -104,9 +117,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<ApiResponse<Void>> handleNullPointerException(NullPointerException e) {
         log.error("Null pointer exception", e);
+        String message = MessageProvider.getMessage(ErrorCode.NULL_POINTER.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("필수 데이터가 누락되었습니다. 요청 내용을 확인해 주세요."));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -115,9 +129,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NumberFormatException.class)
     public ResponseEntity<ApiResponse<Void>> handleNumberFormatException(NumberFormatException e) {
         log.warn("Number format exception: {}", e.getMessage());
+        String message = MessageProvider.getMessage(ErrorCode.NUMBER_FORMAT.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("숫자 형식이 올바르지 않습니다. 입력값을 확인해 주세요."));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -126,11 +141,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
-        // DEBUG 레벨로 로깅 (불필요한 에러 로그 방지)
         log.debug("Static resource not found: {}", e.getResourcePath());
+        String message = MessageProvider.getMessage(ErrorCode.RESOURCE_NOT_FOUND.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("요청한 리소스를 찾을 수 없습니다"));
+                .body(ApiResponse.error(message));
     }
 
     /**
@@ -139,14 +154,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unexpected exception", e);
-        String detailMessage = e.getMessage() != null ? e.getMessage() : "알 수 없는 오류";
+        String message = MessageProvider.getMessage(ErrorCode.INTERNAL_SERVER_ERROR.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (오류: " + detailMessage + ")"));
+                .body(ApiResponse.error(message));
     }
 
     private String formatFieldError(FieldError fieldError) {
         return String.format("%s: %s", fieldError.getField(), fieldError.getDefaultMessage());
     }
 }
-
