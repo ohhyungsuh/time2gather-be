@@ -17,12 +17,10 @@ spring:
         version: 1.0.0
         type: SYNC
         # Streamable HTTP for PlayMCP compatibility (단일 /mcp 엔드포인트)
-        protocol: streamable-http
+        # Valid values: SSE, STREAMABLE, STATELESS
+        protocol: STREAMABLE
         streamable-http:
           mcp-endpoint: /mcp
-        # SSE 설정 (레거시 호환용, streamable-http 사용 시 무시됨)
-        sse-message-endpoint: /mcp/message
-        sse-endpoint: /sse
         annotation-scanner:
           enabled: true
           base-packages: com.cover.time2gather.api.mcp
