@@ -3,6 +3,7 @@ package com.cover.time2gather.api.meeting.dto.request;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -211,11 +212,12 @@ import java.util.Map;
 public class UpsertUserSelectionRequest {
 
     @NotNull(message = "선택한 시간대는 필수입니다")
+    @Size(min = 1, max = 31, message = "날짜는 1개 이상 31개 이하로 선택해야 합니다")
     @Schema(
         description = """
             날짜별 선택 정보 배열
             
-            - 최소 1개 이상의 날짜 필요
+            - 최소 1개 이상의 날짜 필요 (최대 31개)
             - 각 날짜마다 date, type 필드 필수
             - type="TIME"인 경우 times 필드도 필수
             """,

@@ -43,7 +43,8 @@ public class CreateMeetingRequest {
     private String selectionType;
 
     @NotNull(message = "가능한 날짜/시간은 필수입니다")
-    @Schema(description = "날짜별 가능한 시간대 (HH:mm 형식). ALL_DAY 타입인 경우 빈 배열 [] 사용",
+    @Size(min = 1, max = 31, message = "날짜는 1개 이상 31개 이하로 선택해야 합니다")
+    @Schema(description = "날짜별 가능한 시간대 (HH:mm 형식). ALL_DAY 타입인 경우 빈 배열 [] 사용. 최대 31일까지 선택 가능",
             example = "{\"2024-02-15\": [\"09:00\", \"10:00\", \"11:00\"], \"2024-02-16\": [\"14:00\", \"15:00\"]}",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private Map<String, String[]> availableDates;
