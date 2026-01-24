@@ -67,7 +67,7 @@ oauth2:
     playmcp:
       client-id: ${PLAYMCP_CLIENT_ID:playmcp-time2gather}
       client-secret: ${PLAYMCP_CLIENT_SECRET:time2gather-mcp-secret-2024}
-      redirect-uri: ${PLAYMCP_REDIRECT_URI:https://playmcp.com/oauth/callback}
+      redirect-uri: ${PLAYMCP_REDIRECT_URI:https://playmcp.kakao.com/api/v1/applied-mcps/561/authorize/oauth:callback}
 
 # Swagger
 springdoc:
