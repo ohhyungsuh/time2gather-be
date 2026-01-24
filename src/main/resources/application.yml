@@ -15,10 +15,10 @@ spring:
       server:
         name: time2gather
         version: 1.0.0
-        sse:
-          enabled: true
-          endpoint: /mcp/sse
-          message-endpoint: /mcp/message
+        type: SYNC
+        protocol: SSE
+        sse-message-endpoint: /mcp/message
+        sse-endpoint: /sse
         annotation-scanner:
           enabled: true
           base-packages: com.cover.time2gather.api.mcp

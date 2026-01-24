@@ -35,7 +35,9 @@ public class SecurityConfig {
 			"https://localhost:3000",
             "https://www.time2gather.org",
             "https://*.time2gather.org",
-            "https://playmcp.com"
+            // PlayMCP (카카오)
+            "https://playmcp.kakao.com",
+            "https://*.playmcp.kakao.com"
     );
 
     private static final List<String> ALLOWED_METHODS = Arrays.asList(
