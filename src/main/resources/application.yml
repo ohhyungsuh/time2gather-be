@@ -57,6 +57,9 @@ oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:4ea5e31b7c9fd5131c30f91acac4abb0}
     client-secret: ${KAKAO_CLIENT_SECRET:Ftk2nyEdPIsgBBJFlqstGO3X1r1teH9L}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
   redirect:
     default: ${OAUTH_REDIRECT_URL:https://time2gather.com/login/oauth2/code/kakao}
 

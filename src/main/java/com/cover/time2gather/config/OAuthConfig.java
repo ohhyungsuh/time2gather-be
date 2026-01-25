@@ -1,5 +1,6 @@
 package com.cover.time2gather.config;
 
+import com.cover.time2gather.infra.oauth.GoogleOidcProvider;
 import com.cover.time2gather.infra.oauth.KakaoOidcProvider;
 import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,12 @@ public class OAuthConfig {
     @Value("${oauth.kakao.client-secret}")
     private String kakaoClientSecret;
 
+    @Value("${oauth.google.client-id}")
+    private String googleClientId;
+
+    @Value("${oauth.google.client-secret}")
+    private String googleClientSecret;
+
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
@@ -26,8 +33,8 @@ public class OAuthConfig {
     @Bean
     public List<OidcProviderStrategy> oidcProviders(RestTemplate restTemplate) {
         return List.of(
-                new KakaoOidcProvider(restTemplate, kakaoClientId, kakaoClientSecret)
-                // 추후 Google Provider 등 추가 가능
+                new KakaoOidcProvider(restTemplate, kakaoClientId, kakaoClientSecret),
+                new GoogleOidcProvider(restTemplate, googleClientId, googleClientSecret)
         );
     }
 }
