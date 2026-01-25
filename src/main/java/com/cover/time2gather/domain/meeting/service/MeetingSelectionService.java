@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting.service;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
@@ -43,6 +45,11 @@ public class MeetingSelectionService {
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+
+        if (meeting.isConfirmed()) {
+            throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
+        }
+
         validateSelections(meeting, selections);
 
         MeetingUserSelection selection = selectionRepository
