@@ -167,6 +167,8 @@ public class MeetingDetailResponse {
 				return new BestSlot(
 					slot.getDate(),
 					timeString,
+					slot.getStartSlotIndex(),
+					slot.getEndSlotIndex(),
 					slot.getCount(),
 					slot.getPercentage(),
 					participants
@@ -323,6 +325,12 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "시간 (연속 시간대인 경우 범위 형식)", example = "09:00 ~ 12:00")
 		private String time;
+
+		@Schema(description = "시작 슬롯 인덱스 (약속 확정 시 사용, ALL_DAY는 -1)", example = "9")
+		private int startSlotIndex;
+
+		@Schema(description = "종료 슬롯 인덱스 (연속 범위의 끝, 단일 슬롯이면 startSlotIndex와 동일)", example = "11")
+		private int endSlotIndex;
 
 		@Schema(description = "가능한 인원 수", example = "4")
 		private int count;
