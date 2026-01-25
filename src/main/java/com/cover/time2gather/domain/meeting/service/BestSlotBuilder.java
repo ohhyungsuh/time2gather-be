@@ -50,10 +50,10 @@ public class BestSlotBuilder {
     }
 
     /**
-     * TIME 타입: 최대 연속 범위만 평가 후 최적 선택
+     * TIME 타입: 모든 연속 범위 조합 평가 후 겹치지 않는 Top3 선택
      * 
-     * 같은 날짜에서 겹치는 범위가 Top3에 중복 표시되는 것을 방지하기 위해
-     * 최대 연속 범위만 생성합니다.
+     * 1. 모든 가능한 연속 범위 조합을 생성하고 공통 참여자 계산
+     * 2. count 기준 정렬 후, 같은 날짜에서 겹치는 범위는 제외하고 Top3 선택
      */
     private MeetingDetailData.SummaryData buildTimeSummary(
             List<MeetingUserSelection> selections,
@@ -63,17 +63,17 @@ public class BestSlotBuilder {
         // 1. 날짜-슬롯별 참여자 Set 생성
         Map<String, Map<Integer, Set<Long>>> dateSlotUsersMap = buildDateSlotUsersMap(selections);
 
-        // 2. 최대 연속 범위만 평가
+        // 2. 모든 연속 범위 조합 평가
         List<MeetingDetailData.BestSlot> allSlots = new ArrayList<>();
 
         for (Map.Entry<String, Map<Integer, Set<Long>>> dateEntry : dateSlotUsersMap.entrySet()) {
             String date = dateEntry.getKey();
             Map<Integer, Set<Long>> slotUsersMap = dateEntry.getValue();
 
-            // 해당 날짜의 최대 연속 범위만 생성
-            List<SlotRange> maxRanges = findMaxConsecutiveRanges(slotUsersMap);
+            // 해당 날짜의 모든 가능한 연속 범위 생성
+            List<SlotRange> allRanges = generateAllConsecutiveRanges(slotUsersMap);
 
-            for (SlotRange range : maxRanges) {
+            for (SlotRange range : allRanges) {
                 // 모든 슬롯에 참여한 사용자만 필터링 (엄격한 카운트)
                 Set<Long> commonUserIds = findCommonUsers(slotUsersMap, range);
                 
@@ -101,16 +101,59 @@ public class BestSlotBuilder {
         }
 
         // 3. 정렬: count 내림차순 → 범위 넓이 내림차순 → 날짜 오름차순 → startSlotIndex 오름차순
-        List<MeetingDetailData.BestSlot> bestSlots = allSlots.stream()
+        List<MeetingDetailData.BestSlot> sortedSlots = allSlots.stream()
                 .sorted(Comparator
                         .<MeetingDetailData.BestSlot>comparingInt(MeetingDetailData.BestSlot::getCount).reversed()
                         .thenComparing(Comparator.<MeetingDetailData.BestSlot>comparingInt(s -> s.getEndSlotIndex() - s.getStartSlotIndex()).reversed())
                         .thenComparing(MeetingDetailData.BestSlot::getDate)
                         .thenComparingInt(MeetingDetailData.BestSlot::getStartSlotIndex))
-                .limit(TOP_N)
                 .collect(Collectors.toList());
 
+        // 4. Top3 선택 (같은 날짜에서 겹치는 범위는 제외)
+        List<MeetingDetailData.BestSlot> bestSlots = selectNonOverlappingTopN(sortedSlots, TOP_N);
+
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
+    }
+
+    /**
+     * 같은 날짜에서 겹치는 범위를 제외하고 Top N 선택
+     */
+    private List<MeetingDetailData.BestSlot> selectNonOverlappingTopN(
+            List<MeetingDetailData.BestSlot> sortedSlots, 
+            int n
+    ) {
+        List<MeetingDetailData.BestSlot> result = new ArrayList<>();
+        // 날짜별로 선택된 범위 추적
+        Map<String, List<SlotRange>> selectedRangesByDate = new HashMap<>();
+
+        for (MeetingDetailData.BestSlot slot : sortedSlots) {
+            if (result.size() >= n) {
+                break;
+            }
+
+            String date = slot.getDate();
+            SlotRange currentRange = new SlotRange(slot.getStartSlotIndex(), slot.getEndSlotIndex());
+
+            // 해당 날짜에서 이미 선택된 범위와 겹치는지 확인
+            List<SlotRange> selectedRanges = selectedRangesByDate.getOrDefault(date, new ArrayList<>());
+            boolean overlaps = selectedRanges.stream()
+                    .anyMatch(selected -> rangesOverlap(selected, currentRange));
+
+            if (!overlaps) {
+                result.add(slot);
+                selectedRanges.add(currentRange);
+                selectedRangesByDate.put(date, selectedRanges);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 두 범위가 겹치는지 확인
+     */
+    private boolean rangesOverlap(SlotRange a, SlotRange b) {
+        return a.start <= b.end && b.start <= a.end;
     }
 
     /**
@@ -202,7 +245,10 @@ public class BestSlotBuilder {
      * 
      * 연속된 슬롯을 그룹화하여 각 그룹의 최대 범위만 반환합니다.
      * 예: slotIndex [14, 15, 16, 18, 19] → [(14,16), (18,19)]
+     * 
+     * @deprecated 공통 참여자가 적어질 수 있음. generateAllConsecutiveRanges + selectNonOverlappingTopN 사용 권장
      */
+    @Deprecated
     private List<SlotRange> findMaxConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
         if (slotUsersMap.isEmpty()) {
             return List.of();
@@ -241,10 +287,7 @@ public class BestSlotBuilder {
      * 
      * 예: slotIndex [14, 15, 16] → [(14,14), (15,15), (16,16), (14,15), (15,16), (14,16)]
      * 비연속 슬롯은 개별로만 생성: [14, 16] → [(14,14), (16,16)]
-     * 
-     * @deprecated 같은 날짜에서 겹치는 범위가 Top3에 중복 표시됨. findMaxConsecutiveRanges 사용 권장
      */
-    @Deprecated
     private List<SlotRange> generateAllConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
         if (slotUsersMap.isEmpty()) {
             return List.of();
