@@ -52,8 +52,11 @@ public class BestSlotBuilder {
     /**
      * TIME 타입: 모든 연속 범위 조합 평가 후 겹치지 않는 Top3 선택
      * 
-     * 1. 모든 가능한 연속 범위 조합을 생성하고 공통 참여자 계산
+     * 1. 모든 가능한 연속 범위 조합을 생성하고 공통 참여자 계산 (Incremental intersection)
      * 2. count 기준 정렬 후, 같은 날짜에서 겹치는 범위는 제외하고 Top3 선택
+     * 
+     * 시간복잡도: O(D × S² × U) - Incremental intersection 최적화 적용
+     * - D: 날짜 수, S: 슬롯 수, U: 사용자 수
      */
     private MeetingDetailData.SummaryData buildTimeSummary(
             List<MeetingUserSelection> selections,
@@ -63,41 +66,17 @@ public class BestSlotBuilder {
         // 1. 날짜-슬롯별 참여자 Set 생성
         Map<String, Map<Integer, Set<Long>>> dateSlotUsersMap = buildDateSlotUsersMap(selections);
 
-        // 2. 모든 연속 범위 조합 평가
+        // 2. 모든 연속 범위 조합 평가 (Incremental intersection으로 O(S² × U) 달성)
         List<MeetingDetailData.BestSlot> allSlots = new ArrayList<>();
 
         for (Map.Entry<String, Map<Integer, Set<Long>>> dateEntry : dateSlotUsersMap.entrySet()) {
             String date = dateEntry.getKey();
             Map<Integer, Set<Long>> slotUsersMap = dateEntry.getValue();
 
-            // 해당 날짜의 모든 가능한 연속 범위 생성
-            List<SlotRange> allRanges = generateAllConsecutiveRanges(slotUsersMap);
-
-            for (SlotRange range : allRanges) {
-                // 모든 슬롯에 참여한 사용자만 필터링 (엄격한 카운트)
-                Set<Long> commonUserIds = findCommonUsers(slotUsersMap, range);
-                
-                List<User> participants = commonUserIds.stream()
-                        .map(userMap::get)
-                        .filter(u -> u != null)
-                        .collect(Collectors.toList());
-
-                int count = participants.size();
-                if (count == 0) {
-                    continue; // 참여자가 없는 범위는 제외
-                }
-                
-                double percentage = totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0;
-
-                allSlots.add(new MeetingDetailData.BestSlot(
-                        date,
-                        range.start,
-                        range.end,
-                        count,
-                        percentage,
-                        participants
-                ));
-            }
+            // 해당 날짜의 모든 연속 범위에 대해 BestSlot 생성
+            List<MeetingDetailData.BestSlot> dateSlots = generateSlotsWithIncrementalIntersection(
+                    date, slotUsersMap, userMap, totalParticipants);
+            allSlots.addAll(dateSlots);
         }
 
         // 3. 정렬: count 내림차순 → 범위 넓이 내림차순 → 날짜 오름차순 → startSlotIndex 오름차순
@@ -113,6 +92,109 @@ public class BestSlotBuilder {
         List<MeetingDetailData.BestSlot> bestSlots = selectNonOverlappingTopN(sortedSlots, TOP_N);
 
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
+    }
+
+    /**
+     * Incremental intersection을 사용하여 모든 연속 범위의 BestSlot 생성
+     * 
+     * 기존 방식: generateAllConsecutiveRanges() + findCommonUsers() → O(S³ × U)
+     * 최적화 방식: 확장하면서 교집합 누적 유지 → O(S² × U)
+     * 
+     * @param date 날짜
+     * @param slotUsersMap 슬롯별 참여자 맵
+     * @param userMap 사용자 ID → User 맵
+     * @param totalParticipants 전체 참여자 수
+     * @return 해당 날짜의 모든 BestSlot 리스트
+     */
+    private List<MeetingDetailData.BestSlot> generateSlotsWithIncrementalIntersection(
+            String date,
+            Map<Integer, Set<Long>> slotUsersMap,
+            Map<Long, User> userMap,
+            int totalParticipants
+    ) {
+        if (slotUsersMap.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> sortedSlots = slotUsersMap.keySet().stream()
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<MeetingDetailData.BestSlot> result = new ArrayList<>();
+
+        // 각 시작점에서 연속 확장하면서 교집합 누적
+        for (int i = 0; i < sortedSlots.size(); i++) {
+            int start = sortedSlots.get(i);
+            Set<Long> commonUserIds = new HashSet<>(slotUsersMap.get(start));
+            int end = start;
+
+            // 단일 슬롯 (start == end) 추가
+            addBestSlotIfValid(result, date, start, end, commonUserIds, userMap, totalParticipants);
+
+            // 연속된 슬롯으로 확장하면서 교집합 유지
+            for (int j = i + 1; j < sortedSlots.size(); j++) {
+                int next = sortedSlots.get(j);
+
+                if (next != end + 1) {
+                    // 연속이 끊김 → 이 시작점에서의 확장 종료
+                    break;
+                }
+
+                // 연속됨 → 확장하면서 교집합 갱신
+                end = next;
+                Set<Long> nextSlotUsers = slotUsersMap.get(next);
+                commonUserIds.retainAll(nextSlotUsers);
+
+                // 교집합이 비어있으면 더 확장해도 의미 없음 (Early termination)
+                if (commonUserIds.isEmpty()) {
+                    break;
+                }
+
+                // 확장된 범위 추가
+                addBestSlotIfValid(result, date, start, end, commonUserIds, userMap, totalParticipants);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 유효한 BestSlot을 결과 리스트에 추가
+     */
+    private void addBestSlotIfValid(
+            List<MeetingDetailData.BestSlot> result,
+            String date,
+            int start,
+            int end,
+            Set<Long> commonUserIds,
+            Map<Long, User> userMap,
+            int totalParticipants
+    ) {
+        if (commonUserIds.isEmpty()) {
+            return;
+        }
+
+        // Set을 복사하여 사용 (이후 retainAll로 원본이 변경되므로)
+        List<User> participants = commonUserIds.stream()
+                .map(userMap::get)
+                .filter(u -> u != null)
+                .collect(Collectors.toList());
+
+        int count = participants.size();
+        if (count == 0) {
+            return;
+        }
+
+        double percentage = totalParticipants > 0 ? (count * 100.0 / totalParticipants) : 0;
+
+        result.add(new MeetingDetailData.BestSlot(
+                date,
+                start,
+                end,
+                count,
+                percentage,
+                participants
+        ));
     }
 
     /**
@@ -238,113 +320,6 @@ public class BestSlotBuilder {
         }
 
         return result;
-    }
-
-    /**
-     * 최대 연속 범위만 찾기
-     * 
-     * 연속된 슬롯을 그룹화하여 각 그룹의 최대 범위만 반환합니다.
-     * 예: slotIndex [14, 15, 16, 18, 19] → [(14,16), (18,19)]
-     * 
-     * @deprecated 공통 참여자가 적어질 수 있음. generateAllConsecutiveRanges + selectNonOverlappingTopN 사용 권장
-     */
-    @Deprecated
-    private List<SlotRange> findMaxConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
-        if (slotUsersMap.isEmpty()) {
-            return List.of();
-        }
-
-        List<Integer> sortedSlots = slotUsersMap.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
-        List<SlotRange> ranges = new ArrayList<>();
-        int start = sortedSlots.get(0);
-        int end = start;
-
-        for (int i = 1; i < sortedSlots.size(); i++) {
-            int current = sortedSlots.get(i);
-
-            if (current == end + 1) {
-                // 연속됨
-                end = current;
-            } else {
-                // 끊김 → 현재 범위 저장
-                ranges.add(new SlotRange(start, end));
-                start = current;
-                end = current;
-            }
-        }
-
-        // 마지막 범위 저장
-        ranges.add(new SlotRange(start, end));
-
-        return ranges;
-    }
-
-    /**
-     * 가능한 모든 연속 범위 조합 생성
-     * 
-     * 예: slotIndex [14, 15, 16] → [(14,14), (15,15), (16,16), (14,15), (15,16), (14,16)]
-     * 비연속 슬롯은 개별로만 생성: [14, 16] → [(14,14), (16,16)]
-     */
-    private List<SlotRange> generateAllConsecutiveRanges(Map<Integer, Set<Long>> slotUsersMap) {
-        if (slotUsersMap.isEmpty()) {
-            return List.of();
-        }
-
-        List<Integer> sortedSlots = slotUsersMap.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
-        List<SlotRange> ranges = new ArrayList<>();
-
-        // 모든 시작점과 끝점 조합 생성 (연속된 것만)
-        for (int i = 0; i < sortedSlots.size(); i++) {
-            int start = sortedSlots.get(i);
-            int end = start;
-
-            // 단일 슬롯 추가
-            ranges.add(new SlotRange(start, end));
-
-            // 연속된 슬롯으로 확장
-            for (int j = i + 1; j < sortedSlots.size(); j++) {
-                int next = sortedSlots.get(j);
-                if (next == end + 1) {
-                    // 연속됨 → 확장
-                    end = next;
-                    ranges.add(new SlotRange(start, end));
-                } else {
-                    // 끊김 → 이 시작점에서의 확장 종료
-                    break;
-                }
-            }
-        }
-
-        return ranges;
-    }
-
-    /**
-     * 범위 내 모든 슬롯에 참여한 사용자 ID 찾기 (엄격한 카운트)
-     */
-    private Set<Long> findCommonUsers(Map<Integer, Set<Long>> slotUsersMap, SlotRange range) {
-        Set<Long> commonUsers = null;
-
-        for (int slot = range.start; slot <= range.end; slot++) {
-            Set<Long> slotUsers = slotUsersMap.get(slot);
-
-            if (slotUsers == null) {
-                return Set.of();
-            }
-
-            if (commonUsers == null) {
-                commonUsers = new HashSet<>(slotUsers);
-            } else {
-                commonUsers.retainAll(slotUsers);
-            }
-        }
-
-        return commonUsers != null ? commonUsers : Set.of();
     }
 
     /**
