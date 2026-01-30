@@ -13,25 +13,25 @@ import java.util.stream.Collectors;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "모임 상세 응답")
+@Schema(description = "Meeting detail response")
 public class MeetingDetailResponse {
 
-	@Schema(description = "모임 정보")
+	@Schema(description = "Meeting information")
 	private MeetingInfo meeting;
 
-	@Schema(description = "참여자 목록")
+	@Schema(description = "Participant list")
 	private List<ParticipantInfo> participants;
 
-	@Schema(description = "날짜/시간별 참여 가능한 사용자 목록 및 카운트")
+	@Schema(description = "Available users list and count by date/time")
 	private Map<String, Map<String, TimeSlotDetail>> schedule;
 
-	@Schema(description = "요약 정보")
+	@Schema(description = "Summary information")
 	private SummaryInfo summary;
 
-	@Schema(description = "현재 사용자의 참여 여부 (미인증 시 false)")
+	@Schema(description = "Current user's participation status (false if not authenticated)")
 	private boolean isParticipated;
 
-	@Schema(description = "장소 투표 정보 (장소 투표 비활성화 시 null)")
+	@Schema(description = "Location vote information (null if location voting is disabled)")
 	private LocationVoteInfo locationVote;
 
 	/**
@@ -229,153 +229,153 @@ public class MeetingDetailResponse {
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "모임 기본 정보")
+	@Schema(description = "Meeting basic information")
 	public static class MeetingInfo {
-		@Schema(description = "모임 ID", example = "1")
+		@Schema(description = "Meeting ID", example = "1")
 		private Long id;
 
-		@Schema(description = "모임 코드", example = "mtg_a3f8k2md9x")
+		@Schema(description = "Meeting code", example = "mtg_a3f8k2md9x")
 		private String code;
 
-		@Schema(description = "모임 제목", example = "프로젝트 킥오프 미팅")
+		@Schema(description = "Meeting title", example = "Project Kickoff Meeting")
 		private String title;
 
-		@Schema(description = "모임 설명", example = "2월 신규 프로젝트 시작 회의")
+		@Schema(description = "Meeting description", example = "February new project start meeting")
 		private String description;
 
-		@Schema(description = "방장 정보")
+		@Schema(description = "Host information")
 		private HostInfo host;
 
-		@Schema(description = "타임존", example = "Asia/Seoul")
+		@Schema(description = "Timezone", example = "Asia/Seoul")
 		private String timezone;
 
-		@Schema(description = "선택 타입 (TIME: 시간 단위, ALL_DAY: 일 단위)", example = "TIME")
+		@Schema(description = "Selection type (TIME: time-slot based, ALL_DAY: full-day based)", example = "TIME")
 		private String selectionType;
 
-		@Schema(description = "시간 간격 (분 단위)", example = "60")
+		@Schema(description = "Time interval in minutes", example = "60")
 		private int intervalMinutes;
 
-		@Schema(description = "가능한 날짜/시간대. ALL_DAY인 경우 빈 배열",
+		@Schema(description = "Available dates/times. Empty array for ALL_DAY type",
 			example = "{\"2024-02-15\": [\"09:00\", \"10:00\", \"11:00\"], \"2024-02-16\": [\"14:00\", \"15:00\"]}")
 		private Map<String, String[]> availableDates;
 
-		@Schema(description = "확정된 날짜 (없으면 null)", example = "2024-02-15")
+		@Schema(description = "Confirmed date (null if not confirmed)", example = "2024-02-15")
 		private String confirmedDate;
 
-		@Schema(description = "확정된 시간 (없으면 null, ALL_DAY인 경우 'ALL_DAY')", example = "09:00")
+		@Schema(description = "Confirmed time (null if not confirmed, 'ALL_DAY' for ALL_DAY type)", example = "09:00")
 		private String confirmedTime;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "방장 정보")
+	@Schema(description = "Host information")
 	public static class HostInfo {
-		@Schema(description = "사용자 ID", example = "1")
+		@Schema(description = "User ID", example = "1")
 		private Long id;
 
-		@Schema(description = "사용자명", example = "jinwoo")
+		@Schema(description = "Username", example = "jinwoo")
 		private String username;
 
-		@Schema(description = "프로필 이미지 URL", example = "https://...")
+		@Schema(description = "Profile image URL", example = "https://...")
 		private String profileImageUrl;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "참여자 정보")
+	@Schema(description = "Participant information")
 	public static class ParticipantInfo {
-		@Schema(description = "사용자 ID", example = "1")
+		@Schema(description = "User ID", example = "1")
 		private Long userId;
 
-		@Schema(description = "사용자명", example = "jinwoo")
+		@Schema(description = "Username", example = "jinwoo")
 		private String username;
 
-		@Schema(description = "프로필 이미지 URL", example = "https://...")
+		@Schema(description = "Profile image URL", example = "https://...")
 		private String profileImageUrl;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "시간대별 상세 정보")
+	@Schema(description = "Time slot detail information")
 	public static class TimeSlotDetail {
-		@Schema(description = "해당 시간대를 선택한 참여자 수", example = "3")
+		@Schema(description = "Number of participants who selected this time slot", example = "3")
 		private int count;
 
-		@Schema(description = "해당 시간대를 선택한 참여자 목록")
+		@Schema(description = "List of participants who selected this time slot")
 		private List<ParticipantInfo> participants;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "요약 정보")
+	@Schema(description = "Summary information")
 	public static class SummaryInfo {
-		@Schema(description = "총 참여자 수", example = "5")
+		@Schema(description = "Total number of participants", example = "5")
 		private int totalParticipants;
 
-		@Schema(description = "베스트 시간대 (가장 많은 사람이 가능한 시간대)")
+		@Schema(description = "Best time slots (time slots with most available participants)")
 		private List<BestSlot> bestSlots;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "베스트 시간대")
+	@Schema(description = "Best time slot")
 	public static class BestSlot {
-		@Schema(description = "날짜", example = "2024-02-15")
+		@Schema(description = "Date", example = "2024-02-15")
 		private String date;
 
-		@Schema(description = "시간 (연속 시간대인 경우 범위 형식)", example = "09:00 ~ 12:00")
+		@Schema(description = "Time (range format for consecutive slots)", example = "09:00 ~ 12:00")
 		private String time;
 
-		@Schema(description = "시작 슬롯 인덱스 (약속 확정 시 사용, ALL_DAY는 -1)", example = "9")
+		@Schema(description = "Start slot index (used for confirmation, -1 for ALL_DAY)", example = "9")
 		private int startSlotIndex;
 
-		@Schema(description = "종료 슬롯 인덱스 (연속 범위의 끝, 단일 슬롯이면 startSlotIndex와 동일)", example = "11")
+		@Schema(description = "End slot index (end of consecutive range, same as startSlotIndex for single slot)", example = "11")
 		private int endSlotIndex;
 
-		@Schema(description = "가능한 인원 수", example = "4")
+		@Schema(description = "Number of available participants", example = "4")
 		private int count;
 
-		@Schema(description = "가능 비율 (% 포함)", example = "80%")
+		@Schema(description = "Availability percentage (includes %)", example = "80%")
 		private String percentage;
 
-		@Schema(description = "해당 시간대에 참여 가능한 참여자 목록")
+		@Schema(description = "List of participants available at this time slot")
 		private List<ParticipantInfo> participants;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "장소 투표 정보")
+	@Schema(description = "Location vote information")
 	public static class LocationVoteInfo {
-		@Schema(description = "장소 투표 활성화 여부", example = "true")
+		@Schema(description = "Location voting enabled status", example = "true")
 		private boolean enabled;
 
-		@Schema(description = "장소 목록")
+		@Schema(description = "Location list")
 		private List<LocationInfo> locations;
 
-		@Schema(description = "확정된 장소 (없으면 null)")
+		@Schema(description = "Confirmed location (null if not confirmed)")
 		private LocationInfo confirmedLocation;
 	}
 
 	@Getter
 	@AllArgsConstructor
-	@Schema(description = "장소 정보")
+	@Schema(description = "Location information")
 	public static class LocationInfo {
-		@Schema(description = "장소 ID", example = "1")
+		@Schema(description = "Location ID", example = "1")
 		private Long id;
 
-		@Schema(description = "장소 이름", example = "강남역 스타벅스")
+		@Schema(description = "Location name", example = "Gangnam Station Starbucks")
 		private String name;
 
-		@Schema(description = "표시 순서", example = "0")
+		@Schema(description = "Display order", example = "0")
 		private int displayOrder;
 
-		@Schema(description = "투표 수", example = "3")
+		@Schema(description = "Vote count", example = "3")
 		private int voteCount;
 
-		@Schema(description = "투표 비율", example = "60%")
+		@Schema(description = "Vote percentage", example = "60%")
 		private String percentage;
 
-		@Schema(description = "투표한 참여자 목록")
+		@Schema(description = "List of participants who voted for this location")
 		private List<ParticipantInfo> voters;
 	}
 

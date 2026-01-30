@@ -3,6 +3,8 @@ package com.cover.time2gather.domain.meeting;
 import static com.cover.time2gather.domain.meeting.vo.TimeSlot.*;
 
 import com.cover.time2gather.domain.common.BaseEntity;
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
@@ -11,7 +13,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
 
-import java.util.Arrays;
 import java.util.Map;
 
 @Entity
@@ -114,13 +115,13 @@ public class MeetingUserSelection extends BaseEntity {
      */
     private void validateTimeSlots() {
         if (selections == null || selections.isEmpty()) {
-            throw new IllegalArgumentException("최소 하나의 시간대를 선택해야 합니다.");
+            throw new BusinessException(ErrorCode.MEETING_DATE_REQUIRED);
         }
 
         for (Map.Entry<String, int[]> entry : selections.entrySet()) {
             int[] slots = entry.getValue();
             if (slots == null || slots.length == 0) {
-                throw new IllegalArgumentException("각 날짜마다 최소 하나의 시간대를 선택해야 합니다.");
+                throw new BusinessException(ErrorCode.MEETING_DATE_SLOT_REQUIRED);
             }
 
             for (int slotIndex : slots) {
@@ -136,14 +137,14 @@ public class MeetingUserSelection extends BaseEntity {
      */
     private void validateAllDayDates() {
         if (selections == null || selections.isEmpty()) {
-            throw new IllegalArgumentException("최소 하나의 날짜를 선택해야 합니다.");
+            throw new BusinessException(ErrorCode.MEETING_DATE_REQUIRED);
         }
 
         for (Map.Entry<String, int[]> entry : selections.entrySet()) {
             int[] slots = entry.getValue();
             // ALL_DAY 타입은 빈 배열이어야 함
             if (slots != null && slots.length > 0) {
-                throw new IllegalArgumentException("일 단위 선택(ALL_DAY)인 경우 시간대는 빈 배열이어야 합니다.");
+                throw new BusinessException(ErrorCode.MEETING_ALL_DAY_EMPTY_SLOTS);
             }
         }
     }

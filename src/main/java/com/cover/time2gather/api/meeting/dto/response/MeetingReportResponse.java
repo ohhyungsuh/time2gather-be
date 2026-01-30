@@ -7,16 +7,16 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "모임 레포트 응답")
+@Schema(description = "Meeting report response")
 public class MeetingReportResponse {
 
-    @Schema(description = "레포트 ID", example = "1")
+    @Schema(description = "Report ID", example = "1")
     private long reportId;
 
-    @Schema(description = "모임 ID", example = "1")
+    @Schema(description = "Meeting ID", example = "1")
     private long meetingId;
 
-    @Schema(description = "요약된 레포트 내용")
+    @Schema(description = "Summarized report content")
     private String summaryText;
 
     public static MeetingReportResponse from(MeetingReport report) {

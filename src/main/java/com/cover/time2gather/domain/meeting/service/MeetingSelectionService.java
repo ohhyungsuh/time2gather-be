@@ -40,11 +40,11 @@ public class MeetingSelectionService {
     @Transactional
     public void upsertUserSelections(Long meetingId, Long userId, Map<String, int[]> selections) {
         if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found");
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEETING_NOT_FOUND));
 
         if (meeting.isConfirmed()) {
             throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
@@ -86,15 +86,13 @@ public class MeetingSelectionService {
 
             // 해당 날짜가 available_dates에 없으면 에러
             if (!availableDates.containsKey(date)) {
-                throw new IllegalArgumentException("Date " + date + " is not available in this meeting");
+                throw new BusinessException(ErrorCode.SELECTION_DATE_NOT_AVAILABLE, date);
             }
 
             // 빈 배열: ALL_DAY 타입에서만 허용
             if (selectedSlots != null && selectedSlots.length == 0) {
                 if (meeting.getSelectionType() != com.cover.time2gather.domain.meeting.SelectionType.ALL_DAY) {
-                    throw new IllegalArgumentException(
-                            "Empty array is only allowed for ALL_DAY type meetings. " +
-                            "For TIME type, either specify times or exclude the date from the request.");
+                    throw new BusinessException(ErrorCode.SELECTION_SLOT_EMPTY_FOR_TIME);
                 }
                 // ALL_DAY 타입이면 빈 배열 허용
                 continue;
@@ -102,7 +100,7 @@ public class MeetingSelectionService {
 
             // TIME 타입: 시간대 검증
             if (selectedSlots == null) {
-                throw new IllegalArgumentException("Slot array cannot be null. Use empty map to exclude dates.");
+                throw new BusinessException(ErrorCode.SELECTION_SLOT_NULL);
             }
 
             // 선택한 슬롯이 모두 available_dates에 포함되어 있는지 확인
@@ -114,8 +112,7 @@ public class MeetingSelectionService {
 
             for (int selectedSlot : selectedSlots) {
                 if (!availableSet.contains(selectedSlot)) {
-                    throw new IllegalArgumentException(
-                            "Slot " + selectedSlot + " is not available on " + date);
+                    throw new BusinessException(ErrorCode.SELECTION_SLOT_NOT_AVAILABLE, selectedSlot, date);
                 }
             }
         }

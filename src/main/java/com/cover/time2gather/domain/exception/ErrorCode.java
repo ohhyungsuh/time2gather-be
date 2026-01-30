@@ -28,6 +28,7 @@ public enum ErrorCode {
     USER_NOT_AUTHENTICATED("error.auth.not.authenticated", HttpStatus.UNAUTHORIZED),
     USER_NOT_FOUND("error.user.not.found", HttpStatus.NOT_FOUND),
     USER_NOT_FOUND_EMAIL("error.user.not.found.email", HttpStatus.NOT_FOUND),
+    USER_ID_REQUIRED("error.user.id.required", HttpStatus.BAD_REQUEST),
 
     // ===== OAuth Errors =====
     OAUTH_INVALID_CODE("error.oauth.invalid.code", HttpStatus.BAD_REQUEST),
@@ -37,6 +38,7 @@ public enum ErrorCode {
 
     // ===== Meeting Errors =====
     MEETING_NOT_FOUND("error.meeting.not.found", HttpStatus.NOT_FOUND),
+    MEETING_ID_REQUIRED("error.meeting.id.required", HttpStatus.BAD_REQUEST),
     MEETING_ALREADY_CONFIRMED("error.meeting.already.confirmed", HttpStatus.BAD_REQUEST),
     MEETING_NOT_CONFIRMED("error.meeting.not.confirmed", HttpStatus.BAD_REQUEST),
     MEETING_INVALID_DATE("error.meeting.invalid.date", HttpStatus.BAD_REQUEST),

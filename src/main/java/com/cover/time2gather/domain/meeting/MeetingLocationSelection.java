@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,13 +41,13 @@ public class MeetingLocationSelection {
 
     public static MeetingLocationSelection create(Long meetingId, Long locationId, Long userId) {
         if (meetingId == null) {
-            throw new IllegalArgumentException("미팅 ID는 필수입니다.");
+            throw new BusinessException(ErrorCode.MEETING_ID_REQUIRED);
         }
         if (locationId == null) {
-            throw new IllegalArgumentException("장소 ID는 필수입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_ID_REQUIRED);
         }
         if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+            throw new BusinessException(ErrorCode.USER_ID_REQUIRED);
         }
 
         MeetingLocationSelection selection = new MeetingLocationSelection();

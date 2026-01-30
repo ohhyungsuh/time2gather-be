@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "장소 추가 요청")
+@Schema(description = "Add location request")
 public class AddLocationRequest {
 
-    @NotBlank(message = "장소 이름은 필수입니다.")
-    @Schema(description = "장소 이름", example = "강남역 스타벅스")
+    @NotBlank(message = "{validation.location.name.required}")
+    @Schema(description = "Location name", example = "Gangnam Station Starbucks")
     private String name;
 }

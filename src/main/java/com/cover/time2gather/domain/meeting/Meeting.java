@@ -1,6 +1,8 @@
 package com.cover.time2gather.domain.meeting;
 
 import com.cover.time2gather.domain.common.BaseEntity;
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
@@ -138,13 +140,13 @@ public class Meeting extends BaseEntity {
      */
     private void validateTimeSlots() {
         if (availableDates == null || availableDates.isEmpty()) {
-            throw new IllegalArgumentException("최소 하나의 날짜와 시간대를 선택해야 합니다.");
+            throw new BusinessException(ErrorCode.MEETING_TIME_REQUIRED);
         }
 
         for (Map.Entry<String, int[]> entry : availableDates.entrySet()) {
             int[] slots = entry.getValue();
             if (slots == null || slots.length == 0) {
-                throw new IllegalArgumentException("각 날짜마다 최소 하나의 시간대를 선택해야 합니다.");
+                throw new BusinessException(ErrorCode.MEETING_DATE_SLOT_REQUIRED);
             }
 
             for (int slotIndex : slots) {
@@ -160,14 +162,14 @@ public class Meeting extends BaseEntity {
      */
     private void validateAllDayDates() {
         if (availableDates == null || availableDates.isEmpty()) {
-            throw new IllegalArgumentException("최소 하나의 날짜를 선택해야 합니다.");
+            throw new BusinessException(ErrorCode.MEETING_DATE_REQUIRED);
         }
 
         for (Map.Entry<String, int[]> entry : availableDates.entrySet()) {
             int[] slots = entry.getValue();
             // ALL_DAY 타입은 빈 배열이어야 함
             if (slots != null && slots.length > 0) {
-                throw new IllegalArgumentException("일 단위 선택(ALL_DAY)인 경우 시간대는 빈 배열이어야 합니다.");
+                throw new BusinessException(ErrorCode.MEETING_ALL_DAY_EMPTY_SLOTS);
             }
         }
     }
@@ -178,12 +180,12 @@ public class Meeting extends BaseEntity {
 
     public void confirm(LocalDate date, Integer slotIndex) {
         if (isConfirmed()) {
-            throw new IllegalStateException("이미 확정된 미팅입니다. 먼저 확정을 취소해주세요.");
+            throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
         }
 
         String dateString = date.toString();
         if (!availableDates.containsKey(dateString)) {
-            throw new IllegalArgumentException("유효하지 않은 날짜입니다: " + dateString);
+            throw new BusinessException(ErrorCode.MEETING_INVALID_DATE, dateString);
         }
 
         if (selectionType == SelectionType.TIME) {
@@ -200,7 +202,7 @@ public class Meeting extends BaseEntity {
 
     private void validateSlotIndex(String dateString, Integer slotIndex) {
         if (slotIndex == null) {
-            throw new IllegalArgumentException("TIME 타입 미팅은 slotIndex가 필요합니다.");
+            throw new BusinessException(ErrorCode.MEETING_SLOT_INDEX_REQUIRED);
         }
 
         int[] availableSlots = availableDates.get(dateString);
@@ -213,13 +215,13 @@ public class Meeting extends BaseEntity {
         }
 
         if (!slotExists) {
-            throw new IllegalArgumentException("유효하지 않은 슬롯 인덱스입니다: " + slotIndex);
+            throw new BusinessException(ErrorCode.MEETING_SLOT_INDEX_INVALID, slotIndex);
         }
     }
 
     public void cancelConfirmation() {
         if (!isConfirmed()) {
-            throw new IllegalStateException("확정되지 않은 미팅입니다.");
+            throw new BusinessException(ErrorCode.MEETING_NOT_CONFIRMED);
         }
 
         this.confirmedDate = null;
@@ -239,13 +241,13 @@ public class Meeting extends BaseEntity {
 
     public void confirmLocation(Long locationId) {
         if (!isLocationVoteEnabled()) {
-            throw new IllegalStateException("장소 투표가 활성화되지 않은 미팅입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_VOTE_NOT_ENABLED);
         }
         if (isLocationConfirmed()) {
-            throw new IllegalStateException("이미 장소가 확정된 미팅입니다. 먼저 장소 확정을 취소해주세요.");
+            throw new BusinessException(ErrorCode.LOCATION_ALREADY_CONFIRMED);
         }
         if (locationId == null) {
-            throw new IllegalArgumentException("장소 ID는 필수입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_ID_REQUIRED);
         }
 
         this.confirmedLocationId = locationId;
@@ -254,7 +256,7 @@ public class Meeting extends BaseEntity {
 
     public void cancelLocationConfirmation() {
         if (!isLocationConfirmed()) {
-            throw new IllegalStateException("장소가 확정되지 않은 미팅입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NOT_CONFIRMED);
         }
 
         this.confirmedLocationId = null;
@@ -267,7 +269,7 @@ public class Meeting extends BaseEntity {
 
     public void disableLocationVote() {
         if (isLocationConfirmed()) {
-            throw new IllegalStateException("장소가 확정된 미팅은 장소 투표를 비활성화할 수 없습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_CANNOT_DISABLE);
         }
         this.locationVoteEnabled = false;
     }

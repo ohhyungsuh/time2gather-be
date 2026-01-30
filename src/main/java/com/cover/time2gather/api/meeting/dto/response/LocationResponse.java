@@ -7,16 +7,16 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "장소 응답")
+@Schema(description = "Location response")
 public class LocationResponse {
 
-    @Schema(description = "장소 ID", example = "1")
+    @Schema(description = "Location ID", example = "1")
     private Long id;
 
-    @Schema(description = "장소 이름", example = "강남역 스타벅스")
+    @Schema(description = "Location name", example = "Gangnam Station Starbucks")
     private String name;
 
-    @Schema(description = "표시 순서", example = "0")
+    @Schema(description = "Display order", example = "0")
     private int displayOrder;
 
     public static LocationResponse from(MeetingLocation location) {

@@ -14,6 +14,8 @@ import com.cover.time2gather.api.meeting.dto.response.MeetingReportResponse;
 import com.cover.time2gather.api.meeting.dto.response.UserLocationSelectionsResponse;
 import com.cover.time2gather.api.meeting.dto.response.UserSelectionResponse;
 import com.cover.time2gather.config.security.JwtAuthentication;
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingLocation;
@@ -38,7 +40,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/meetings")
 @RequiredArgsConstructor
-@Tag(name = "Meeting", description = "모임 관련 API")
+@Tag(name = "Meeting", description = "Meeting management APIs")
 public class MeetingController {
 
     private final MeetingService meetingService;
@@ -48,7 +50,7 @@ public class MeetingController {
     private final MeetingLocationService locationService;
 
     @PostMapping
-    @Operation(summary = "모임 생성", description = "새로운 모임을 생성합니다.")
+    @Operation(summary = "Create meeting", description = "Creates a new meeting.")
     public ApiResponse<CreateMeetingResponse> createMeeting(
             @AuthenticationPrincipal JwtAuthentication authentication,
             @Valid @RequestBody CreateMeetingRequest request
@@ -74,7 +76,7 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingCode}")
-    @Operation(summary = "모임 상세 조회", description = "모임 상세 정보를 조회합니다. (인증 선택적)")
+    @Operation(summary = "Get meeting detail", description = "Retrieves meeting detail information. (Authentication optional)")
     public ApiResponse<MeetingDetailResponse> getMeetingDetail(
             @PathVariable String meetingCode,
             @AuthenticationPrincipal JwtAuthentication authentication
@@ -88,7 +90,7 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingCode}/selections")
-    @Operation(summary = "내 선택 조회", description = "현재 사용자의 시간 선택을 조회합니다.")
+    @Operation(summary = "Get my selections", description = "Retrieves current user's time selections.")
     public ApiResponse<UserSelectionResponse> getUserSelections(
             @AuthenticationPrincipal JwtAuthentication authentication,
             @PathVariable String meetingCode
@@ -104,22 +106,22 @@ public class MeetingController {
 
     @PutMapping("/{meetingCode}/selections")
     @Operation(
-        summary = "시간 선택/수정",
+        summary = "Create/Update time selections",
         description = """
-            ## 사용자의 시간 선택을 등록하거나 수정합니다
+            ## Create or update user's time selections
             
-            ### 📌 사용 흐름
-            1. `GET /meetings/{code}`로 모임 정보 조회
-            2. `meeting.selectionType` 확인 ("TIME" 또는 "ALL_DAY")
-            3. 해당 타입에 맞게 selections 구성
-            4. 이 API 호출
+            ### Usage flow
+            1. Call `GET /meetings/{code}` to get meeting info
+            2. Check `meeting.selectionType` ("TIME" or "ALL_DAY")
+            3. Build selections matching that type
+            4. Call this API
             
             ---
             
-            ### 🎯 타입별 사용법
+            ### Type-specific usage
             
-            #### 1. TIME 타입 (시간 단위 선택)
-            모임이 시간 단위로 선택하는 경우:
+            #### 1. TIME type (time-slot selection)
+            When meeting uses time-slot selection:
             ```json
             {
               "selections": [
@@ -137,13 +139,13 @@ public class MeetingController {
             }
             ```
             
-            **필수 조건:**
+            **Requirements:**
             - `type` = "TIME"
-            - `times` 배열 필수 (최소 1개 시간)
-            - `times`가 빈 배열 [] 또는 null이면 에러!
+            - `times` array required (at least 1 time)
+            - Empty array [] or null for `times` causes error!
             
-            #### 2. ALL_DAY 타입 (일 단위 선택)
-            모임이 일 단위로 선택하는 경우:
+            #### 2. ALL_DAY type (full-day selection)
+            When meeting uses full-day selection:
             ```json
             {
               "selections": [
@@ -159,52 +161,52 @@ public class MeetingController {
             }
             ```
             
-            **조건:**
+            **Requirements:**
             - `type` = "ALL_DAY"
-            - `times` 필드는 무시됨 (null, [], 뭐든 가능)
+            - `times` field is ignored (null, [], anything works)
             
             ---
             
-            ### ⚠️ 중요 사항
+            ### Important notes
             
-            1. **모임 타입과 선택 타입이 일치해야 함**
-               - TIME 모임 → type="TIME" 사용
-               - ALL_DAY 모임 → type="ALL_DAY" 사용
-               - 불일치 시 서버 에러
+            1. **Meeting type and selection type must match**
+               - TIME meeting -> use type="TIME"
+               - ALL_DAY meeting -> use type="ALL_DAY"
+               - Mismatch causes server error
             
-            2. **선택하지 않은 날짜는 배열에서 제외**
-               - 선택 안 한 날짜 = selections 배열에 포함하지 않음
-               - null이나 빈 객체 보내지 말 것
+            2. **Exclude unselected dates from array**
+               - Unselected date = don't include in selections array
+               - Don't send null or empty objects
             
-            3. **기존 선택 덮어쓰기**
-               - 이 API는 기존 선택을 완전히 대체합니다
-               - 부분 수정이 아닌 전체 교체
+            3. **Replaces existing selections**
+               - This API completely replaces existing selections
+               - Not a partial update, but full replacement
             
             ---
             
-            ### ❌ 흔한 실수
+            ### Common mistakes
             
-            **실수 1**: TIME 타입인데 times가 비어있음
+            **Mistake 1**: Empty times for TIME type
             ```json
             {"date": "2024-12-15", "type": "TIME", "times": []}
             ```
-            → **에러**: "TIME 타입인데 시간이 지정되지 않았습니다"
+            -> **Error**: "TIME type but no times specified"
             
-            **실수 2**: type 필드 누락
+            **Mistake 2**: Missing type field
             ```json
             {"date": "2024-12-15", "times": ["09:00"]}
             ```
-            → **에러**: "타입은 필수입니다"
+            -> **Error**: "Type is required"
             
-            **실수 3**: 잘못된 타입 값
+            **Mistake 3**: Invalid type value
             ```json
             {"date": "2024-12-15", "type": "FULL_DAY", "times": []}
             ```
-            → **에러**: "알 수 없는 타입: FULL_DAY"
+            -> **Error**: "Unknown type: FULL_DAY"
             
             ---
             
-            ### 📖 상세 필드 설명은 Request Body Schema 참고
+            ### See Request Body Schema for detailed field descriptions
             """
     )
     public ApiResponse<Void> upsertUserSelections(
@@ -217,12 +219,12 @@ public class MeetingController {
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
 
         if (meeting == null) {
-            throw new IllegalArgumentException("모임을 찾을 수 없습니다: " + meetingCode);
+            throw new BusinessException(ErrorCode.MEETING_NOT_FOUND);
         }
 
         Integer intervalMinutes = meeting.getIntervalMinutes();
         if (intervalMinutes == null) {
-            throw new IllegalArgumentException("모임의 시간 간격 정보가 없습니다");
+            throw new BusinessException(ErrorCode.MEETING_NO_INTERVAL_INFO);
         }
 
         meetingFacadeService.upsertUserSelections(
@@ -235,7 +237,7 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingCode}/report")
-    @Operation(summary = "모임 레포트 조회", description = "AI가 생성한 모임 요약 레포트를 조회합니다. (인증 불필요)")
+    @Operation(summary = "Get meeting report", description = "Retrieves AI-generated meeting summary report. (No authentication required)")
     public ApiResponse<MeetingReportResponse> getMeetingReport(
             @PathVariable String meetingCode
     ) {
@@ -251,14 +253,14 @@ public class MeetingController {
 
     @GetMapping("/{meetingCode}/export")
     @Operation(
-        summary = "캘린더로 export",
+        summary = "Export to calendar",
         description = """
-            선택한 시간대를 ICS 파일로 다운로드합니다.
-            - Google Calendar, iOS Calendar 등에서 import 가능합니다.
-            - date와 slotIndex를 지정하면 해당 시간대로 ICS 파일을 생성합니다.
-            - 파라미터가 없으면 bestSlot의 첫 번째 항목(가장 많이 선택된 시간)을 사용합니다.
-            - slotIndex가 -1이면 ALL_DAY(종일 일정)로 생성됩니다.
-            - 아직 아무도 시간을 선택하지 않은 경우(파라미터 없을 때) 에러가 발생합니다.
+            Downloads selected time slot as an ICS file.
+            - Can be imported into Google Calendar, iOS Calendar, etc.
+            - Specifying date and slotIndex creates ICS file for that time slot.
+            - Without parameters, uses the first bestSlot (most selected time).
+            - slotIndex of -1 creates an ALL_DAY (full-day) event.
+            - Error occurs if no one has selected a time yet (when no parameters).
         """
     )
     public ResponseEntity<byte[]> exportToCalendar(
@@ -273,7 +275,7 @@ public class MeetingController {
 
         // date 또는 slotIndex 중 하나만 있는 경우 에러
         if ((date != null && slotIndex == null) || (date == null && slotIndex != null)) {
-            throw new IllegalArgumentException("date와 slotIndex는 함께 지정해야 합니다.");
+            throw new BusinessException(ErrorCode.MEETING_DATE_SLOT_TOGETHER);
         }
 
         if (date != null) {
@@ -285,7 +287,7 @@ public class MeetingController {
             MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
 
             if (detailData.getSummary().getBestSlots().isEmpty()) {
-                throw new IllegalStateException("아직 투표한 참여자가 없어 캘린더를 생성할 수 없습니다.");
+                throw new BusinessException(ErrorCode.MEETING_NO_PARTICIPANTS);
             }
 
             MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
@@ -319,13 +321,13 @@ public class MeetingController {
 
     @PutMapping("/{meetingCode}/confirm")
     @Operation(
-        summary = "미팅 일정 확정",
+        summary = "Confirm meeting schedule",
         description = """
-            호스트가 미팅 일정을 확정합니다.
-            - 호스트만 확정할 수 있습니다.
-            - 이미 확정된 미팅은 먼저 취소해야 재확정할 수 있습니다.
-            - 확정 후에는 참여자들이 투표를 수정할 수 없습니다.
-            - ALL_DAY 타입 미팅은 slotIndex를 null로 전달합니다.
+            Host confirms the meeting schedule.
+            - Only the host can confirm.
+            - Already confirmed meetings must be cancelled before re-confirming.
+            - After confirmation, participants cannot modify their votes.
+            - For ALL_DAY type meetings, pass null for slotIndex.
         """
     )
     public ApiResponse<Void> confirmMeeting(
@@ -337,7 +339,7 @@ public class MeetingController {
 
         // 호스트 권한 확인
         if (!meeting.getHostUserId().equals(authentication.getUserId())) {
-            throw new org.springframework.security.access.AccessDeniedException("호스트만 미팅을 확정할 수 있습니다.");
+            throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
         }
 
         // 확정 처리 (도메인 메서드에서 검증 수행)
@@ -348,12 +350,12 @@ public class MeetingController {
 
     @DeleteMapping("/{meetingCode}/confirm")
     @Operation(
-        summary = "미팅 일정 확정 취소",
+        summary = "Cancel meeting confirmation",
         description = """
-            호스트가 미팅 일정 확정을 취소합니다.
-            - 호스트만 취소할 수 있습니다.
-            - 확정되지 않은 미팅은 취소할 수 없습니다.
-            - 취소 후에는 참여자들이 다시 투표를 수정할 수 있습니다.
+            Host cancels the meeting schedule confirmation.
+            - Only the host can cancel.
+            - Unconfirmed meetings cannot be cancelled.
+            - After cancellation, participants can modify their votes again.
         """
     )
     public ApiResponse<Void> cancelConfirmation(
@@ -364,7 +366,7 @@ public class MeetingController {
 
         // 호스트 권한 확인
         if (!meeting.getHostUserId().equals(authentication.getUserId())) {
-            throw new org.springframework.security.access.AccessDeniedException("호스트만 미팅 확정을 취소할 수 있습니다.");
+            throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
         }
 
         // 취소 처리 (도메인 메서드에서 검증 수행)
@@ -375,12 +377,12 @@ public class MeetingController {
 
     @PostMapping("/{meetingCode}/locations")
     @Operation(
-        summary = "장소 추가",
+        summary = "Add location",
         description = """
-            호스트가 미팅에 새로운 장소를 추가합니다.
-            - 호스트만 장소를 추가할 수 있습니다.
-            - 장소 투표가 활성화된 미팅에서만 추가 가능합니다.
-            - 최대 5개까지 추가할 수 있습니다.
+            Host adds a new location to the meeting.
+            - Only the host can add locations.
+            - Only available for meetings with location voting enabled.
+            - Maximum 5 locations allowed.
         """
     )
     public ApiResponse<LocationResponse> addLocation(
@@ -399,13 +401,13 @@ public class MeetingController {
 
     @DeleteMapping("/{meetingCode}/locations/{locationId}")
     @Operation(
-        summary = "장소 삭제",
+        summary = "Delete location",
         description = """
-            호스트가 미팅에서 장소를 삭제합니다.
-            - 호스트만 장소를 삭제할 수 있습니다.
-            - 장소 투표가 활성화된 미팅에서만 삭제 가능합니다.
-            - 최소 2개는 유지해야 합니다.
-            - 해당 장소에 대한 투표도 함께 삭제됩니다.
+            Host deletes a location from the meeting.
+            - Only the host can delete locations.
+            - Only available for meetings with location voting enabled.
+            - Minimum 2 locations must be maintained.
+            - Votes for the location will also be deleted.
         """
     )
     public ApiResponse<Void> deleteLocation(
@@ -424,12 +426,12 @@ public class MeetingController {
 
     @PutMapping("/{meetingCode}/location-selections")
     @Operation(
-        summary = "장소 투표",
+        summary = "Vote for locations",
         description = """
-            사용자의 장소 투표를 저장합니다.
-            - 복수 선택 가능합니다.
-            - 빈 배열을 전송하면 기존 투표가 삭제됩니다 (투표 스킵).
-            - 기존 투표는 새로운 투표로 완전히 대체됩니다.
+            Saves user's location votes.
+            - Multiple selections allowed.
+            - Sending empty array removes existing votes (skip voting).
+            - Existing votes are completely replaced with new votes.
         """
     )
     public ApiResponse<Void> voteLocations(
@@ -448,10 +450,10 @@ public class MeetingController {
 
     @GetMapping("/{meetingCode}/location-selections")
     @Operation(
-        summary = "내 장소 투표 조회",
+        summary = "Get my location votes",
         description = """
-            현재 사용자의 장소 투표를 조회합니다.
-            - 투표하지 않은 경우 빈 배열이 반환됩니다.
+            Retrieves current user's location votes.
+            - Returns empty array if user hasn't voted.
         """
     )
     public ApiResponse<UserLocationSelectionsResponse> getMyLocationSelections(
@@ -468,11 +470,11 @@ public class MeetingController {
 
     @PutMapping("/{meetingCode}/confirm-location")
     @Operation(
-        summary = "장소 확정",
+        summary = "Confirm location",
         description = """
-            호스트가 미팅 장소를 확정합니다.
-            - 호스트만 확정할 수 있습니다.
-            - 이미 확정된 미팅은 먼저 취소해야 재확정할 수 있습니다.
+            Host confirms the meeting location.
+            - Only the host can confirm.
+            - Already confirmed meetings must be cancelled before re-confirming.
         """
     )
     public ApiResponse<Void> confirmLocation(
@@ -491,11 +493,11 @@ public class MeetingController {
 
     @DeleteMapping("/{meetingCode}/confirm-location")
     @Operation(
-        summary = "장소 확정 취소",
+        summary = "Cancel location confirmation",
         description = """
-            호스트가 미팅 장소 확정을 취소합니다.
-            - 호스트만 취소할 수 있습니다.
-            - 확정되지 않은 미팅은 취소할 수 없습니다.
+            Host cancels the meeting location confirmation.
+            - Only the host can cancel.
+            - Unconfirmed meetings cannot be cancelled.
         """
     )
     public ApiResponse<Void> cancelLocationConfirmation(
@@ -515,12 +517,12 @@ public class MeetingController {
         try {
             java.time.LocalDate.parse(date, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         } catch (java.time.format.DateTimeParseException e) {
-            throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다. yyyy-MM-dd 형식으로 입력해주세요.");
+            throw new BusinessException(ErrorCode.MEETING_DATE_FORMAT_INVALID);
         }
 
         // Meeting에 해당 날짜가 있는지 검증
         if (!meeting.getAvailableDates().containsKey(date)) {
-            throw new IllegalArgumentException("해당 날짜는 모임의 가능한 날짜에 포함되어 있지 않습니다: " + date);
+            throw new BusinessException(ErrorCode.MEETING_DATE_NOT_AVAILABLE);
         }
 
         return date;

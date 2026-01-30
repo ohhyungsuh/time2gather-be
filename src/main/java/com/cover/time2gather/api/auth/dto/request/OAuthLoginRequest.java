@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Schema(description = "OAuth 로그인 요청")
+@Schema(description = "OAuth login request")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -14,10 +14,10 @@ public class OAuthLoginRequest {
 
     @Schema(description = "OAuth Authorization Code",
             example = "0jVtEEMB9eJtGR-SUnkEbCazKEGk3XFZAAAAAQoXIS0AAAGahuf3ZLfuZLkpz6yP")
-    @NotBlank(message = "인가 코드는 필수입니다")
+    @NotBlank(message = "{validation.auth.code.required}")
     private String authorizationCode;
 
-    @Schema(description = "Redirect URL (선택). 미입력시 기본 설정값 사용",
+    @Schema(description = "Redirect URL (optional). Uses default if not provided",
             example = "http://localhost:3000/auth/callback")
     private String redirectUrl;
 }

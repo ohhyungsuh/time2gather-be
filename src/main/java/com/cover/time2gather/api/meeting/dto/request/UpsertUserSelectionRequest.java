@@ -1,5 +1,7 @@
 package com.cover.time2gather.api.meeting.dto.request;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -17,39 +19,39 @@ import java.util.Map;
 @AllArgsConstructor
 @Schema(
     description = """
-        ## 사용자 시간 선택 요청
+        ## User Time Selection Request
         
-        ### 📌 중요: 각 날짜마다 type 필드를 반드시 명시해야 합니다!
+        ### Important: The type field must be specified for each date!
         
-        ### 🎯 type 필드 값
-        - **"TIME"**: 시간 단위 선택 (특정 시간대를 선택)
-        - **"ALL_DAY"**: 일 단위 선택 (하루 종일 가능)
+        ### Type field values
+        - **"TIME"**: Hourly selection (select specific time slots)
+        - **"ALL_DAY"**: Full day selection (available all day)
         
-        ### 📋 필드 설명
+        ### Field descriptions
         
-        #### 1. selections (배열, 필수)
-        - 선택한 날짜들의 배열
-        - 비어있으면 안됨 (최소 1개 날짜 필요)
+        #### 1. selections (array, required)
+        - Array of selected dates
+        - Cannot be empty (minimum 1 date required)
         
-        #### 2. selections[].date (문자열, 필수)
-        - 형식: YYYY-MM-DD
-        - 예: "2024-12-15"
+        #### 2. selections[].date (string, required)
+        - Format: YYYY-MM-DD
+        - Example: "2024-12-15"
         
-        #### 3. selections[].type (문자열, 필수)
-        - 값: "TIME" 또는 "ALL_DAY"
-        - 대소문자 구분 없음
+        #### 3. selections[].type (string, required)
+        - Value: "TIME" or "ALL_DAY"
+        - Case insensitive
         
-        #### 4. selections[].times (배열)
-        - **type="TIME"인 경우**: 필수! 최소 1개 시간 필요
-        - **type="ALL_DAY"인 경우**: 무시됨 (null, [], 뭘 보내든 무시)
-        - 형식: "HH:mm" (24시간 형식)
-        - 예: ["09:00", "10:00", "11:00"]
+        #### 4. selections[].times (array)
+        - **When type="TIME"**: Required! At least 1 time needed
+        - **When type="ALL_DAY"**: Ignored (null, [], anything is ignored)
+        - Format: "HH:mm" (24-hour format)
+        - Example: ["09:00", "10:00", "11:00"]
         
         ---
         
-        ### ✅ 올바른 사용 예시
+        ### Correct usage examples
         
-        #### 예시 1: 시간 단위 선택 (TIME)
+        #### Example 1: Hourly selection (TIME)
         ```json
         {
           "selections": [
@@ -67,7 +69,7 @@ import java.util.Map;
         }
         ```
         
-        #### 예시 2: 일 단위 선택 (ALL_DAY)
+        #### Example 2: Full day selection (ALL_DAY)
         ```json
         {
           "selections": [
@@ -83,7 +85,7 @@ import java.util.Map;
         }
         ```
         
-        #### 예시 3: 혼합 (모임이 TIME 타입인 경우만 가능)
+        #### Example 3: Mixed (only when meeting is TIME type)
         ```json
         {
           "selections": [
@@ -95,102 +97,102 @@ import java.util.Map;
           ]
         }
         ```
-        **참고**: 선택하지 않은 날짜는 배열에서 제외
+        **Note**: Unselected dates should be excluded from the array
         
         ---
         
-        ### ❌ 잘못된 사용 예시
+        ### Incorrect usage examples
         
-        #### 에러 1: TYPE인데 times가 비어있음
+        #### Error 1: TYPE but times is empty
         ```json
         {
           "selections": [
             {
               "date": "2024-12-15",
               "type": "TIME",
-              "times": []  // ❌ 에러! TIME은 times 필수
+              "times": []  // Error! times required for TIME
             }
           ]
         }
         ```
-        **에러 메시지**: "날짜 '2024-12-15'는 TIME 타입인데 시간이 지정되지 않았습니다."
+        **Error message**: "Date '2024-12-15' is TIME type but no times specified."
         
-        #### 에러 2: TYPE인데 times가 null
+        #### Error 2: TYPE but times is null
         ```json
         {
           "selections": [
             {
               "date": "2024-12-15",
               "type": "TIME",
-              "times": null  // ❌ 에러! TIME은 times 필수
+              "times": null  // Error! times required for TIME
             }
           ]
         }
         ```
-        **에러 메시지**: "날짜 '2024-12-15'는 TIME 타입인데 시간이 지정되지 않았습니다."
+        **Error message**: "Date '2024-12-15' is TIME type but no times specified."
         
-        #### 에러 3: 잘못된 타입
+        #### Error 3: Invalid type
         ```json
         {
           "selections": [
             {
               "date": "2024-12-15",
-              "type": "FULL_DAY",  // ❌ 에러! TIME 또는 ALL_DAY만 가능
+              "type": "FULL_DAY",  // Error! Only TIME or ALL_DAY allowed
               "times": ["09:00"]
             }
           ]
         }
         ```
-        **에러 메시지**: "알 수 없는 타입: FULL_DAY (TIME 또는 ALL_DAY만 가능)"
+        **Error message**: "Unknown type: FULL_DAY (only TIME or ALL_DAY allowed)"
         
-        #### 에러 4: type 필드 누락
+        #### Error 4: type field missing
         ```json
         {
           "selections": [
             {
               "date": "2024-12-15",
-              "times": ["09:00"]  // ❌ 에러! type 필수
+              "times": ["09:00"]  // Error! type is required
             }
           ]
         }
         ```
-        **에러 메시지**: "타입은 필수입니다"
+        **Error message**: "Type is required"
         
         ---
         
-        ### 🔍 빈 배열 vs null 의미
+        ### Empty array vs null meaning
         
-        #### times 필드가 빈 배열 [] 인 경우
-        - **type="TIME"**: ❌ 에러 발생
-        - **type="ALL_DAY"**: ✅ 정상 (무시됨)
+        #### When times field is empty array []
+        - **type="TIME"**: Error occurs
+        - **type="ALL_DAY"**: OK (ignored)
         
-        #### times 필드가 null 인 경우
-        - **type="TIME"**: ❌ 에러 발생
-        - **type="ALL_DAY"**: ✅ 정상 (무시됨)
+        #### When times field is null
+        - **type="TIME"**: Error occurs
+        - **type="ALL_DAY"**: OK (ignored)
         
-        #### times 필드가 아예 없는 경우
-        - **type="TIME"**: ❌ 에러 발생
-        - **type="ALL_DAY"**: ✅ 정상 (무시됨)
+        #### When times field is omitted
+        - **type="TIME"**: Error occurs
+        - **type="ALL_DAY"**: OK (ignored)
         
-        #### 날짜를 선택하지 않는 경우
-        - 해당 날짜를 selections 배열에서 **제외**하면 됨
-        - null이나 빈 객체를 보내지 마세요
+        #### When not selecting a date
+        - **Exclude** that date from the selections array
+        - Do not send null or empty object
         
         ---
         
-        ### 💡 팁
+        ### Tips
         
-        1. **먼저 모임 정보를 조회**하여 selectionType을 확인하세요
+        1. **First check the meeting info** to see the selectionType
            - `GET /api/v1/meetings/{code}`
-           - response.meeting.selectionType 확인
+           - Check response.meeting.selectionType
         
-        2. **모임 타입에 맞게 요청 구성**
-           - selectionType="TIME" → type="TIME" 사용
-           - selectionType="ALL_DAY" → type="ALL_DAY" 사용
+        2. **Compose request according to meeting type**
+           - selectionType="TIME" -> use type="TIME"
+           - selectionType="ALL_DAY" -> use type="ALL_DAY"
         
-        3. **혼합 불가**
-           - ALL_DAY 모임에 TIME 타입 선택 → 서버 에러
-           - TIME 모임에 ALL_DAY 타입 선택 → 서버 에러
+        3. **No mixing allowed**
+           - ALL_DAY meeting with TIME type selection -> server error
+           - TIME meeting with ALL_DAY type selection -> server error
         """,
     example = """
         {
@@ -211,15 +213,15 @@ import java.util.Map;
 )
 public class UpsertUserSelectionRequest {
 
-    @NotNull(message = "선택한 시간대는 필수입니다")
-    @Size(min = 1, max = 31, message = "날짜는 1개 이상 31개 이하로 선택해야 합니다")
+    @NotNull(message = "{validation.selection.required}")
+    @Size(min = 1, max = 31, message = "{validation.selection.date.min.max}")
     @Schema(
         description = """
-            날짜별 선택 정보 배열
+            Array of date selection info
             
-            - 최소 1개 이상의 날짜 필요 (최대 31개)
-            - 각 날짜마다 date, type 필드 필수
-            - type="TIME"인 경우 times 필드도 필수
+            - At least 1 date required (max 31)
+            - date and type fields are required for each date
+            - times field is also required when type="TIME"
             """,
         requiredMode = Schema.RequiredMode.REQUIRED
     )
@@ -230,9 +232,9 @@ public class UpsertUserSelectionRequest {
     @AllArgsConstructor
     @Schema(
         description = """
-            날짜별 선택 정보
+            Date selection info
             
-            각 날짜에 대한 선택 타입과 시간을 지정합니다.
+            Specify the selection type and times for each date.
             """,
         example = """
             {
@@ -244,50 +246,50 @@ public class UpsertUserSelectionRequest {
     )
     public static class DateSelection {
 
-        @NotNull(message = "날짜는 필수입니다")
+        @NotNull(message = "{validation.date.required}")
         @Schema(
             description = """
-                선택한 날짜 (YYYY-MM-DD 형식)
+                Selected date (YYYY-MM-DD format)
                 
-                - 형식: YYYY-MM-DD
-                - 예시: "2024-12-15", "2024-01-01"
-                - 필수 입력
+                - Format: YYYY-MM-DD
+                - Example: "2024-12-15", "2024-01-01"
+                - Required field
                 
-                ⚠️ 주의:
-                - 모임의 availableDates에 포함된 날짜만 선택 가능
-                - 잘못된 날짜 형식 시 에러 발생
+                Note:
+                - Only dates included in meeting's availableDates can be selected
+                - Invalid date format will cause an error
                 """,
             example = "2024-12-15",
             requiredMode = Schema.RequiredMode.REQUIRED
         )
         private String date;
 
-        @NotNull(message = "타입은 필수입니다")
+        @NotNull(message = "{validation.type.required}")
         @Schema(
             description = """
-                선택 타입 (TIME 또는 ALL_DAY)
+                Selection type (TIME or ALL_DAY)
                 
-                ### 가능한 값:
-                1. **"TIME"**: 시간 단위 선택
-                   - 특정 시간대를 선택하는 경우
-                   - times 필드 필수! (최소 1개 시간 필요)
-                   - 예: ["09:00", "10:00", "11:00"]
+                ### Possible values:
+                1. **"TIME"**: Hourly selection
+                   - Select specific time slots
+                   - times field required! (at least 1 time needed)
+                   - Example: ["09:00", "10:00", "11:00"]
                 
-                2. **"ALL_DAY"**: 일 단위 선택
-                   - 하루 종일 가능한 경우
-                   - times 필드 무시됨 (null, [], 뭐든 상관없음)
+                2. **"ALL_DAY"**: Full day selection
+                   - Available all day
+                   - times field ignored (null, [], anything is fine)
                 
-                ### 주의사항:
-                - 대소문자 구분 없음 ("time", "Time", "TIME" 모두 가능)
-                - 필수 입력
-                - TIME도 ALL_DAY도 아닌 값 입력 시 에러
+                ### Notes:
+                - Case insensitive ("time", "Time", "TIME" all work)
+                - Required field
+                - Error if value is neither TIME nor ALL_DAY
                 
-                ### 모임 타입과의 관계:
-                - 모임이 TIME 타입 → type="TIME" 사용
-                - 모임이 ALL_DAY 타입 → type="ALL_DAY" 사용
-                - 불일치 시 서버에서 에러 발생
+                ### Relationship with meeting type:
+                - Meeting is TIME type -> use type="TIME"
+                - Meeting is ALL_DAY type -> use type="ALL_DAY"
+                - Mismatch will cause server error
                 
-                💡 팁: GET /meetings/{code}로 모임 정보를 먼저 확인하세요!
+                Tip: Check meeting info first with GET /meetings/{code}!
                 """,
             allowableValues = {"TIME", "ALL_DAY"},
             example = "TIME",
@@ -297,30 +299,30 @@ public class UpsertUserSelectionRequest {
 
         @Schema(
             description = """
-                선택한 시간대 배열 (HH:mm 형식)
+                Selected time slots array (HH:mm format)
                 
-                ### type="TIME"인 경우:
-                - **필수 입력!**
-                - 최소 1개 이상의 시간 필요
-                - 형식: "HH:mm" (24시간 형식)
-                - 예시: ["09:00", "10:00", "11:00", "14:30"]
-                - ❌ null, [] (빈 배열) → 에러 발생!
+                ### When type="TIME":
+                - **Required!**
+                - At least 1 time needed
+                - Format: "HH:mm" (24-hour format)
+                - Example: ["09:00", "10:00", "11:00", "14:30"]
+                - null, [] (empty array) -> Error!
                 
-                ### type="ALL_DAY"인 경우:
-                - **무시됨** (아무 값이나 보내도 됨)
-                - null 가능
-                - [] (빈 배열) 가능
-                - 시간 값 있어도 무시됨
-                - 권장: 필드 자체를 생략하거나 null 전송
+                ### When type="ALL_DAY":
+                - **Ignored** (any value is fine)
+                - null is OK
+                - [] (empty array) is OK
+                - Time values are ignored even if present
+                - Recommended: omit the field or send null
                 
-                ### 시간 형식:
-                - "00:00" ~ "23:00" (정시만 가능, 기본 60분 간격)
-                - 잘못된 형식: "9:00", "09:0", "25:00" → 에러
-                - 올바른 형식: "09:00", "14:00", "23:00"
+                ### Time format:
+                - "00:00" ~ "23:00" (hourly only, default 60min interval)
+                - Invalid format: "9:00", "09:0", "25:00" -> Error
+                - Valid format: "09:00", "14:00", "23:00"
                 
-                ### 예시:
+                ### Examples:
                 
-                #### ✅ 올바른 예시 (TIME):
+                #### Correct example (TIME):
                 ```json
                 {
                   "date": "2024-12-15",
@@ -329,14 +331,14 @@ public class UpsertUserSelectionRequest {
                 }
                 ```
                 
-                #### ✅ 올바른 예시 (ALL_DAY):
+                #### Correct example (ALL_DAY):
                 ```json
                 {
                   "date": "2024-12-15",
                   "type": "ALL_DAY"
                 }
                 ```
-                또는
+                or
                 ```json
                 {
                   "date": "2024-12-15",
@@ -344,7 +346,7 @@ public class UpsertUserSelectionRequest {
                   "times": null
                 }
                 ```
-                또는
+                or
                 ```json
                 {
                   "date": "2024-12-15",
@@ -353,29 +355,29 @@ public class UpsertUserSelectionRequest {
                 }
                 ```
                 
-                #### ❌ 잘못된 예시 (TIME에 빈 배열):
+                #### Incorrect example (TIME with empty array):
                 ```json
                 {
                   "date": "2024-12-15",
                   "type": "TIME",
-                  "times": []  // ❌ 에러!
+                  "times": []  // Error!
                 }
                 ```
-                **에러**: "날짜 '2024-12-15'는 TIME 타입인데 시간이 지정되지 않았습니다."
+                **Error**: "Date '2024-12-15' is TIME type but no times specified."
                 
-                #### ❌ 잘못된 예시 (TIME에 null):
+                #### Incorrect example (TIME with null):
                 ```json
                 {
                   "date": "2024-12-15",
                   "type": "TIME",
-                  "times": null  // ❌ 에러!
+                  "times": null  // Error!
                 }
                 ```
-                **에러**: "날짜 '2024-12-15'는 TIME 타입인데 시간이 지정되지 않았습니다."
+                **Error**: "Date '2024-12-15' is TIME type but no times specified."
                 
-                ### 🔍 빈 배열 vs null 차이:
-                - **type="TIME"**: 둘 다 에러 (시간 필수!)
-                - **type="ALL_DAY"**: 둘 다 정상 (무시됨)
+                ### Empty array vs null difference:
+                - **type="TIME"**: Both cause error (times required!)
+                - **type="ALL_DAY"**: Both are OK (ignored)
                 """,
             example = "[\"09:00\", \"10:00\", \"11:00\"]",
             requiredMode = Schema.RequiredMode.NOT_REQUIRED
@@ -389,7 +391,7 @@ public class UpsertUserSelectionRequest {
      */
     public Map<String, int[]> toSlotIndexes(int intervalMinutes) {
         if (selections == null || selections.isEmpty()) {
-            throw new IllegalArgumentException("선택 데이터가 없습니다");
+            throw new BusinessException(ErrorCode.SELECTION_EMPTY);
         }
 
         Map<String, int[]> result = new HashMap<>();
@@ -405,10 +407,10 @@ public class UpsertUserSelectionRequest {
 
             // 필수 필드 검증
             if (date == null || date.trim().isEmpty()) {
-                throw new IllegalArgumentException("날짜는 필수입니다");
+                throw new BusinessException(ErrorCode.SELECTION_DATE_REQUIRED);
             }
             if (type == null || type.trim().isEmpty()) {
-                throw new IllegalArgumentException("타입은 필수입니다");
+                throw new BusinessException(ErrorCode.SELECTION_TYPE_REQUIRED);
             }
 
             if ("ALL_DAY".equalsIgnoreCase(type)) {
@@ -418,32 +420,28 @@ public class UpsertUserSelectionRequest {
             } else if ("TIME".equalsIgnoreCase(type)) {
                 // TIME: 시간 배열 필수
                 if (times == null || times.isEmpty()) {
-                    throw new IllegalArgumentException(
-                        String.format("날짜 '%s'는 TIME 타입인데 시간이 지정되지 않았습니다.", date)
-                    );
+                    throw new BusinessException(ErrorCode.SELECTION_SLOT_EMPTY_FOR_TIME);
                 }
 
                 try {
                     int[] slots = times.stream()
                             .mapToInt(timeStr -> {
                                 if (timeStr == null || timeStr.trim().isEmpty()) {
-                                    throw new IllegalArgumentException("시간 값이 비어있습니다");
+                                    throw new BusinessException(ErrorCode.SELECTION_TIME_EMPTY);
                                 }
                                 // 모임의 intervalMinutes를 사용하여 변환
                                 return TimeSlot.fromTimeString(timeStr.trim(), intervalMinutes).getSlotIndex();
                             })
                             .toArray();
                     result.put(date, slots);
+                } catch (BusinessException e) {
+                    throw e;
                 } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException(
-                        String.format("날짜 '%s'의 시간 형식이 올바르지 않습니다. %s", date, e.getMessage())
-                    );
+                    throw new BusinessException(ErrorCode.SELECTION_TIME_FORMAT_INVALID);
                 }
 
             } else {
-                throw new IllegalArgumentException(
-                    String.format("알 수 없는 타입: %s (TIME 또는 ALL_DAY만 가능)", type)
-                );
+                throw new BusinessException(ErrorCode.SELECTION_TYPE_UNKNOWN);
             }
         }
 

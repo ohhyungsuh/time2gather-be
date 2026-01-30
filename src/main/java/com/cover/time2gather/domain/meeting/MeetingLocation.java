@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -46,10 +48,10 @@ public class MeetingLocation {
 
     private static void validateName(String name) {
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("장소 이름은 필수입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NAME_REQUIRED);
         }
         if (name.trim().length() > 200) {
-            throw new IllegalArgumentException("장소 이름은 200자를 초과할 수 없습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NAME_TOO_LONG);
         }
     }
 

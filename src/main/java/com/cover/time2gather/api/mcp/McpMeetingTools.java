@@ -10,6 +10,7 @@ import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
+import com.cover.time2gather.util.MessageProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springaicommunity.mcp.annotation.McpTool;
@@ -97,7 +98,7 @@ public class McpMeetingTools {
         return new CreateMeetingResponse(
                 meeting.getMeetingCode(),
                 meeting.getTitle(),
-                "모임이 성공적으로 생성되었습니다."
+                MessageProvider.getMessage("mcp.meeting.created")
         );
     }
 
@@ -114,7 +115,7 @@ public class McpMeetingTools {
         
         meetingFacadeService.upsertUserSelections(meetingCode, userId, slotIndexes);
         
-        return new VoteResponse(true, "투표가 성공적으로 저장되었습니다.");
+        return new VoteResponse(true, MessageProvider.getMessage("mcp.vote.time.saved"));
     }
 
     @McpTool(name = "vote_location", description = "모임 장소에 투표합니다. 장소 투표가 활성화된 모임에서만 사용 가능합니다. 인증된 사용자가 투표합니다.")
@@ -128,7 +129,7 @@ public class McpMeetingTools {
         List<Long> ids = parseLocationIds(locationIds);
         meetingLocationService.voteLocations(meetingCode, userId, ids);
         
-        return new VoteResponse(true, "장소 투표가 성공적으로 저장되었습니다.");
+        return new VoteResponse(true, MessageProvider.getMessage("mcp.vote.location.saved"));
     }
 
     @McpTool(name = "confirm_meeting", description = "모임 일정을 확정합니다. 호스트만 사용할 수 있습니다.")
@@ -144,7 +145,7 @@ public class McpMeetingTools {
         
         meetingService.confirmMeeting(meeting, confirmDate, slotIndex);
         
-        return new ConfirmResponse(true, "모임 일정이 확정되었습니다.", date, slotIndex);
+        return new ConfirmResponse(true, MessageProvider.getMessage("mcp.meeting.confirmed"), date, slotIndex);
     }
 
     @McpTool(name = "confirm_location", description = "모임 장소를 확정합니다. 호스트만 사용할 수 있으며, 장소 투표가 활성화된 모임에서만 사용 가능합니다. 인증된 사용자가 호스트여야 합니다.")
@@ -157,7 +158,7 @@ public class McpMeetingTools {
         
         meetingLocationService.confirmLocation(meetingCode, hostUserId, locationId);
         
-        return new ConfirmResponse(true, "모임 장소가 확정되었습니다.", null, null);
+        return new ConfirmResponse(true, MessageProvider.getMessage("mcp.location.confirmed"), null, null);
     }
 
     @McpTool(name = "export_calendar", description = "확정된 모임 일정을 ICS 캘린더 파일로 내보냅니다. Google Calendar, Apple Calendar 등에서 가져오기 할 수 있는 형식입니다.")
@@ -184,7 +185,7 @@ public class McpMeetingTools {
         
         return new ExportCalendarResponse(
                 true,
-                "ICS 파일이 생성되었습니다.",
+                MessageProvider.getMessage("mcp.ics.created"),
                 icsBase64,
                 meeting.getTitle() + ".ics"
         );

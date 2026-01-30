@@ -11,10 +11,10 @@ import java.util.Map;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "사용자 선택 조회 응답")
+@Schema(description = "User selection response")
 public class UserSelectionResponse {
 
-    @Schema(description = "날짜별 선택한 시간대 (HH:mm 형식)",
+    @Schema(description = "Selected time slots by date (HH:mm format)",
             example = "{\"2024-02-15\": [\"09:00\", \"09:30\", \"10:30\"], \"2024-02-16\": [\"11:00\", \"11:30\"]}")
     private Map<String, String[]> selections;
 

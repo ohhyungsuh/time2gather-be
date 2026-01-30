@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting.service;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
@@ -93,7 +95,7 @@ public class CalendarExportService {
 
         } catch (Exception e) {
             log.error("Failed to create ICS file", e);
-            throw new IllegalStateException("캘린더 파일 생성 중 오류가 발생했습니다.", e);
+            throw new BusinessException(ErrorCode.CALENDAR_EXPORT_FAILED, e);
         }
     }
 

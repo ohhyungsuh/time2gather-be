@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting.service;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingLocation;
 import com.cover.time2gather.domain.meeting.MeetingLocationSelection;
@@ -7,7 +9,6 @@ import com.cover.time2gather.infra.meeting.MeetingLocationRepository;
 import com.cover.time2gather.infra.meeting.MeetingLocationSelectionRepository;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +44,7 @@ public class MeetingLocationService {
         // 최대 개수 확인
         int currentCount = locationRepository.countByMeetingId(meeting.getId());
         if (currentCount >= MAX_LOCATIONS) {
-            throw new IllegalArgumentException("장소는 최대 " + MAX_LOCATIONS + "개까지 추가할 수 있습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_MAX_EXCEEDED, MAX_LOCATIONS);
         }
 
         // 다음 displayOrder 계산
@@ -65,17 +66,17 @@ public class MeetingLocationService {
 
         // 장소 존재 확인
         MeetingLocation location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalArgumentException("장소를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOCATION_NOT_FOUND));
 
         // 해당 미팅의 장소인지 확인
         if (!location.getMeetingId().equals(meeting.getId())) {
-            throw new IllegalArgumentException("해당 미팅의 장소가 아닙니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NOT_BELONG_TO_MEETING);
         }
 
         // 최소 개수 확인
         int currentCount = locationRepository.countByMeetingId(meeting.getId());
         if (currentCount <= MIN_LOCATIONS) {
-            throw new IllegalArgumentException("장소는 최소 " + MIN_LOCATIONS + "개 이상이어야 합니다.");
+            throw new BusinessException(ErrorCode.LOCATION_MIN_REQUIRED, MIN_LOCATIONS);
         }
 
         // 해당 장소에 대한 투표 삭제
@@ -121,7 +122,7 @@ public class MeetingLocationService {
         // 새로운 투표 저장
         for (Long locationId : locationIds) {
             if (!validLocationIds.contains(locationId)) {
-                throw new IllegalArgumentException("존재하지 않는 장소입니다: " + locationId);
+                throw new BusinessException(ErrorCode.LOCATION_NOT_EXIST, locationId);
             }
 
             MeetingLocationSelection selection = MeetingLocationSelection.create(
@@ -165,16 +166,16 @@ public class MeetingLocationService {
 
         // 이미 확정되었는지 확인
         if (meeting.isLocationConfirmed()) {
-            throw new IllegalStateException("이미 장소가 확정되었습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_ALREADY_CONFIRMED);
         }
 
         // 장소 존재 확인
         MeetingLocation location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalArgumentException("장소를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOCATION_NOT_FOUND));
 
         // 해당 미팅의 장소인지 확인
         if (!location.getMeetingId().equals(meeting.getId())) {
-            throw new IllegalArgumentException("해당 미팅의 장소가 아닙니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NOT_BELONG_TO_MEETING);
         }
 
         // 장소 확정
@@ -197,7 +198,7 @@ public class MeetingLocationService {
 
         // 확정되지 않은 경우 에러
         if (!meeting.isLocationConfirmed()) {
-            throw new IllegalStateException("장소가 확정되지 않았습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NOT_CONFIRMED);
         }
 
         // 확정 취소
@@ -207,24 +208,24 @@ public class MeetingLocationService {
 
     private Meeting getMeetingByCode(String meetingCode) {
         return meetingRepository.findByMeetingCode(meetingCode)
-                .orElseThrow(() -> new IllegalArgumentException("미팅을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEETING_NOT_FOUND));
     }
 
     private void validateHost(Meeting meeting, Long userId) {
         if (!meeting.getHostUserId().equals(userId)) {
-            throw new AccessDeniedException("호스트만 장소를 관리할 수 있습니다.");
+            throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
         }
     }
 
     private void validateLocationVoteEnabled(Meeting meeting) {
         if (!meeting.isLocationVoteEnabled()) {
-            throw new IllegalArgumentException("장소 투표가 활성화되지 않은 미팅입니다.");
+            throw new BusinessException(ErrorCode.LOCATION_VOTE_NOT_ENABLED);
         }
     }
 
     private void validateLocationName(String locationName) {
         if (locationName == null || locationName.trim().isEmpty()) {
-            throw new IllegalArgumentException("장소 이름은 비어있을 수 없습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_NAME_REQUIRED);
         }
     }
 

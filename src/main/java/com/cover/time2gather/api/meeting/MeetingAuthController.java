@@ -7,6 +7,8 @@ import com.cover.time2gather.api.meeting.dto.response.AnonymousLoginResponse;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginResult;
 import com.cover.time2gather.domain.auth.service.AnonymousLoginService;
 import com.cover.time2gather.domain.auth.service.InvalidPasswordException;
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,29 +24,27 @@ import org.springframework.web.bind.annotation.*;
  * Meeting 컨텍스트 내 인증 컨트롤러
  * - 익명 로그인 처리
  */
-@Tag(name = "모임 인증 API", description = "Meeting 스코프 기반 익명 로그인 API")
+@Tag(name = "Meeting Auth API", description = "Meeting-scoped anonymous login API")
 @RestController
 @RequestMapping("/api/v1/meetings/{meetingCode}/auth")
 @RequiredArgsConstructor
 public class MeetingAuthController {
 
-    private static final String ERROR_USERNAME_REQUIRED = "Username is required";
-    private static final String ERROR_PASSWORD_REQUIRED = "Password is required";
     private static final String PATH_ANONYMOUS_LOGIN = "/anonymous";
     private static final String PARAM_MEETING_CODE = "meetingCode";
     private static final String EXAMPLE_MEETING_CODE = "mtg_abc123";
     private static final String HTTP_STATUS_200 = "200";
     private static final String HTTP_STATUS_400 = "400";
     private static final String HTTP_STATUS_401 = "401";
-    private static final String RESPONSE_DESC_SUCCESS = "로그인 성공";
-    private static final String RESPONSE_DESC_MISSING_FIELD = "필수 필드 누락 (username 또는 password)";
-    private static final String RESPONSE_DESC_INVALID_PASSWORD = "비밀번호 불일치 (기존 사용자)";
+    private static final String RESPONSE_DESC_SUCCESS = "Login successful";
+    private static final String RESPONSE_DESC_MISSING_FIELD = "Required field missing (username or password)";
+    private static final String RESPONSE_DESC_INVALID_PASSWORD = "Password mismatch (existing user)";
 
     private final AnonymousLoginService anonymousLoginService;
 
     @Operation(
-            summary = "익명 로그인",
-            description = "Meeting 스코프 기반 익명 로그인. 같은 모임 내에서만 username이 유니크하며, 다른 모임에서는 같은 이름 사용 가능."
+            summary = "Anonymous login",
+            description = "Meeting-scoped anonymous login. Username is unique only within the same meeting; the same name can be used in different meetings."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -70,10 +70,10 @@ public class MeetingAuthController {
     ) {
         // Manual validation
         if (request.getUsername() == null || request.getUsername().isBlank()) {
-            throw new IllegalArgumentException(ERROR_USERNAME_REQUIRED);
+            throw new BusinessException(ErrorCode.VALIDATION_USERNAME_REQUIRED);
         }
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new IllegalArgumentException(ERROR_PASSWORD_REQUIRED);
+            throw new BusinessException(ErrorCode.VALIDATION_PASSWORD_REQUIRED);
         }
 
         AnonymousLoginResult loginResult = anonymousLoginService.login(
@@ -94,12 +94,6 @@ public class MeetingAuthController {
     @ExceptionHandler(InvalidPasswordException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ApiResponse<Void> handleInvalidPassword(InvalidPasswordException e) {
-        return ApiResponse.error(e.getMessage());
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleIllegalArgument(IllegalArgumentException e) {
         return ApiResponse.error(e.getMessage());
     }
 }

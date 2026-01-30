@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting.vo;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -78,24 +80,22 @@ public class TimeSlot {
     public static TimeSlot fromTimeString(String timeStr, int intervalMinutes) {
         String[] parts = timeStr.split(":");
         if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid time format. Expected HH:mm");
+            throw new BusinessException(ErrorCode.TIMESLOT_INVALID_FORMAT);
         }
 
         int hour = Integer.parseInt(parts[0]);
         int minute = Integer.parseInt(parts[1]);
 
         if (hour < 0 || hour > 23) {
-            throw new IllegalArgumentException("Hour must be between 0 and 23");
+            throw new BusinessException(ErrorCode.TIMESLOT_INVALID_HOUR);
         }
         if (minute < 0 || minute > 59) {
-            throw new IllegalArgumentException("Minute must be between 0 and 59");
+            throw new BusinessException(ErrorCode.TIMESLOT_INVALID_MINUTE);
         }
 
         int totalMinutes = hour * 60 + minute;
         if (totalMinutes % intervalMinutes != 0) {
-            throw new IllegalArgumentException(
-                String.format("Time must be aligned to %d minute intervals", intervalMinutes)
-            );
+            throw new BusinessException(ErrorCode.TIMESLOT_NOT_ALIGNED, intervalMinutes);
         }
 
         int slotIndex = totalMinutes / intervalMinutes;
@@ -159,21 +159,17 @@ public class TimeSlot {
 
     private void validateSlotIndex(int slotIndex) {
         if (slotIndex < minSlotIndex || slotIndex > maxSlotIndex) {
-            throw new IllegalArgumentException(
-                    String.format("SlotIndex must be between %d and %d for %d-minute intervals, but got: %d",
-                            minSlotIndex, maxSlotIndex, intervalMinutes, slotIndex)
-            );
+            throw new BusinessException(ErrorCode.TIMESLOT_INDEX_OUT_OF_RANGE, 
+                    intervalMinutes, minSlotIndex, maxSlotIndex, slotIndex);
         }
     }
 
     private void validateIntervalMinutes(int intervalMinutes) {
         if (intervalMinutes <= 0) {
-            throw new IllegalArgumentException("Interval minutes must be positive");
+            throw new BusinessException(ErrorCode.TIMESLOT_INTERVAL_POSITIVE);
         }
         if (MINUTES_PER_DAY % intervalMinutes != 0) {
-            throw new IllegalArgumentException(
-                String.format("Interval minutes must be a divisor of %d (minutes in a day)", MINUTES_PER_DAY)
-            );
+            throw new BusinessException(ErrorCode.TIMESLOT_INTERVAL_DIVISOR, MINUTES_PER_DAY);
         }
     }
 

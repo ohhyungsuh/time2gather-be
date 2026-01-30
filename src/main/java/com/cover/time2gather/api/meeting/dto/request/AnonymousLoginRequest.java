@@ -6,17 +6,17 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Schema(description = "익명 로그인 요청")
+@Schema(description = "Anonymous login request")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class AnonymousLoginRequest {
 
-    @NotBlank(message = "Username is required")
-    @Schema(description = "사용자 이름 (Meeting 스코프 내에서 유니크)", example = "철수", required = true)
+    @NotBlank(message = "{validation.username.required}")
+    @Schema(description = "Username (unique within the meeting scope)", example = "John", required = true)
     private String username;
 
-    @NotBlank(message = "Password is required")
-    @Schema(description = "비밀번호", example = "1234", required = true)
+    @NotBlank(message = "{validation.password.required}")
+    @Schema(description = "Password", example = "1234", required = true)
     private String password;
 }

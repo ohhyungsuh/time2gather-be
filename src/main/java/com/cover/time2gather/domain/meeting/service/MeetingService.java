@@ -1,5 +1,7 @@
 package com.cover.time2gather.domain.meeting.service;
 
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingLocation;
@@ -65,7 +67,7 @@ public class MeetingService {
     ) {
         // 사용자가 존재하는지 검증
         if (!userRepository.existsById(hostUserId)) {
-            throw new IllegalArgumentException("User not found");
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         // 장소 투표 활성화 시 검증
@@ -107,21 +109,21 @@ public class MeetingService {
 
     private void validateLocations(List<String> locations) {
         if (locations == null || locations.size() < 2) {
-            throw new IllegalArgumentException("장소 투표를 활성화하려면 최소 2개의 장소가 필요합니다.");
+            throw new BusinessException(ErrorCode.LOCATION_MIN_FOR_VOTE, 2);
         }
         if (locations.size() > 5) {
-            throw new IllegalArgumentException("장소는 최대 5개까지 추가할 수 있습니다.");
+            throw new BusinessException(ErrorCode.LOCATION_MAX_EXCEEDED, 5);
         }
         for (String location : locations) {
             if (location == null || location.trim().isEmpty()) {
-                throw new IllegalArgumentException("장소 이름은 비어있을 수 없습니다.");
+                throw new BusinessException(ErrorCode.LOCATION_NAME_REQUIRED);
             }
         }
     }
 
     public Meeting getMeetingByCode(String meetingCode) {
         return meetingRepository.findByMeetingCode(meetingCode)
-                .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEETING_NOT_FOUND));
     }
 
     @Transactional
@@ -155,7 +157,7 @@ public class MeetingService {
 
         // 방장 정보 조회 (참여자 목록과 별도)
         User host = userRepository.findById(meeting.getHostUserId())
-                .orElseThrow(() -> new IllegalArgumentException("Host not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<User> participants = participantIds.stream()
                 .map(userMap::get)

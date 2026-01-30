@@ -8,10 +8,10 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "사용자의 장소 투표 응답")
+@Schema(description = "User location vote response")
 public class UserLocationSelectionsResponse {
 
-    @Schema(description = "투표한 장소 ID 목록", example = "[1, 2]")
+    @Schema(description = "List of voted location IDs", example = "[1, 2]")
     private List<Long> locationIds;
 
     public static UserLocationSelectionsResponse from(List<Long> locationIds) {
