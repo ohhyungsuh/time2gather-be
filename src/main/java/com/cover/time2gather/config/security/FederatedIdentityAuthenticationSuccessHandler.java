@@ -104,7 +104,10 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
 
     private String extractProviderId(String provider, OAuth2User oauth2User) {
         if ("kakao".equalsIgnoreCase(provider)) {
-            return String.valueOf(oauth2User.getAttribute("id"));
+            Object id = oauth2User.getAttribute("id");
+            if (id != null) {
+                return String.valueOf(id);
+            }
         }
         // 다른 provider 추가 가능
         return oauth2User.getName();

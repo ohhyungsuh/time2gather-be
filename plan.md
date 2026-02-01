@@ -338,19 +338,19 @@ MVP 완료 후 추가할 기능:
 
 #### 1.1 MeetingDetailData.BestSlot 모델 변경
 
-- [ ] startSlotIndex 필드 추가 (기존 slotIndex → startSlotIndex)
-- [ ] endSlotIndex 필드 추가
-- [ ] participants 필드 추가 (List<User>)
+- [x] startSlotIndex 필드 추가 (기존 slotIndex → startSlotIndex)
+- [x] endSlotIndex 필드 추가
+- [x] participants 필드 추가 (List<User>)
 
 #### 1.2 테스트 케이스
 
-- [ ] 연속 슬롯 2개 → 병합됨 (14:00, 15:00 → 14:00~16:00)
-- [ ] 연속 슬롯 3개 → 병합됨 (14:00, 15:00, 16:00 → 14:00~17:00)
-- [ ] 비연속 슬롯 → 병합 안됨 (14:00, 16:00 → 개별 유지)
-- [ ] 다른 날짜 → 병합 안됨
-- [ ] ALL_DAY 타입 → 병합 없음 (기존 동작 유지)
-- [ ] 병합된 슬롯의 count는 모든 슬롯 참여 인원만 카운트
-- [ ] participants 필드에 참여자 목록 포함
+- [x] 연속 슬롯 2개 → 병합됨 (14:00, 15:00 → 14:00~16:00)
+- [x] 연속 슬롯 3개 → 병합됨 (14:00, 15:00, 16:00 → 14:00~17:00)
+- [x] 비연속 슬롯 → 병합 안됨 (14:00, 16:00 → 개별 유지)
+- [x] 다른 날짜 → 병합 안됨
+- [x] ALL_DAY 타입 → 병합 없음 (기존 동작 유지)
+- [x] 병합된 슬롯의 count는 모든 슬롯 참여 인원만 카운트
+- [x] participants 필드에 참여자 목록 포함
 
 ---
 
@@ -358,9 +358,9 @@ MVP 완료 후 추가할 기능:
 
 #### 2.1 MeetingService.buildSummaryData 수정
 
-- [ ] 연속 슬롯 그룹 탐지 로직 추가
-- [ ] 그룹 내 공통 참여자 계산 로직
-- [ ] Top3 선정 후 participants 매핑
+- [x] 연속 슬롯 그룹 탐지 로직 추가
+- [x] 그룹 내 공통 참여자 계산 로직
+- [x] Top3 선정 후 participants 매핑
 
 ---
 
@@ -368,13 +368,13 @@ MVP 완료 후 추가할 기능:
 
 #### 3.1 MeetingDetailResponse.BestSlot 변경
 
-- [ ] time 필드 → "14:00 ~ 17:00" 형식 지원
-- [ ] participants 필드 추가 (List<ParticipantInfo>)
+- [x] time 필드 → "14:00 ~ 17:00" 형식 지원
+- [x] participants 필드 추가 (List<ParticipantInfo>)
 
 ---
 
 ## 완료 조건
 
-- [ ] 모든 테스트 케이스 통과
-- [ ] 기존 API 응답 호환성 유지
-- [ ] Swagger 문서 업데이트
+- [x] 모든 테스트 케이스 통과
+- [x] 기존 API 응답 호환성 유지
+- [x] Swagger 문서 업데이트
