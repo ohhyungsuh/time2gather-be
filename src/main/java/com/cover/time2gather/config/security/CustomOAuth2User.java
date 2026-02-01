@@ -29,7 +29,9 @@ public class CustomOAuth2User implements OAuth2User {
 
     @Override
     public String getName() {
-        return userPrincipal.getEmail();
+        // OAuth2 Authorization Server requires non-empty principal name
+        // Use principalName which is guaranteed to be non-null
+        return userPrincipal.getUsername();
     }
 
     public CustomUserPrincipal getUserPrincipal() {
@@ -44,7 +46,7 @@ public class CustomOAuth2User implements OAuth2User {
         return userPrincipal.getEmail();
     }
 
-    public String getUsername() {
-        return userPrincipal.getUsername();
+    public String getDisplayName() {
+        return userPrincipal.getDisplayName();
     }
 }

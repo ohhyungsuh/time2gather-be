@@ -19,24 +19,36 @@ public class CustomUserPrincipal implements UserDetails {
     private final Long userId;
     private final String email;
     private final String password;
-    private final String username;
+    private final String displayName;
+    private final String principalName; // Non-null identifier for Spring Security
     private final Collection<? extends GrantedAuthority> authorities;
 
-    private CustomUserPrincipal(Long userId, String email, String password, String username,
-                                Collection<? extends GrantedAuthority> authorities) {
+    private CustomUserPrincipal(Long userId, String email, String password, String displayName,
+                                String principalName, Collection<? extends GrantedAuthority> authorities) {
         this.userId = userId;
         this.email = email;
         this.password = password;
-        this.username = username;
+        this.displayName = displayName;
+        this.principalName = principalName;
         this.authorities = authorities;
     }
 
     public static CustomUserPrincipal from(User user) {
+        // principalName must be non-null - use email if available, otherwise use providerId or id
+        String principalName = user.getEmail();
+        if (principalName == null || principalName.isEmpty()) {
+            principalName = user.getProviderId();
+        }
+        if (principalName == null || principalName.isEmpty()) {
+            principalName = String.valueOf(user.getId());
+        }
+        
         return new CustomUserPrincipal(
                 user.getId(),
                 user.getEmail(),
                 user.getPassword() != null ? user.getPassword() : "",
                 user.getUsername(),
+                principalName,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
     }
@@ -53,8 +65,12 @@ public class CustomUserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        // Spring Security uses this as the principal identifier
-        return email;
+        // Spring Security uses this as the principal identifier - must be non-empty
+        return principalName;
+    }
+    
+    public String getDisplayName() {
+        return displayName;
     }
 
     @Override
