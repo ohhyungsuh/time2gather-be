@@ -95,6 +95,7 @@ public class OAuth2AuthorizationServerConfig {
                 .redirectUri(playMcpRedirectUri)
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
+                .scope(OidcScopes.EMAIL)
                 .scope("meeting:read")
                 .scope("meeting:write")
                 .tokenSettings(TokenSettings.builder()

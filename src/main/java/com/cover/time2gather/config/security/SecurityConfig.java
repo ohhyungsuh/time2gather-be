@@ -27,6 +27,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler;
 
     // CORS 설정 상수
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
@@ -78,6 +79,7 @@ public class SecurityConfig {
     /**
      * OAuth2 로그인용 Security Filter Chain
      * 폼 로그인 및 세션 기반 인증 (OAuth2 Authorization Server용)
+     * 카카오 소셜 로그인 지원
      */
     @Bean
     @Order(2)
@@ -95,6 +97,10 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .permitAll()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .successHandler(federatedIdentityAuthenticationSuccessHandler)
                 );
 
         return http.build();
