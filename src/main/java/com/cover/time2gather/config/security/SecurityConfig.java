@@ -90,12 +90,15 @@ public class SecurityConfig {
     public SecurityFilterChain loginSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 // OAuth2 Authorization Server 엔드포인트 (/oauth2/authorize, /oauth2/token 등)는 Order 1에서 처리
-                // 여기서는 로그인 폼과 OAuth2 Client 콜백 (/login/oauth2/code/*) 만 처리
-                .securityMatcher("/login", "/login/**", "/userinfo", "/.well-known/**")
+                // 여기서는 로그인 폼과 OAuth2 Client 경로만 처리:
+                // - /login, /login/** : 로그인 폼 및 OAuth2 콜백 (/login/oauth2/code/*)
+                // - /oauth2/authorization/** : OAuth2 Client 로그인 시작 (카카오 등)
+                .securityMatcher("/login", "/login/**", "/oauth2/authorization/**", "/userinfo", "/.well-known/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/login/**").permitAll()
+                        .requestMatchers("/oauth2/authorization/**").permitAll()
                         .requestMatchers("/.well-known/**").permitAll()
                         .anyRequest().authenticated()
                 )
