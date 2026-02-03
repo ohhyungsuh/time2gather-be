@@ -80,17 +80,22 @@ public class SecurityConfig {
      * OAuth2 로그인용 Security Filter Chain
      * 폼 로그인 및 세션 기반 인증 (OAuth2 Authorization Server용)
      * 카카오 소셜 로그인 지원
+     * 
+     * 주의: /oauth2/authorize, /oauth2/token 등 Authorization Server 엔드포인트는
+     * OAuth2AuthorizationServerConfig의 @Order(1) Filter Chain에서 처리됨.
+     * 여기서는 OAuth2 Client (카카오 로그인) 관련 경로만 매칭.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain loginSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/login", "/login/**", "/oauth2/**", "/userinfo", "/.well-known/**")
+                // OAuth2 Authorization Server 엔드포인트 (/oauth2/authorize, /oauth2/token 등)는 Order 1에서 처리
+                // 여기서는 로그인 폼과 OAuth2 Client 콜백 (/login/oauth2/code/*) 만 처리
+                .securityMatcher("/login", "/login/**", "/userinfo", "/.well-known/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/login/**").permitAll()
-                        .requestMatchers("/oauth2/**").permitAll()
                         .requestMatchers("/.well-known/**").permitAll()
                         .anyRequest().authenticated()
                 )
