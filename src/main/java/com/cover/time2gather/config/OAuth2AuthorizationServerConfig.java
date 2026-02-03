@@ -28,6 +28,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -41,6 +44,8 @@ import java.util.UUID;
  */
 @Configuration
 public class OAuth2AuthorizationServerConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(OAuth2AuthorizationServerConfig.class);
 
     @Value("${oauth2.server.playmcp.client-id:playmcp-client}")
     private String playMcpClientId;
@@ -85,6 +90,11 @@ public class OAuth2AuthorizationServerConfig {
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
+        log.info("=== OAuth2 Client Registration ===");
+        log.info("Client ID: {}", playMcpClientId);
+        log.info("Client Secret (masked): {}...", playMcpClientSecret.substring(0, Math.min(5, playMcpClientSecret.length())));
+        log.info("Redirect URI: {}", playMcpRedirectUri);
+        
         RegisteredClient playMcpClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId(playMcpClientId)
                 .clientSecret("{noop}" + playMcpClientSecret) // {noop} = plain text password encoder
@@ -107,6 +117,7 @@ public class OAuth2AuthorizationServerConfig {
                         .build())
                 .build();
 
+        log.info("Registered client successfully: {}", playMcpClient.getClientId());
         return new InMemoryRegisteredClientRepository(playMcpClient);
     }
 
