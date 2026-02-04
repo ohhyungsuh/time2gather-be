@@ -147,9 +147,6 @@ logging:
     org.hibernate.orm.jdbc.bind: WARN
     org.springframework.web.servlet.resource: ERROR
     org.springframework.security.web: WARN
-    # OAuth2 Authorization Server 디버깅
-    org.springframework.security.oauth2.server.authorization: DEBUG
-    org.springframework.security.oauth2.server.authorization.authentication: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%t] %-40.40logger{39} : %m%n%wEx"
 
