@@ -72,8 +72,9 @@ public class OAuth2AuthorizationServerConfig {
                 .oidc(oidc -> oidc
                         .providerConfigurationEndpoint(providerConfig -> providerConfig
                                 .providerConfigurationCustomizer(customizer -> {
-                                    // scopes_supported에 지원하는 모든 scope 추가
+                                    // scopes_supported에 지원하는 모든 scope 설정 (기존 값 clear 후 추가)
                                     customizer.scopes(scopes -> {
+                                        scopes.clear();  // 기존 openid 제거
                                         scopes.add(OidcScopes.OPENID);
                                         scopes.add(OidcScopes.PROFILE);
                                         scopes.add(OidcScopes.EMAIL);
