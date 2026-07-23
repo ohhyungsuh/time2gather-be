@@ -29,8 +29,6 @@ import java.util.stream.Collectors;
 @Component
 public class BestSlotBuilder {
 
-    private static final int TOP_N = 3;
-
     /**
      * 요약 데이터 생성 (연속 슬롯 병합 적용)
      */
@@ -50,10 +48,10 @@ public class BestSlotBuilder {
     }
 
     /**
-     * TIME 타입: 모든 연속 범위 조합 평가 후 겹치지 않는 Top3 선택
+     * TIME 타입: 모든 연속 범위 조합 평가 후 최고 득표 후보 선택
      * 
      * 1. 모든 가능한 연속 범위 조합을 생성하고 공통 참여자 계산 (Incremental intersection)
-     * 2. count 기준 정렬 후, 같은 날짜에서 겹치는 범위는 제외하고 Top3 선택
+     * 2. count 기준 정렬 후, 공동 1위 중 같은 날짜에서 겹치는 범위는 제외
      * 
      * 시간복잡도: O(D × S² × U) - Incremental intersection 최적화 적용
      * - D: 날짜 수, S: 슬롯 수, U: 사용자 수
@@ -88,8 +86,8 @@ public class BestSlotBuilder {
                         .thenComparingInt(MeetingDetailData.BestSlot::getStartSlotIndex))
                 .collect(Collectors.toList());
 
-        // 4. Top3 선택 (같은 날짜에서 겹치는 범위는 제외)
-        List<MeetingDetailData.BestSlot> bestSlots = selectNonOverlappingTopN(sortedSlots, TOP_N);
+        List<MeetingDetailData.BestSlot> bestSlots =
+                selectNonOverlapping(selectTopCandidates(sortedSlots));
 
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
     }
@@ -198,21 +196,16 @@ public class BestSlotBuilder {
     }
 
     /**
-     * 같은 날짜에서 겹치는 범위를 제외하고 Top N 선택
+     * 같은 날짜에서 겹치는 범위를 제외
      */
-    private List<MeetingDetailData.BestSlot> selectNonOverlappingTopN(
-            List<MeetingDetailData.BestSlot> sortedSlots, 
-            int n
+    private List<MeetingDetailData.BestSlot> selectNonOverlapping(
+            List<MeetingDetailData.BestSlot> sortedSlots
     ) {
         List<MeetingDetailData.BestSlot> result = new ArrayList<>();
         // 날짜별로 선택된 범위 추적
         Map<String, List<SlotRange>> selectedRangesByDate = new HashMap<>();
 
         for (MeetingDetailData.BestSlot slot : sortedSlots) {
-            if (result.size() >= n) {
-                break;
-            }
-
             String date = slot.getDate();
             SlotRange currentRange = new SlotRange(slot.getStartSlotIndex(), slot.getEndSlotIndex());
 
@@ -229,6 +222,19 @@ public class BestSlotBuilder {
         }
 
         return result;
+    }
+
+    private List<MeetingDetailData.BestSlot> selectTopCandidates(
+            List<MeetingDetailData.BestSlot> sortedSlots
+    ) {
+        if (sortedSlots.isEmpty()) {
+            return List.of();
+        }
+
+        int topCount = sortedSlots.getFirst().getCount();
+        return sortedSlots.stream()
+                .takeWhile(slot -> slot.getCount() == topCount)
+                .toList();
     }
 
     /**
@@ -282,14 +288,13 @@ public class BestSlotBuilder {
             ));
         }
 
-        // 정렬 및 Top3 선택
-        List<MeetingDetailData.BestSlot> bestSlots = allSlots.stream()
+        List<MeetingDetailData.BestSlot> sortedSlots = allSlots.stream()
                 .sorted(Comparator
                         .comparingInt(MeetingDetailData.BestSlot::getCount).reversed()
                         .thenComparing(MeetingDetailData.BestSlot::getDate))
-                .limit(TOP_N)
                 .collect(Collectors.toList());
 
+        List<MeetingDetailData.BestSlot> bestSlots = selectTopCandidates(sortedSlots);
         return new MeetingDetailData.SummaryData(totalParticipants, bestSlots);
     }
 

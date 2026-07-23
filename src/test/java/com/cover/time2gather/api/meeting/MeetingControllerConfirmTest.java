@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -95,10 +96,10 @@ class MeetingControllerConfirmTest {
             Integer slotIndex = 9;
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
-            doNothing().when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex));
+            doNothing().when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex), eq(null));
             setAuthentication(hostUserId, "host@test.com");
 
             // When & Then
@@ -107,6 +108,33 @@ class MeetingControllerConfirmTest {
                     .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
+        @DisplayName("장소 투표가 있으면 날짜와 장소를 함께 확정한다")
+        void shouldConfirmMeetingAndLocationTogether() throws Exception {
+            String meetingCode = "mtg_abc123";
+            Long hostUserId = 1L;
+            LocalDate date = LocalDate.of(2024, 2, 15);
+            Integer slotIndex = 9;
+            Long locationId = 12L;
+
+            Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex, locationId);
+
+            when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
+            doNothing().when(meetingService)
+                    .confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex), eq(locationId));
+            setAuthentication(hostUserId, "host@test.com");
+
+            mockMvc.perform(put("/api/v1/meetings/{meetingCode}/confirm", meetingCode)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+
+            verify(meetingService)
+                    .confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex), eq(locationId));
         }
 
         @Test
@@ -120,7 +148,7 @@ class MeetingControllerConfirmTest {
             Integer slotIndex = 9;
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
             setAuthentication(otherUserId, "other@test.com");
@@ -142,11 +170,11 @@ class MeetingControllerConfirmTest {
             Integer slotIndex = 9;
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, slotIndex, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
             doThrow(new IllegalStateException("이미 확정된 미팅입니다."))
-                .when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex));
+                .when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(slotIndex), eq(null));
             setAuthentication(hostUserId, "host@test.com");
 
             // When & Then
@@ -166,11 +194,11 @@ class MeetingControllerConfirmTest {
             Integer slotIndex = 9;
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(invalidDate, slotIndex);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(invalidDate, slotIndex, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
             doThrow(new IllegalArgumentException("유효하지 않은 날짜입니다."))
-                .when(meetingService).confirmMeeting(any(Meeting.class), eq(invalidDate), eq(slotIndex));
+                .when(meetingService).confirmMeeting(any(Meeting.class), eq(invalidDate), eq(slotIndex), eq(null));
             setAuthentication(hostUserId, "host@test.com");
 
             // When & Then
@@ -190,11 +218,11 @@ class MeetingControllerConfirmTest {
             Integer invalidSlotIndex = 99;
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.TIME);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, invalidSlotIndex);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, invalidSlotIndex, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
             doThrow(new IllegalArgumentException("유효하지 않은 슬롯 인덱스입니다."))
-                .when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(invalidSlotIndex));
+                .when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(invalidSlotIndex), eq(null));
             setAuthentication(hostUserId, "host@test.com");
 
             // When & Then
@@ -213,10 +241,10 @@ class MeetingControllerConfirmTest {
             LocalDate date = LocalDate.of(2024, 2, 15);
 
             Meeting meeting = createMeeting(meetingCode, hostUserId, SelectionType.ALL_DAY);
-            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, null);
+            ConfirmMeetingRequest request = new ConfirmMeetingRequest(date, null, null);
 
             when(meetingService.getMeetingByCode(eq(meetingCode))).thenReturn(meeting);
-            doNothing().when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(null));
+            doNothing().when(meetingService).confirmMeeting(any(Meeting.class), eq(date), eq(null), eq(null));
             setAuthentication(hostUserId, "host@test.com");
 
             // When & Then

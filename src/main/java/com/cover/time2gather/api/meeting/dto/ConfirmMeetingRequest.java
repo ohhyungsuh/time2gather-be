@@ -20,4 +20,7 @@ public class ConfirmMeetingRequest {
 
     @Schema(description = "Slot index to confirm (required for TIME type, null for ALL_DAY type)", example = "28")
     private Integer slotIndex;
+
+    @Schema(description = "Location ID to confirm (required when location voting is enabled)", example = "12")
+    private Long locationId;
 }

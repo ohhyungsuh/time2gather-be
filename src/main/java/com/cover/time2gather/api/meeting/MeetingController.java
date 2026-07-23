@@ -328,6 +328,7 @@ public class MeetingController {
             - Already confirmed meetings must be cancelled before re-confirming.
             - After confirmation, participants cannot modify their votes.
             - For ALL_DAY type meetings, pass null for slotIndex.
+            - When location voting is enabled, locationId is required and is confirmed together.
         """
     )
     public ApiResponse<Void> confirmMeeting(
@@ -343,7 +344,12 @@ public class MeetingController {
         }
 
         // 확정 처리 (도메인 메서드에서 검증 수행)
-        meetingService.confirmMeeting(meeting, request.getDate(), request.getSlotIndex());
+        meetingService.confirmMeeting(
+                meeting,
+                request.getDate(),
+                request.getSlotIndex(),
+                request.getLocationId()
+        );
 
         return ApiResponse.success(null);
     }
@@ -544,4 +550,3 @@ public class MeetingController {
         return String.format("meeting_%s_%s.ics", date, timeString.replace(":", ""));
     }
 }
-

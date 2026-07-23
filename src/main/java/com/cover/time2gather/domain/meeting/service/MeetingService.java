@@ -128,14 +128,62 @@ public class MeetingService {
 
     @Transactional
     public void confirmMeeting(Meeting meeting, LocalDate date, Integer slotIndex) {
+        confirmMeeting(meeting, date, slotIndex, null);
+    }
+
+    @Transactional
+    public void confirmMeeting(
+            Meeting meeting,
+            LocalDate date,
+            Integer slotIndex,
+            Long locationId
+    ) {
+        validateLocationForConfirmation(meeting, locationId);
         meeting.confirm(date, slotIndex);
+
+        if (meeting.isLocationVoteEnabled() && !meeting.isLocationConfirmed()) {
+            meeting.confirmLocation(locationId);
+        }
+
         meetingRepository.save(meeting);
     }
 
     @Transactional
     public void cancelConfirmation(Meeting meeting) {
         meeting.cancelConfirmation();
+
+        if (meeting.isLocationConfirmed()) {
+            meeting.cancelLocationConfirmation();
+        }
+
         meetingRepository.save(meeting);
+    }
+
+    private void validateLocationForConfirmation(Meeting meeting, Long locationId) {
+        if (!meeting.isLocationVoteEnabled()) {
+            if (locationId != null) {
+                throw new BusinessException(ErrorCode.LOCATION_VOTE_NOT_ENABLED);
+            }
+            return;
+        }
+
+        if (locationId == null) {
+            throw new BusinessException(ErrorCode.LOCATION_ID_REQUIRED);
+        }
+
+        if (meeting.isLocationConfirmed()) {
+            if (!locationId.equals(meeting.getConfirmedLocationId())) {
+                throw new BusinessException(ErrorCode.LOCATION_ALREADY_CONFIRMED);
+            }
+            return;
+        }
+
+        MeetingLocation location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOCATION_NOT_FOUND));
+
+        if (!location.getMeetingId().equals(meeting.getId())) {
+            throw new BusinessException(ErrorCode.LOCATION_NOT_BELONG_TO_MEETING);
+        }
     }
 
     /**

@@ -298,25 +298,14 @@ class BestSlotMergingTest {
             MeetingDetailData.SummaryData summary = bestSlotBuilder.buildSummaryData(
                 timeMeeting, selections, userMap, 2);
 
-            // Then: 
-            // 14~15: count=2 (user1, user2) → Top1
-            // 16: count=1 (user1) → Top2 (14~15와 겹치지 않음)
-            // 14~16: count=1 (user1) → 14~15와 겹쳐서 제외됨
-            assertThat(summary.getBestSlots()).isNotEmpty();
+            // Then: 14~15만 최고 득표 후보로 반환
+            assertThat(summary.getBestSlots()).hasSize(1);
             
             MeetingDetailData.BestSlot topSlot = summary.getBestSlots().get(0);
             assertThat(topSlot.getStartSlotIndex()).isEqualTo(14);
             assertThat(topSlot.getEndSlotIndex()).isEqualTo(15);
             assertThat(topSlot.getCount()).isEqualTo(2);
             assertThat(topSlot.getParticipants()).containsExactlyInAnyOrder(user1, user2);
-            
-            // Top2는 16 단독 (14~15와 겹치지 않음)
-            assertThat(summary.getBestSlots()).hasSizeGreaterThanOrEqualTo(2);
-            MeetingDetailData.BestSlot secondSlot = summary.getBestSlots().get(1);
-            assertThat(secondSlot.getStartSlotIndex()).isEqualTo(16);
-            assertThat(secondSlot.getEndSlotIndex()).isEqualTo(16);
-            assertThat(secondSlot.getCount()).isEqualTo(1);
-            assertThat(secondSlot.getParticipants()).containsExactly(user1);
         }
     }
 
@@ -356,13 +345,13 @@ class BestSlotMergingTest {
     }
 
     @Nested
-    @DisplayName("Top3 제한")
-    class Top3Limit {
+    @DisplayName("공동 1위 후보")
+    class JointTopCandidates {
 
         @Test
-        @DisplayName("Top3만 반환된다")
-        void shouldReturnOnlyTop3() {
-            // Given: 5개의 다른 슬롯
+        @DisplayName("공동 1위가 3개를 넘어도 모두 반환된다")
+        void shouldReturnEveryJointTopCandidate() {
+            // Given: 동일한 한 사용자가 선택한 겹치지 않는 5개 슬롯
             Map<Long, User> userMap = Map.of(1L, user1);
             List<MeetingUserSelection> selections = List.of(
                 createSelection(1L, 1L, Map.of("2024-02-15", new int[]{10, 12, 14, 16, 18}))
@@ -373,7 +362,26 @@ class BestSlotMergingTest {
                 timeMeeting, selections, userMap, 1);
 
             // Then
-            assertThat(summary.getBestSlots()).hasSizeLessThanOrEqualTo(3);
+            assertThat(summary.getBestSlots()).hasSize(5);
+            assertThat(summary.getBestSlots())
+                .allSatisfy(slot -> assertThat(slot.getCount()).isEqualTo(1));
+        }
+
+        @Test
+        @DisplayName("최고 득표보다 낮은 후보는 반환하지 않는다")
+        void shouldExcludeCandidatesBelowTopVoteCount() {
+            Map<Long, User> userMap = Map.of(1L, user1, 2L, user2);
+            List<MeetingUserSelection> selections = List.of(
+                createSelection(1L, 1L, Map.of("2024-02-15", new int[]{14, 16})),
+                createSelection(2L, 2L, Map.of("2024-02-15", new int[]{14}))
+            );
+
+            MeetingDetailData.SummaryData summary = bestSlotBuilder.buildSummaryData(
+                timeMeeting, selections, userMap, 2);
+
+            assertThat(summary.getBestSlots()).hasSize(1);
+            assertThat(summary.getBestSlots().getFirst().getStartSlotIndex()).isEqualTo(14);
+            assertThat(summary.getBestSlots().getFirst().getCount()).isEqualTo(2);
         }
     }
 
