@@ -1,5 +1,6 @@
 package com.cover.time2gather.domain.auth.jwt;
 
+import com.cover.time2gather.domain.user.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -38,8 +39,15 @@ public class JwtTokenService {
 	 * @return JWT 토큰
 	 */
 	public String generateToken(Long userId, String username) {
+		return generateToken(userId, username, null);
+	}
+
+	public String generateToken(Long userId, String username, UserRole role) {
 		Map<String, Object> claims = new HashMap<>();
 		claims.put("userId", userId);
+		if (role != null) {
+			claims.put("role", role.name());
+		}
 
 		Date now = new Date();
 		Date expiration = new Date(now.getTime() + expirationMs);
@@ -93,6 +101,19 @@ public class JwtTokenService {
 		return claims.getSubject();
 	}
 
+	public UserRole extractRole(String token) {
+		String role = extractClaims(token).get("role", String.class);
+		if (role == null || role.isBlank()) {
+			return UserRole.USER;
+		}
+
+		try {
+			return UserRole.valueOf(role);
+		} catch (IllegalArgumentException e) {
+			return UserRole.USER;
+		}
+	}
+
 	/**
 	 * 토큰에서 모든 Claims 추출
 	 *
@@ -112,4 +133,3 @@ public class JwtTokenService {
 		return Keys.hmacShaKeyFor(keyBytes);
 	}
 }
-

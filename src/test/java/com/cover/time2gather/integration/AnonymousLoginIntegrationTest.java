@@ -71,7 +71,7 @@ class AnonymousLoginIntegrationTest {
         assertThat(user.getProviderId()).isEqualTo("mtg_abc123:철수");
         assertThat(user.getUsername()).isEqualTo("철수");
         assertThat(user.getPassword()).isNotNull();
-        assertThat(user.getPassword()).startsWith("$2a$"); // BCrypt hash
+        assertThat(user.getPassword()).contains("$2a$"); // BCrypt hash (delegating encoders may add a prefix)
     }
 
     @Test
@@ -201,4 +201,3 @@ class AnonymousLoginIntegrationTest {
         assertThat(users).hasSize(1);
     }
 }
-

@@ -36,6 +36,8 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
     private static final String PROFILE_KEY = "profile";
     private static final String ID_KEY = "id";
     private static final String EMAIL_KEY = "email";
+    private static final String EMAIL_VALID_KEY = "is_email_valid";
+    private static final String EMAIL_VERIFIED_KEY = "is_email_verified";
     private static final String NICKNAME_KEY = "nickname";
     private static final String PROFILE_IMAGE_URL_KEY = "profile_image_url";
     private static final String THUMBNAIL_IMAGE_URL_KEY = "thumbnail_image_url";
@@ -159,10 +161,13 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
 
             // kakao_account에서 이메일 추출
             String email = null;
+            boolean emailVerified = false;
             @SuppressWarnings("unchecked")
             Map<String, Object> kakaoAccount = (Map<String, Object>) userInfo.get(KAKAO_ACCOUNT_KEY);
             if (kakaoAccount != null) {
                 email = (String) kakaoAccount.get(EMAIL_KEY);
+                emailVerified = Boolean.TRUE.equals(kakaoAccount.get(EMAIL_VALID_KEY))
+                        && Boolean.TRUE.equals(kakaoAccount.get(EMAIL_VERIFIED_KEY));
             }
 
             // properties 또는 kakao_account.profile에서 닉네임과 프로필 이미지 추출
@@ -197,15 +202,16 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
                 }
             }
 
-            log.info("Successfully fetched user info from Kakao - providerId: {}, email: {}, profileImageUrl: {}",
-                    providerId, email, profileImageUrl);
+            log.info("Successfully fetched user info from Kakao - providerId: {}, profileImageUrl: {}",
+                    providerId, profileImageUrl);
 
             return new OidcUserInfo(
                     tokenResponse.getIdToken(),
                     providerId,
                     email,
                     nickname,
-                    profileImageUrl
+                    profileImageUrl,
+                    emailVerified
             );
 
         } catch (HttpClientErrorException e) {
@@ -232,4 +238,3 @@ public class KakaoOidcProvider implements OidcProviderStrategy {
         return PROVIDER_NAME;
     }
 }
-

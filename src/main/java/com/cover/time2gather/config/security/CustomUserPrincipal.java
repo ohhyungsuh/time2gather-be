@@ -39,7 +39,7 @@ public class CustomUserPrincipal implements UserDetails {
                 user.getEmail(),
                 user.getPassword() != null ? user.getPassword() : "",
                 user.getUsername(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().asAuthority()))
         );
     }
 

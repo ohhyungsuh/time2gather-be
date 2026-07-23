@@ -1,5 +1,6 @@
 package com.cover.time2gather.domain.auth.service;
 
+import com.cover.time2gather.config.security.AdminAccountPolicy;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
@@ -22,6 +23,7 @@ public class OAuthLoginService {
     private final OidcProviderRegistry providerRegistry;
     private final UserRepository userRepository;
     private final JwtTokenService jwtTokenService;
+    private final AdminAccountPolicy adminAccountPolicy;
 
     @Transactional
     public OAuthLoginResult login(String providerName, String authorizationCode, String redirectUri) {
@@ -50,8 +52,12 @@ public class OAuthLoginService {
             }
         }
 
+        if (adminAccountPolicy.isAdminAccount(authProvider, email, userInfo.isEmailVerified())) {
+            user.promoteToAdmin();
+        }
+
         // 3. JWT 토큰 생성
-        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername());
+        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername(), user.getRole());
 
         return new OAuthLoginResult(
                 jwtToken,
@@ -86,7 +92,7 @@ public class OAuthLoginService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
-        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername());
+        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername(), user.getRole());
 
         return new OAuthLoginResult(
                 jwtToken,

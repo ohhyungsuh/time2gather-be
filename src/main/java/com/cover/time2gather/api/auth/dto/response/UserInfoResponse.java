@@ -29,6 +29,9 @@ public class UserInfoResponse {
     @Schema(description = "인증 제공자", example = "KAKAO")
     private String provider;
 
+    @Schema(description = "사용자 권한", example = "USER")
+    private String role;
+
     @Schema(description = "익명 사용자가 로그인한 미팅 코드 (익명 유저만 해당)", example = "mtg_abc123xyz", nullable = true)
     private String anonymousMeetingCode;
 
@@ -60,6 +63,7 @@ public class UserInfoResponse {
                 .email(user.getEmail())
                 .profileImageUrl(user.getProfileImageUrl())
                 .provider(user.getProvider().name())
+                .role(user.getRole().name())
                 .anonymousMeetingCode(anonymousMeetingCode)
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
                 .createdMeetings(createdMeetings.stream()
@@ -139,4 +143,3 @@ public class UserInfoResponse {
         }
     }
 }
-

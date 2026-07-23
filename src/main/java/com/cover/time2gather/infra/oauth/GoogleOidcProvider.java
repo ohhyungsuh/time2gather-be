@@ -33,6 +33,7 @@ public class GoogleOidcProvider implements OidcProviderStrategy {
 
     private static final String ID_KEY = "id";
     private static final String EMAIL_KEY = "email";
+    private static final String EMAIL_VERIFIED_KEY = "verified_email";
     private static final String NAME_KEY = "name";
     private static final String PICTURE_KEY = "picture";
 
@@ -154,18 +155,20 @@ public class GoogleOidcProvider implements OidcProviderStrategy {
             
             String providerId = String.valueOf(userInfo.get(ID_KEY));
             String email = (String) userInfo.get(EMAIL_KEY);
+            boolean emailVerified = Boolean.TRUE.equals(userInfo.get(EMAIL_VERIFIED_KEY));
             String name = (String) userInfo.get(NAME_KEY);
             String profileImageUrl = (String) userInfo.get(PICTURE_KEY);
 
-            log.info("Successfully fetched user info from Google - providerId: {}, email: {}, name: {}",
-                    providerId, email, name);
+            log.info("Successfully fetched user info from Google - providerId: {}, name: {}",
+                    providerId, name);
 
             return new OidcUserInfo(
                     tokenResponse.getIdToken(),
                     providerId,
                     email,
                     name,
-                    profileImageUrl
+                    profileImageUrl,
+                    emailVerified
             );
 
         } catch (HttpClientErrorException e) {

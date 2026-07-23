@@ -1,6 +1,7 @@
 package com.cover.time2gather.config.security;
 
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
+import com.cover.time2gather.domain.user.UserRole;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -37,8 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtToken != null && jwtTokenService.validateToken(jwtToken)) {
                 Long userId = jwtTokenService.extractUserId(jwtToken);
                 String username = jwtTokenService.extractUsername(jwtToken);
+                UserRole role = jwtTokenService.extractRole(jwtToken);
 
-                JwtAuthentication authentication = new JwtAuthentication(userId, username);
+                JwtAuthentication authentication = new JwtAuthentication(userId, username, role);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
@@ -62,4 +64,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 }
-

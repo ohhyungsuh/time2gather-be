@@ -1,6 +1,7 @@
 package com.cover.time2gather.config.security;
 
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
+import com.cover.time2gather.domain.user.UserRole;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -51,6 +52,7 @@ class JwtAuthenticationFilterTest {
         when(jwtTokenService.validateToken(jwtToken)).thenReturn(true);
         when(jwtTokenService.extractUserId(jwtToken)).thenReturn(1L);
         when(jwtTokenService.extractUsername(jwtToken)).thenReturn("testuser");
+        when(jwtTokenService.extractRole(jwtToken)).thenReturn(UserRole.ADMIN);
 
         // When
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -60,6 +62,9 @@ class JwtAuthenticationFilterTest {
         assertThat(authentication).isNotNull();
         assertThat(authentication.isAuthenticated()).isTrue();
         assertThat(authentication.getName()).isEqualTo("testuser");
+        assertThat(authentication.getAuthorities())
+                .extracting("authority")
+                .containsExactly("ROLE_ADMIN");
 
         verify(filterChain).doFilter(request, response);
     }
@@ -97,4 +102,3 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 }
-

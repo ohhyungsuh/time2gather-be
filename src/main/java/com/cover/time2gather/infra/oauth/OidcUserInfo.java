@@ -14,5 +14,5 @@ public class OidcUserInfo {
     private final String email;
     private final String nickname;
     private final String profileImageUrl;
+    private final boolean emailVerified;
 }
-

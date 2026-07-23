@@ -1,10 +1,12 @@
 package com.cover.time2gather.config.security;
 
+import com.cover.time2gather.domain.user.UserRole;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * JWT 기반 인증 정보를 담는 Authentication 구현체
@@ -12,12 +14,21 @@ import java.util.Collections;
  */
 public record JwtAuthentication(
         Long userId,
-        String username
+        String username,
+        UserRole role
 ) implements Authentication {
+
+    public JwtAuthentication(Long userId, String username) {
+        this(userId, username, UserRole.USER);
+    }
+
+    public JwtAuthentication {
+        role = role != null ? role : UserRole.USER;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        return List.of(new SimpleGrantedAuthority(role.asAuthority()));
     }
 
     @Override
@@ -54,4 +65,3 @@ public record JwtAuthentication(
         return userId;
     }
 }
-

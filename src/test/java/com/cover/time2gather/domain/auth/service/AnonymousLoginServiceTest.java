@@ -71,7 +71,7 @@ class AnonymousLoginServiceTest {
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtTokenService.generateToken(any(), any())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(any(), any(), any())).thenReturn("jwt-token");
 
         // When
         AnonymousLoginResult result = anonymousLoginService.login(meetingCode, username, password);
@@ -113,7 +113,7 @@ class AnonymousLoginServiceTest {
         when(userRepository.findByProviderAndProviderId(User.AuthProvider.ANONYMOUS, providerId))
                 .thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches(password, existingUser.getPassword())).thenReturn(true);
-        when(jwtTokenService.generateToken(any(), any())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(any(), any(), any())).thenReturn("jwt-token");
 
         // When
         AnonymousLoginResult result = anonymousLoginService.login(meetingCode, username, password);
@@ -152,7 +152,7 @@ class AnonymousLoginServiceTest {
                 .hasMessageContaining("Invalid password");
 
         verify(userRepository, never()).save(any());
-        verify(jwtTokenService, never()).generateToken(any(), any());
+        verify(jwtTokenService, never()).generateToken(any(), any(), any());
     }
 
     @Test
@@ -170,4 +170,3 @@ class AnonymousLoginServiceTest {
         assertThat(providerId1).isNotEqualTo(providerId2);
     }
 }
-

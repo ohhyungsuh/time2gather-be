@@ -50,6 +50,10 @@ public class User {
     @Column(name = "provider_id", length = 255)
     private String providerId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role = UserRole.USER;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -60,13 +64,14 @@ public class User {
 
     @Builder
     public User(String username, String password, String email,
-                String profileImageUrl, AuthProvider provider, String providerId) {
+                String profileImageUrl, AuthProvider provider, String providerId, UserRole role) {
         this.username = username;
         this.password = password;
         this.email = email;
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
         this.providerId = providerId;
+        this.role = role != null ? role : UserRole.USER;
     }
 
     /**
@@ -77,10 +82,13 @@ public class User {
         this.profileImageUrl = profileImageUrl;
     }
 
+    public void promoteToAdmin() {
+        this.role = UserRole.ADMIN;
+    }
+
     public enum AuthProvider {
         ANONYMOUS,
         KAKAO,
         GOOGLE
     }
 }
-

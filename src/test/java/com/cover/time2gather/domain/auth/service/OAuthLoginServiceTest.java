@@ -1,17 +1,20 @@
 package com.cover.time2gather.domain.auth.service;
 
+import com.cover.time2gather.config.security.AdminAccountPolicy;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.cover.time2gather.infra.oauth.OidcProviderStrategy;
+import com.cover.time2gather.infra.oauth.OidcUserInfo;
 import com.cover.time2gather.domain.user.User;
+import com.cover.time2gather.domain.user.UserRole;
 import com.cover.time2gather.domain.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -21,7 +24,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@Disabled
 class OAuthLoginServiceTest {
 
     @Mock
@@ -36,11 +38,19 @@ class OAuthLoginServiceTest {
     @Mock
     private JwtTokenService jwtTokenService;
 
+    @Mock
+    private AdminAccountPolicy adminAccountPolicy;
+
     private OAuthLoginService oAuthLoginService;
 
     @BeforeEach
     void setUp() {
-        oAuthLoginService = new OAuthLoginService(providerRegistry, userRepository, jwtTokenService);
+        oAuthLoginService = new OAuthLoginService(
+                providerRegistry,
+                userRepository,
+                jwtTokenService,
+                adminAccountPolicy
+        );
     }
 
     @Test
@@ -50,12 +60,18 @@ class OAuthLoginServiceTest {
         String authCode = "test-auth-code";
         String redirectUri = "http://localhost:3000/callback";
 
-        com.cover.time2gather.infra.oauth.OidcUserInfo userInfo =
-            new com.cover.time2gather.infra.oauth.OidcUserInfo("12345", "test_nickname", "user@kakao.com", "test", "http://profile.url");
+        OidcUserInfo userInfo = new OidcUserInfo(
+                "id-token",
+                "12345",
+                "user@kakao.com",
+                "test_nickname",
+                "http://profile.url",
+                true
+        );
 
         when(providerRegistry.getProvider(provider)).thenReturn(kakaoProvider);
         when(kakaoProvider.getUserInfo(anyString(), anyString())).thenReturn(userInfo);
-        when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, eq("12345")))
+        when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, "12345"))
                 .thenReturn(Optional.empty());
 
         User savedUser = User.builder()
@@ -65,9 +81,10 @@ class OAuthLoginServiceTest {
                 .providerId("12345")
                 .profileImageUrl("http://profile.url")
                 .build();
+        ReflectionTestUtils.setField(savedUser, "id", 1L);
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtTokenService.generateToken(anyLong(), anyString())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(anyLong(), anyString(), any())).thenReturn("jwt-token");
 
         // When
         OAuthLoginResult result = oAuthLoginService.login(provider, authCode, redirectUri);
@@ -93,8 +110,14 @@ class OAuthLoginServiceTest {
         String authCode = "test-auth-code";
         String redirectUri = "http://localhost:3000/callback";
 
-        com.cover.time2gather.infra.oauth.OidcUserInfo userInfo =
-            new com.cover.time2gather.infra.oauth.OidcUserInfo("12345", "test_nickname", "user@kakao.com", "test","http://profile.url");
+        OidcUserInfo userInfo = new OidcUserInfo(
+                "id-token",
+                "12345",
+                "user@kakao.com",
+                "test_nickname",
+                "http://profile.url",
+                true
+        );
 
         User existingUser = User.builder()
                 .username("test_nickname")
@@ -103,12 +126,13 @@ class OAuthLoginServiceTest {
                 .providerId("12345")
                 .profileImageUrl("http://old.url")
                 .build();
+        ReflectionTestUtils.setField(existingUser, "id", 1L);
 
         when(providerRegistry.getProvider(provider)).thenReturn(kakaoProvider);
         when(kakaoProvider.getUserInfo(anyString(), anyString())).thenReturn(userInfo);
         when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, "12345"))
                 .thenReturn(Optional.of(existingUser));
-        when(jwtTokenService.generateToken(anyLong(), anyString())).thenReturn("jwt-token");
+        when(jwtTokenService.generateToken(anyLong(), anyString(), any())).thenReturn("jwt-token");
 
         // When
         OAuthLoginResult result = oAuthLoginService.login(provider, authCode, redirectUri);
@@ -120,5 +144,38 @@ class OAuthLoginServiceTest {
 
         verify(userRepository, never()).save(any());
     }
-}
 
+    @Test
+    void shouldPromoteConfiguredKakaoAccountBeforeIssuingJwt() {
+        String provider = "kakao";
+        String adminEmail = "admin@example.com";
+        OidcUserInfo userInfo = new OidcUserInfo(
+                "id-token",
+                "12345",
+                adminEmail,
+                "admin",
+                "http://profile.url",
+                true
+        );
+        User existingUser = User.builder()
+                .username("admin")
+                .email(adminEmail)
+                .provider(User.AuthProvider.KAKAO)
+                .providerId("12345")
+                .build();
+        ReflectionTestUtils.setField(existingUser, "id", 1L);
+
+        when(providerRegistry.getProvider(provider)).thenReturn(kakaoProvider);
+        when(kakaoProvider.getUserInfo(anyString(), anyString())).thenReturn(userInfo);
+        when(userRepository.findByProviderAndProviderId(User.AuthProvider.KAKAO, "12345"))
+                .thenReturn(Optional.of(existingUser));
+        when(adminAccountPolicy.isAdminAccount(User.AuthProvider.KAKAO, adminEmail, true)).thenReturn(true);
+        when(jwtTokenService.generateToken(1L, "admin", UserRole.ADMIN)).thenReturn("admin-jwt");
+
+        OAuthLoginResult result = oAuthLoginService.login(provider, "auth-code", "redirect-uri");
+
+        assertThat(result.getJwtToken()).isEqualTo("admin-jwt");
+        assertThat(result.getUser().getRole()).isEqualTo(UserRole.ADMIN);
+        verify(jwtTokenService).generateToken(1L, "admin", UserRole.ADMIN);
+    }
+}

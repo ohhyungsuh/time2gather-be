@@ -1,5 +1,6 @@
 package com.cover.time2gather.domain.auth.jwt;
 
+import com.cover.time2gather.domain.user.UserRole;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,5 +97,19 @@ class JwtTokenServiceTest {
         assertThat(claims.get("userId", Long.class)).isEqualTo(userId);
         assertThat(claims.getSubject()).isEqualTo(username);
     }
-}
 
+    @Test
+    void shouldPreserveAdminRoleInToken() {
+        String token = jwtTokenService.generateToken(1L, "admin", UserRole.ADMIN);
+
+        assertThat(jwtTokenService.extractRole(token)).isEqualTo(UserRole.ADMIN);
+        assertThat(jwtTokenService.extractClaims(token).get("role", String.class)).isEqualTo("ADMIN");
+    }
+
+    @Test
+    void shouldTreatLegacyTokenWithoutRoleAsUser() {
+        String token = jwtTokenService.generateToken(1L, "legacy-user");
+
+        assertThat(jwtTokenService.extractRole(token)).isEqualTo(UserRole.USER);
+    }
+}

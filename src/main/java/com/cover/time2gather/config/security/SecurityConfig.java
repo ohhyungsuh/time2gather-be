@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,6 +28,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final FederatedIdentityAuthenticationSuccessHandler federatedIdentityAuthenticationSuccessHandler;
 
     // CORS 설정 상수
@@ -57,6 +59,8 @@ public class SecurityConfig {
 
     // API 엔드포인트 상수
     private static final String AUTH_API_PATTERN = "/api/v1/auth/**";
+    private static final String TEST_TOKEN_PATTERN = "/api/v1/auth/test-token";
+    private static final String ADMIN_API_PATTERN = "/api/v1/admin/**";
     private static final String MEETING_AUTH_PATTERN = "/api/v1/meetings/*/auth/**";
 
     // Public endpoints (인증 불필요)
@@ -126,10 +130,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception ->
-                        exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("OPTIONS", "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests for CORS preflight
                         .requestMatchers(FAVICON_PATTERN).permitAll() // Favicon
                         .requestMatchers(HEALTH_CHECK_PATTERN).permitAll() // Health check for AWS
                         .requestMatchers(ROOT_PATTERN).permitAll() // Root endpoint
@@ -140,14 +145,18 @@ public class SecurityConfig {
                         .requestMatchers(MCP_PATTERN).permitAll()
                         .requestMatchers(SSE_PATTERN).permitAll()
 
+                        // Admin endpoints
+                        .requestMatchers(ADMIN_API_PATTERN).hasRole("ADMIN")
+                        .requestMatchers(TEST_TOKEN_PATTERN).hasRole("ADMIN")
+
                         // Auth endpoints
                         .requestMatchers(AUTH_API_PATTERN).permitAll()
                         .requestMatchers(MEETING_AUTH_PATTERN).permitAll() // Anonymous login
 
                         // Public meeting endpoints (인증 불필요)
-                        .requestMatchers("GET", MEETING_DETAIL_PATTERN).permitAll() // GET /meetings/{code}
-                        .requestMatchers("GET", MEETING_REPORT_PATTERN).permitAll() // GET /meetings/{code}/report
-                        .requestMatchers("POST", MEETING_EXPORT_PATTERN).permitAll() // POST /meetings/{code}/export
+                        .requestMatchers(HttpMethod.GET, MEETING_DETAIL_PATTERN).permitAll() // GET /meetings/{code}
+                        .requestMatchers(HttpMethod.GET, MEETING_REPORT_PATTERN).permitAll() // GET /meetings/{code}/report
+                        .requestMatchers(HttpMethod.POST, MEETING_EXPORT_PATTERN).permitAll() // POST /meetings/{code}/export
 
                         // All other requests require authentication (인증 필요)
                         // - POST /meetings (모임 생성)

@@ -74,7 +74,7 @@ public class AnonymousLoginService {
         }
 
         // JWT 생성
-        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername());
+        String jwtToken = jwtTokenService.generateToken(user.getId(), user.getUsername(), user.getRole());
 
         return new AnonymousLoginResult(
                 jwtToken,
@@ -124,4 +124,3 @@ public class AnonymousLoginService {
         }
     }
 }
-

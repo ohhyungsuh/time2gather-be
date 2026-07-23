@@ -76,6 +76,10 @@ jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-this-in-production
   expiration-ms: 3600000
 
+security:
+  admin:
+    kakao-emails: ${ADMIN_KAKAO_EMAILS:}
+
 # OAuth - Kakao (Client)
 oauth:
   kakao:
@@ -149,4 +153,3 @@ logging:
     org.springframework.security.web: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%t] %-40.40logger{39} : %m%n%wEx"
-

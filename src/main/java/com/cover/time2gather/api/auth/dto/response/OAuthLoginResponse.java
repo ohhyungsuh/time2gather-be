@@ -1,6 +1,7 @@
 package com.cover.time2gather.api.auth.dto.response;
 
 import com.cover.time2gather.domain.auth.service.OAuthLoginResult;
+import com.cover.time2gather.domain.user.UserRole;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -26,6 +27,9 @@ public class OAuthLoginResponse {
     @Schema(description = "OAuth Provider", example = "kakao")
     private final String provider;
 
+    @Schema(description = "사용자 권한", example = "USER")
+    private final String role;
+
     @Schema(description = "신규 사용자 여부", example = "true")
     @JsonProperty("isNewUser")
     private final Boolean isNewUser;
@@ -45,6 +49,7 @@ public class OAuthLoginResponse {
                 loginResult.getEmail(),
                 loginResult.getProfileImageUrl(),
                 provider,
+                loginResult.getUser() != null ? loginResult.getUser().getRole().name() : UserRole.USER.name(),
                 loginResult.isNewUser()
         );
     }
