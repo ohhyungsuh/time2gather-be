@@ -68,6 +68,8 @@ public class MeetingSelectionService {
             selectionRepository.save(selection);
         } else {
             selection.updateSelections(selections);
+            // JPA used dirty checking here; explicit persistence is required by Firestore.
+            selectionRepository.save(selection);
         }
 
         try {

@@ -11,7 +11,6 @@ import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.user.UserRepository;
-import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -58,9 +57,6 @@ class MeetingControllerExportTest {
 
     @MockitoBean
     private JwtTokenService jwtTokenService;
-
-    @MockitoBean
-    private OidcProviderRegistry oidcProviderRegistry;
 
     @MockitoBean
     private UserRepository userRepository;

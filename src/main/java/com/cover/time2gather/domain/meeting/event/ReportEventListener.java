@@ -19,7 +19,7 @@ public class ReportEventListener {
 
     private final ReportWorkerService reportWorkerService;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleReportGenerateEvent(ReportGenerateEvent event) {
         try {
             reportWorkerService.generateReportAsync(event.meetingId(), event.retryCount());

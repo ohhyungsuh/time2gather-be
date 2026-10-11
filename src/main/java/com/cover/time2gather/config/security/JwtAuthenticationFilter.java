@@ -56,7 +56,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         for (Cookie cookie : request.getCookies()) {
-            if ("accessToken".equals(cookie.getName())) {
+            // Keep accepting the legacy cookie during the cutover while issuing
+            // Firebase Hosting's reserved __session cookie for new sessions.
+            if ("__session".equals(cookie.getName()) || "accessToken".equals(cookie.getName())) {
                 return cookie.getValue();
             }
         }

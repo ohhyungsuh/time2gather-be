@@ -47,7 +47,7 @@ class JwtAuthenticationFilterTest {
     void shouldAuthenticateWithValidJwtCookie() throws ServletException, IOException {
         // Given
         String jwtToken = "valid-jwt-token";
-        Cookie cookie = new Cookie("accessToken", jwtToken);
+        Cookie cookie = new Cookie("__session", jwtToken);
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
         when(jwtTokenService.validateToken(jwtToken)).thenReturn(true);
         when(jwtTokenService.extractUserId(jwtToken)).thenReturn(1L);
@@ -73,7 +73,7 @@ class JwtAuthenticationFilterTest {
     void shouldNotAuthenticateWithInvalidToken() throws ServletException, IOException {
         // Given
         String jwtToken = "invalid-jwt-token";
-        Cookie cookie = new Cookie("accessToken", jwtToken);
+        Cookie cookie = new Cookie("__session", jwtToken);
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
         when(jwtTokenService.validateToken(jwtToken)).thenReturn(false);
 

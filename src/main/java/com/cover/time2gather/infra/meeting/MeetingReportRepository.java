@@ -1,11 +1,12 @@
 package com.cover.time2gather.infra.meeting;
 
 import com.cover.time2gather.domain.meeting.MeetingReport;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 
-public interface MeetingReportRepository extends JpaRepository<MeetingReport, Long> {
+/** Persistence port implemented by JPA locally and Firestore in production. */
+public interface MeetingReportRepository {
+
+    <S extends MeetingReport> S save(S entity);
 
     Optional<MeetingReport> findByMeetingId(Long meetingId);
 }

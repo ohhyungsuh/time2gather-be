@@ -5,14 +5,13 @@ import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
 /**
  * Service to extract authenticated user information from SecurityContext.
- * Supports both form login (CustomUserPrincipal) and OAuth2 JWT token authentication.
+ * Supports the application's anonymous JWT authentication.
  */
 @Service
 @RequiredArgsConstructor
@@ -32,26 +31,8 @@ public class AuthenticatedUserService {
             return Optional.empty();
         }
 
-        Object principal = authentication.getPrincipal();
-
-        // Case 1: Form login with CustomUserPrincipal
-        if (principal instanceof CustomUserPrincipal customUser) {
-            return Optional.of(customUser.getUserId());
-        }
-
-        // Case 2: OAuth2 JWT token (from MCP tools called via PlayMCP)
-        if (principal instanceof Jwt jwt) {
-            String email = jwt.getClaimAsString("sub");
-            if (email != null) {
-                return userRepository.findByEmail(email)
-                        .map(User::getId);
-            }
-        }
-
-        // Case 3: String principal (email from JWT)
-        if (principal instanceof String email) {
-            return userRepository.findByEmail(email)
-                    .map(User::getId);
+        if (authentication instanceof JwtAuthentication jwtAuthentication) {
+            return Optional.of(jwtAuthentication.getUserId());
         }
 
         return Optional.empty();

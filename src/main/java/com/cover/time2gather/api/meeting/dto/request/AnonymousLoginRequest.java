@@ -2,6 +2,7 @@ package com.cover.time2gather.api.meeting.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,10 +14,7 @@ import lombok.NoArgsConstructor;
 public class AnonymousLoginRequest {
 
     @NotBlank(message = "{validation.username.required}")
-    @Schema(description = "Username (unique within the meeting scope)", example = "John", required = true)
+    @Size(max = 100)
+    @Schema(description = "Display name (not unique)", example = "John", required = true)
     private String username;
-
-    @NotBlank(message = "{validation.password.required}")
-    @Schema(description = "Password", example = "1234", required = true)
-    private String password;
 }

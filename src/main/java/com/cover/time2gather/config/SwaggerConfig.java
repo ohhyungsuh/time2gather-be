@@ -59,7 +59,7 @@ public class SwaggerConfig implements WebMvcConfigurer {
                         .addSecuritySchemes("cookieAuth", new SecurityScheme()
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.COOKIE)
-                                .name("accessToken")
+                                .name("__session")
                                 .description("JWT Token in HttpOnly Cookie"))
                         .addSecuritySchemes("bearerAuth", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)

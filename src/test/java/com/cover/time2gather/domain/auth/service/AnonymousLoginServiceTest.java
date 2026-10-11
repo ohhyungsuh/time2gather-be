@@ -9,164 +9,45 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AnonymousLoginServiceTest {
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtTokenService jwtTokenService;
-
+    @Mock private UserRepository userRepository;
+    @Mock private JwtTokenService jwtTokenService;
     private AnonymousLoginService anonymousLoginService;
 
     @BeforeEach
     void setUp() {
-        anonymousLoginService = new AnonymousLoginService(userRepository, passwordEncoder, jwtTokenService);
+        anonymousLoginService = new AnonymousLoginService(userRepository, jwtTokenService);
     }
 
     @Test
-    void shouldGenerateMeetingScopedProviderId() {
-        // Given
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-
-        // When
-        String providerId = anonymousLoginService.generateProviderId(meetingCode, username);
-
-        // Then
-        assertThat(providerId).isEqualTo("mtg_abc123:철수");
-    }
-
-    @Test
-    void shouldCreateNewAnonymousUser() {
-        // Given
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password = "1234";
-        String providerId = "mtg_abc123:철수";
-
-        when(passwordEncoder.encode(password)).thenReturn("$2a$10$hashed");
-        when(userRepository.findByProviderAndProviderId(User.AuthProvider.ANONYMOUS, providerId))
-                .thenReturn(Optional.empty());
-
-        User savedUser = User.builder()
-                .username(username)  // 사용자 입력 이름만 저장
-                .password("$2a$10$hashed")
-                .provider(User.AuthProvider.ANONYMOUS)
-                .providerId(providerId)
-                .profileImageUrl("https://ui-avatars.com/api/?name=" + username + "&background=random&size=200")
-                .build();
-
+    void shouldCreatePasswordlessUserWithUnpredictableIdentity() {
+        User savedUser = User.builder().username("철수")
+                .provider(User.AuthProvider.ANONYMOUS).providerId("generated-id").build();
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(jwtTokenService.generateToken(any(), any(), any())).thenReturn("jwt-token");
 
-        // When
-        AnonymousLoginResult result = anonymousLoginService.login(meetingCode, username, password);
+        AnonymousLoginResult result = anonymousLoginService.login("  철수  ");
 
-        // Then
-        assertThat(result).isNotNull();
         assertThat(result.getJwtToken()).isEqualTo("jwt-token");
         assertThat(result.isNewUser()).isTrue();
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-
-        User capturedUser = userCaptor.getValue();
-        assertThat(capturedUser.getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
-        assertThat(capturedUser.getProviderId()).isEqualTo(providerId);
-        assertThat(capturedUser.getUsername()).isEqualTo(username);  // 사용자 입력 이름 검증
-        assertThat(capturedUser.getPassword()).isEqualTo("$2a$10$hashed");
-        assertThat(capturedUser.getEmail()).isNull();  // 이메일은 null
-        assertThat(capturedUser.getProfileImageUrl()).isNotNull();  // 프로필 이미지 생성됨
-
-        verify(passwordEncoder).encode(password);
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getUsername()).isEqualTo("철수");
+        assertThat(captor.getValue().getProfileImageUrl()).isEmpty();
+        assertThat(captor.getValue().getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
+        assertThat(captor.getValue().getProviderId()).isNotBlank();
     }
 
     @Test
-    void shouldLoginExistingUserWithCorrectPassword() {
-        // Given
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password = "1234";
-        String providerId = "mtg_abc123:철수";
-
-        User existingUser = User.builder()
-                .username(username)  // 사용자 입력 이름
-                .password("$2a$10$hashed")
-                .provider(User.AuthProvider.ANONYMOUS)
-                .providerId(providerId)
-                .build();
-
-        when(userRepository.findByProviderAndProviderId(User.AuthProvider.ANONYMOUS, providerId))
-                .thenReturn(Optional.of(existingUser));
-        when(passwordEncoder.matches(password, existingUser.getPassword())).thenReturn(true);
-        when(jwtTokenService.generateToken(any(), any(), any())).thenReturn("jwt-token");
-
-        // When
-        AnonymousLoginResult result = anonymousLoginService.login(meetingCode, username, password);
-
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getJwtToken()).isEqualTo("jwt-token");
-        assertThat(result.isNewUser()).isFalse();
-
-        verify(userRepository, never()).save(any());
-        verify(passwordEncoder).matches(password, existingUser.getPassword());
-    }
-
-    @Test
-    void shouldThrowExceptionWhenPasswordIncorrect() {
-        // Given
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password = "wrong-password";
-        String providerId = "mtg_abc123:철수";
-
-        User existingUser = User.builder()
-                .username(username)  // 사용자 입력 이름
-                .password("$2a$10$hashed")
-                .provider(User.AuthProvider.ANONYMOUS)
-                .providerId(providerId)
-                .build();
-
-        when(userRepository.findByProviderAndProviderId(User.AuthProvider.ANONYMOUS, providerId))
-                .thenReturn(Optional.of(existingUser));
-        when(passwordEncoder.matches(password, existingUser.getPassword())).thenReturn(false);
-
-        // When & Then
-        assertThatThrownBy(() -> anonymousLoginService.login(meetingCode, username, password))
-                .isInstanceOf(InvalidPasswordException.class)
-                .hasMessageContaining("Invalid password");
-
-        verify(userRepository, never()).save(any());
-        verify(jwtTokenService, never()).generateToken(any(), any(), any());
-    }
-
-    @Test
-    void shouldAllowSameUsernameInDifferentMeetings() {
-        // Given
-        String username = "철수";
-
-        // When
-        String providerId1 = anonymousLoginService.generateProviderId("mtg_abc", username);
-        String providerId2 = anonymousLoginService.generateProviderId("mtg_xyz", username);
-
-        // Then
-        assertThat(providerId1).isEqualTo("mtg_abc:철수");
-        assertThat(providerId2).isEqualTo("mtg_xyz:철수");
-        assertThat(providerId1).isNotEqualTo(providerId2);
+    void shouldGenerateDifferentIdentityEveryTime() {
+        assertThat(anonymousLoginService.generateProviderId())
+                .isNotEqualTo(anonymousLoginService.generateProviderId());
     }
 }

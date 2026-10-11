@@ -1,5 +1,6 @@
 server:
-  # AWS ALB/ELB 뒤에서 X-Forwarded-* 헤더를 신뢰하여 HTTPS 리다이렉트 올바르게 처리
+  port: ${PORT:8080}
+  # Firebase Hosting/Cloud Run의 X-Forwarded-* 헤더를 신뢰한다.
   forward-headers-strategy: framework
 
 spring:
@@ -51,54 +52,10 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-  # Spring Security OAuth2 Client (카카오 소셜 로그인 - Authorization Server 연동용)
-  security:
-    oauth2:
-      client:
-        registration:
-          kakao:
-            client-id: ${KAKAO_CLIENT_ID:4ea5e31b7c9fd5131c30f91acac4abb0}
-            client-secret: ${KAKAO_CLIENT_SECRET:Ftk2nyEdPIsgBBJFlqstGO3X1r1teH9L}
-            authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: profile_nickname, profile_image, account_email
-            client-name: Kakao
-            client-authentication-method: client_secret_post
-        provider:
-          kakao:
-            authorization-uri: https://kauth.kakao.com/oauth/authorize
-            token-uri: https://kauth.kakao.com/oauth/token
-            user-info-uri: https://kapi.kakao.com/v2/user/me
-            user-name-attribute: id
-
 # JWT Configuration
 jwt:
-  secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-this-in-production
-  expiration-ms: 3600000
-
-security:
-  admin:
-    kakao-emails: ${ADMIN_KAKAO_EMAILS:}
-
-# OAuth - Kakao (Client)
-oauth:
-  kakao:
-    client-id: ${KAKAO_CLIENT_ID:4ea5e31b7c9fd5131c30f91acac4abb0}
-    client-secret: ${KAKAO_CLIENT_SECRET:Ftk2nyEdPIsgBBJFlqstGO3X1r1teH9L}
-  google:
-    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
-    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
-  redirect:
-    default: ${OAUTH_REDIRECT_URL:https://time2gather.com/login/oauth2/code/kakao}
-
-# OAuth2 Authorization Server (for PlayMCP)
-oauth2:
-  server:
-    issuer: ${OAUTH2_ISSUER:https://api.time2gather.org}
-    playmcp:
-      client-id: ${PLAYMCP_CLIENT_ID:playmcp-time2gather}
-      client-secret: ${PLAYMCP_CLIENT_SECRET:time2gather-mcp-secret-2024}
-      redirect-uri: ${PLAYMCP_REDIRECT_URI:https://playmcp.kakao.com/api/v1/applied-mcps/561/authorize/oauth:callback}
+  secret: ${JWT_SECRET:local-development-secret-must-be-at-least-256-bits-long}
+  expiration-ms: ${JWT_EXPIRATION_MS:31536000000}
 
 # Swagger
 springdoc:

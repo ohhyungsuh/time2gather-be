@@ -54,6 +54,10 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     testRuntimeOnly 'com.h2database:h2'
 
+    // Firestore production persistence (version alignment follows Google's BOM)
+    implementation platform('com.google.cloud:libraries-bom:26.90.0')
+    implementation 'com.google.cloud:google-cloud-firestore'
+
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
@@ -64,11 +68,6 @@ dependencies {
     // validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation("jakarta.validation:jakarta.validation-api:3.1.0")
-
-    // oauth2
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-authorization-server'
-
 
     // jwt
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'

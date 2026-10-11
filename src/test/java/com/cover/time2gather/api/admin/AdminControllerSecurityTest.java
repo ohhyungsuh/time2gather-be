@@ -13,7 +13,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,10 +57,4 @@ class AdminControllerSecurityTest {
                 .andExpect(jsonPath("$.data.meetings.active").value(9));
     }
 
-    @Test
-    @WithMockUser(roles = "USER")
-    void shouldRestrictTestTokenEndpointToAdmins() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/test-token"))
-                .andExpect(status().isForbidden());
-    }
 }

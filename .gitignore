@@ -36,6 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
+### macOS ###
+.DS_Store
+
 ### Environment Variables ###
 .env
 .env.local
@@ -47,4 +50,3 @@ docker-compose.override.yml
 ### Logs ###
 *.log
 logs/
-

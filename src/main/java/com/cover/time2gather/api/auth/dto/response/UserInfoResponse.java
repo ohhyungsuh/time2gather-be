@@ -26,14 +26,11 @@ public class UserInfoResponse {
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg", nullable = true)
     private String profileImageUrl;
 
-    @Schema(description = "인증 제공자", example = "KAKAO")
+    @Schema(description = "인증 제공자", example = "ANONYMOUS")
     private String provider;
 
     @Schema(description = "사용자 권한", example = "USER")
     private String role;
-
-    @Schema(description = "익명 사용자가 로그인한 미팅 코드 (익명 유저만 해당)", example = "mtg_abc123xyz", nullable = true)
-    private String anonymousMeetingCode;
 
     @Schema(description = "가입 일시", example = "2025-11-15T10:00:00")
     private String createdAt;
@@ -48,15 +45,6 @@ public class UserInfoResponse {
      * User 엔티티와 생성한 모임 목록으로부터 UserInfoResponse 생성
      */
     public static UserInfoResponse from(User user, List<Meeting> createdMeetings, List<Meeting> participatedMeetings) {
-        // 익명 사용자인 경우 providerId에서 미팅 코드 추출 (형식: meetingCode:username)
-        String anonymousMeetingCode = null;
-        if (user.getProvider() == User.AuthProvider.ANONYMOUS && user.getProviderId() != null) {
-            String[] parts = user.getProviderId().split(":", 2);
-            if (parts.length > 0) {
-                anonymousMeetingCode = parts[0];
-            }
-        }
-
         return UserInfoResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -64,7 +52,6 @@ public class UserInfoResponse {
                 .profileImageUrl(user.getProfileImageUrl())
                 .provider(user.getProvider().name())
                 .role(user.getRole().name())
-                .anonymousMeetingCode(anonymousMeetingCode)
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
                 .createdMeetings(createdMeetings.stream()
                         .map(CreatedMeetingInfo::from)

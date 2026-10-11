@@ -12,30 +12,28 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.servlet.http.Cookie;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * 익명 로그인 통합 테스트
- * Meeting 스코프 기반 익명 사용자 생성 및 인증 검증
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
 class AnonymousLoginIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
@@ -43,161 +41,78 @@ class AnonymousLoginIntegrationTest {
     }
 
     @Test
-    void shouldCreateNewAnonymousUserInMeetingScope() throws Exception {
-        // Given
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password = "1234";
-
-        AnonymousLoginRequest request = new AnonymousLoginRequest(username, password);
-
-        // When & Then
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
+    void shouldCreatePasswordlessGlobalAnonymousSession() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/anonymous")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new AnonymousLoginRequest("철수"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.username").value("철수"))
                 .andExpect(jsonPath("$.data.isNewUser").value(true))
-                .andExpect(cookie().exists("accessToken"))
-                .andExpect(cookie().httpOnly("accessToken", true));
+                .andExpect(cookie().exists("__session"))
+                .andExpect(cookie().httpOnly("__session", true))
+                .andExpect(cookie().secure("__session", true));
 
-        // Verify user was created in database
-        var users = userRepository.findAll();
+        List<User> users = userRepository.findAll();
         assertThat(users).hasSize(1);
-
-        User user = users.get(0);
-        assertThat(user.getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
-        assertThat(user.getProviderId()).isEqualTo("mtg_abc123:철수");
-        assertThat(user.getUsername()).isEqualTo("철수");
-        assertThat(user.getPassword()).isNotNull();
-        assertThat(user.getPassword()).contains("$2a$"); // BCrypt hash (delegating encoders may add a prefix)
+        assertThat(users.getFirst().getProvider()).isEqualTo(User.AuthProvider.ANONYMOUS);
+        assertThat(users.getFirst().getProfileImageUrl()).isEmpty();
+        assertThat(users.getFirst().getProviderId()).isNotBlank();
     }
 
     @Test
-    void shouldLoginExistingAnonymousUserWithCorrectPassword() throws Exception {
-        // Given - 기존 유저 생성 (첫 로그인)
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password = "1234";
+    void shouldTreatDuplicateDisplayNamesAsDifferentPeople() throws Exception {
+        AnonymousLoginRequest request = new AnonymousLoginRequest("철수");
 
-        AnonymousLoginRequest request = new AnonymousLoginRequest(username, password);
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/api/v1/auth/anonymous")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+        }
 
-        // 첫 번째 로그인 (유저 생성)
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.isNewUser").value(true));
-
-        // When - 두 번째 로그인 (같은 이름, 같은 비밀번호)
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.username").value("철수"))
-                .andExpect(jsonPath("$.data.isNewUser").value(false))  // 기존 유저
-                .andExpect(cookie().exists("accessToken"));
-
-        // Verify no duplicate user was created
-        var users = userRepository.findAll();
-        assertThat(users).hasSize(1);
+        List<User> users = userRepository.findAll();
+        assertThat(users).hasSize(2)
+                .extracting(User::getUsername)
+                .containsOnly("철수");
+        assertThat(users).extracting(User::getProviderId).doesNotHaveDuplicates();
     }
 
     @Test
-    void shouldReturn401WhenPasswordIncorrect() throws Exception {
-        // Given - 유저 생성
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String correctPassword = "1234";
-        String wrongPassword = "wrong";
-
-        AnonymousLoginRequest createRequest = new AnonymousLoginRequest(username, correctPassword);
-
-        // 유저 생성
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
+    void shouldRejectBlankOrOversizedDisplayName() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/anonymous")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest)))
-                .andExpect(status().isOk());
+                        .content("{\"username\":\"   \"}"))
+                .andExpect(status().isBadRequest());
 
-        // When - 잘못된 비밀번호로 로그인 시도
-        AnonymousLoginRequest loginRequest = new AnonymousLoginRequest(username, wrongPassword);
-
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
+        mockMvc.perform(post("/api/v1/auth/anonymous")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").exists());
+                        .content(objectMapper.writeValueAsString(new AnonymousLoginRequest("x".repeat(101)))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldAllowSameUsernameInDifferentMeetings() throws Exception {
-        // Given
-        String username = "철수";
-        String password = "1234";
-
-        String meetingCode1 = "mtg_abc123";
-        String meetingCode2 = "mtg_xyz789";
-
-        AnonymousLoginRequest request = new AnonymousLoginRequest(username, password);
-
-        // When - Meeting A에서 "철수" 생성
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode1)
+    void shouldRenameAnonymousUserWithoutChangingIdentity() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/anonymous")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content("{\"username\":\"기존 이름\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.username").value("철수"))
-                .andExpect(jsonPath("$.data.isNewUser").value(true));
+                .andReturn();
+        Cookie sessionCookie = loginResult.getResponse().getCookie("__session");
+        Long originalUserId = userRepository.findAll().getFirst().getId();
 
-        // When - Meeting B에서도 "철수" 생성 (가능해야 함)
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode2)
+        mockMvc.perform(put("/api/v1/auth/me")
+                        .cookie(sessionCookie)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content("{\"username\":\" 바꾼 이름 \"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.username").value("철수"))
-                .andExpect(jsonPath("$.data.isNewUser").value(true));  // 새 유저
+                .andExpect(jsonPath("$.data.userId").value(originalUserId))
+                .andExpect(jsonPath("$.data.username").value("바꾼 이름"))
+                .andExpect(jsonPath("$.data.isNewUser").value(false))
+                .andExpect(cookie().exists("__session"));
 
-        // Verify 두 개의 별도 User 레코드 생성됨
-        var users = userRepository.findAll();
-        assertThat(users).hasSize(2);
-
-        assertThat(users).extracting(User::getProviderId)
-                .containsExactlyInAnyOrder(
-                        "mtg_abc123:철수",
-                        "mtg_xyz789:철수"
-                );
-    }
-
-    @Test
-    void shouldPreventUsernameCollisionInSameMeeting() throws Exception {
-        // Given - Meeting에서 "철수"가 이미 참여
-        String meetingCode = "mtg_abc123";
-        String username = "철수";
-        String password1 = "1234";
-        String password2 = "5678";
-
-        AnonymousLoginRequest request1 = new AnonymousLoginRequest(username, password1);
-
-        // 첫 번째 "철수" 생성
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request1)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.isNewUser").value(true));
-
-        // When - 다른 비밀번호로 같은 이름 시도
-        AnonymousLoginRequest request2 = new AnonymousLoginRequest(username, password2);
-
-        mockMvc.perform(post("/api/v1/meetings/{meetingCode}/auth/anonymous", meetingCode)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request2)))
-                .andExpect(status().isUnauthorized())  // 비밀번호 불일치
-                .andExpect(jsonPath("$.success").value(false));
-
-        // Verify 여전히 1명의 유저만 존재
-        var users = userRepository.findAll();
-        assertThat(users).hasSize(1);
+        assertThat(userRepository.findAll()).hasSize(1);
+        assertThat(userRepository.findById(originalUserId).orElseThrow().getUsername())
+                .isEqualTo("바꾼 이름");
     }
 }

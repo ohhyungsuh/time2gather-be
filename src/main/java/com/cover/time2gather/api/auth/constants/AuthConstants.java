@@ -13,7 +13,7 @@ public final class AuthConstants {
      * JWT 토큰 쿠키 관련 상수
      */
     public static final class Cookie {
-        public static final String ACCESS_TOKEN_NAME = "accessToken";
+        public static final String ACCESS_TOKEN_NAME = "__session";
         public static final String COOKIE_PATH = "/";
         public static final int MAX_AGE_SECONDS = 3600; // 1 hour
         public static final boolean HTTP_ONLY = true;
@@ -24,4 +24,3 @@ public final class AuthConstants {
         }
     }
 }
-

@@ -35,9 +35,6 @@ public class User {
     private String username;
 
     @Column(length = 255)
-    private String password;
-
-    @Column(length = 255)
     private String email;
 
     @Column(name = "profile_image_url", length = 500)
@@ -63,10 +60,9 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String username, String password, String email,
+    public User(String username, String email,
                 String profileImageUrl, AuthProvider provider, String providerId, UserRole role) {
         this.username = username;
-        this.password = password;
         this.email = email;
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
@@ -82,12 +78,17 @@ public class User {
         this.profileImageUrl = profileImageUrl;
     }
 
+    public void updateUsername(String username) {
+        this.username = username;
+    }
+
     public void promoteToAdmin() {
         this.role = UserRole.ADMIN;
     }
 
     public enum AuthProvider {
         ANONYMOUS,
+        /** Legacy values kept only so old rows and historical tests remain readable. */
         KAKAO,
         GOOGLE
     }

@@ -14,12 +14,15 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class JwtTokenCookie {
 
-    private static final String COOKIE_NAME = "accessToken";
-    private static final int MAX_AGE_SECONDS = 3600; // 1시간
+    // Firebase Hosting forwards only the reserved __session cookie to Cloud Run.
+    private static final String COOKIE_NAME = "__session";
+    private static final int MAX_AGE_SECONDS = 31_536_000; // 1년: 익명 브라우저 소유권 유지
     private static final String COOKIE_PATH = "/";
     private static final boolean HTTP_ONLY = true;
     private static final boolean SECURE = true;
-    private static final String SAME_SITE = "None"; // cross-site 요청 허용 (Secure=true 필수)
+    // Production is same-origin through Firebase Hosting. Lax materially reduces
+    // cross-site request forgery risk while still allowing shared-link navigation.
+    private static final String SAME_SITE = "Lax";
 
     private final Cookie cookie;
 
@@ -64,4 +67,3 @@ public class JwtTokenCookie {
         return header.toString();
     }
 }
-

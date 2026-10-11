@@ -1,19 +1,23 @@
 package com.cover.time2gather.infra.meeting;
 
 import com.cover.time2gather.domain.meeting.MeetingLocation;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
 import java.util.List;
+import java.util.Optional;
 
-public interface MeetingLocationRepository extends JpaRepository<MeetingLocation, Long> {
+/** Persistence port implemented by JPA locally and Firestore in production. */
+public interface MeetingLocationRepository {
 
-    @Query("SELECT l FROM MeetingLocation l WHERE l.meetingId = :meetingId")
-    List<MeetingLocation> selectByMeetingId(@Param("meetingId") Long meetingId);
+    <S extends MeetingLocation> S save(S entity);
 
-    @Query("SELECT l FROM MeetingLocation l WHERE l.meetingId = :meetingId ORDER BY l.displayOrder ASC")
-    List<MeetingLocation> selectByMeetingIdOrderByDisplayOrderAsc(@Param("meetingId") Long meetingId);
+    <S extends MeetingLocation> List<S> saveAll(Iterable<S> entities);
+
+    Optional<MeetingLocation> findById(Long id);
+
+    void delete(MeetingLocation entity);
+
+    List<MeetingLocation> selectByMeetingId(Long meetingId);
+
+    List<MeetingLocation> selectByMeetingIdOrderByDisplayOrderAsc(Long meetingId);
 
     int countByMeetingId(Long meetingId);
 

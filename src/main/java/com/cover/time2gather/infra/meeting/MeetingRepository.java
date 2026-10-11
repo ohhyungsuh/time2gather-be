@@ -1,6 +1,5 @@
 package com.cover.time2gather.infra.meeting;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -10,7 +9,16 @@ import java.util.Optional;
 
 import com.cover.time2gather.domain.meeting.Meeting;
 
-public interface MeetingRepository extends JpaRepository<Meeting, Long> {
+/** Persistence port implemented by JPA locally and Firestore in production. */
+public interface MeetingRepository {
+
+    <S extends Meeting> S save(S entity);
+
+    Optional<Meeting> findById(Long id);
+
+    Page<Meeting> findAll(Pageable pageable);
+
+    long count();
 
     Optional<Meeting> findByMeetingCode(String meetingCode);
 

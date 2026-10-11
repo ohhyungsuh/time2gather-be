@@ -14,7 +14,6 @@ import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.user.UserRepository;
-import com.cover.time2gather.infra.oauth.OidcProviderRegistry;
 import com.cover.time2gather.util.MessageProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -71,9 +70,6 @@ class MeetingSelectionApiTest {
 
     @MockitoBean
     private JwtTokenService jwtTokenService;
-
-    @MockitoBean
-    private OidcProviderRegistry oidcProviderRegistry;
 
     @MockitoBean
     private UserRepository userRepository;

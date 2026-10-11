@@ -1,12 +1,29 @@
 package com.cover.time2gather.domain.user;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+/** Persistence port implemented by JPA locally and Firestore in production. */
+public interface UserRepository {
+
+    <S extends User> S save(S entity);
+
+    Optional<User> findById(Long id);
+
+    boolean existsById(Long id);
+
+    List<User> findAllById(Iterable<Long> ids);
+
+    List<User> findAll();
+
+    void deleteAll();
+
+    Page<User> findAll(Pageable pageable);
+
+    long count();
 
     Optional<User> findByProviderAndProviderId(User.AuthProvider provider, String providerId);
 
