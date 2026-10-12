@@ -24,6 +24,11 @@ public class FirestoreMeetingUserSelectionRepository extends FirestoreRepository
     }
 
     @Override
+    public void delete(MeetingUserSelection entity) {
+        deleteEntity(entity);
+    }
+
+    @Override
     public Optional<MeetingUserSelection> findByMeetingIdAndUserId(Long meetingId, Long userId) {
         return queryEquals("meetingId", meetingId, "userId", userId).stream().findFirst();
     }

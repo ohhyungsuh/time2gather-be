@@ -127,6 +127,37 @@ public class MeetingService {
     }
 
     @Transactional
+    public void updateAvailableDates(String meetingCode, Long userId, List<String> dates) {
+        Meeting meeting = getMeetingByCode(meetingCode);
+        if (!meeting.getHostUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
+        }
+
+        meeting.updateAvailableDates(dates);
+        Set<String> retainedDates = meeting.getAvailableDates().keySet();
+
+        for (MeetingUserSelection selection : selectionRepository.findAllByMeetingId(meeting.getId())) {
+            Map<String, int[]> retainedSelections = selection.getSelections().entrySet().stream()
+                    .filter(entry -> retainedDates.contains(entry.getKey()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> Arrays.copyOf(entry.getValue(), entry.getValue().length),
+                            (first, second) -> first,
+                            LinkedHashMap::new
+                    ));
+
+            if (retainedSelections.isEmpty()) {
+                selectionRepository.delete(selection);
+            } else {
+                selection.updateSelections(retainedSelections);
+                selectionRepository.save(selection);
+            }
+        }
+
+        meetingRepository.save(meeting);
+    }
+
+    @Transactional
     public void confirmMeeting(Meeting meeting, LocalDate date, Integer slotIndex) {
         confirmMeeting(meeting, date, slotIndex, null);
     }

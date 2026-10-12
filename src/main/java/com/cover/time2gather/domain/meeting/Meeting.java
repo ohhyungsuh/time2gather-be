@@ -13,6 +13,10 @@ import org.hibernate.annotations.Type;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -227,6 +231,45 @@ public class Meeting extends BaseEntity {
         this.confirmedDate = null;
         this.confirmedSlotIndex = null;
         this.confirmedAt = null;
+    }
+
+    public void updateAvailableDates(List<String> dates) {
+        if (isConfirmed()) {
+            throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
+        }
+        if (dates == null || dates.isEmpty()) {
+            throw new BusinessException(ErrorCode.MEETING_DATE_REQUIRED);
+        }
+        if (dates.size() > 31) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        int[] defaultSlots = availableDates.values().stream()
+                .findFirst()
+                .map(slots -> slots == null ? new int[0] : Arrays.copyOf(slots, slots.length))
+                .orElseGet(() -> new int[0]);
+        Map<String, int[]> updatedDates = new LinkedHashMap<>();
+
+        for (String date : dates) {
+            try {
+                LocalDate.parse(date);
+            } catch (DateTimeParseException | NullPointerException exception) {
+                throw new BusinessException(ErrorCode.MEETING_DATE_FORMAT_INVALID, date);
+            }
+
+            int[] slots = availableDates.getOrDefault(date, defaultSlots);
+            if (slots == null) {
+                slots = new int[0];
+            }
+            updatedDates.put(date, Arrays.copyOf(slots, slots.length));
+        }
+
+        this.availableDates = updatedDates;
+        if (selectionType == SelectionType.TIME) {
+            validateTimeSlots();
+        } else {
+            validateAllDayDates();
+        }
     }
 
     // 장소 투표 관련 메서드

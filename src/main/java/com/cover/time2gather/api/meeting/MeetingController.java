@@ -6,6 +6,7 @@ import com.cover.time2gather.api.meeting.dto.request.AddLocationRequest;
 import com.cover.time2gather.api.meeting.dto.request.ConfirmLocationRequest;
 import com.cover.time2gather.api.meeting.dto.request.CreateMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpsertUserSelectionRequest;
+import com.cover.time2gather.api.meeting.dto.request.UpdateAvailableDatesRequest;
 import com.cover.time2gather.api.meeting.dto.request.VoteLocationsRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
 import com.cover.time2gather.api.meeting.dto.response.LocationResponse;
@@ -87,6 +88,20 @@ public class MeetingController {
 
         // 도메인 → DTO 변환
         return ApiResponse.success(MeetingDetailResponse.from(detailData));
+    }
+
+    @PutMapping("/{meetingCode}/available-dates")
+    @Operation(
+        summary = "Update voting dates",
+        description = "Only the meeting host can update voting dates before confirmation. Votes for removed dates are discarded."
+    )
+    public ApiResponse<Void> updateAvailableDates(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody UpdateAvailableDatesRequest request
+    ) {
+        meetingService.updateAvailableDates(meetingCode, authentication.getUserId(), request.getDates());
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/{meetingCode}/selections")

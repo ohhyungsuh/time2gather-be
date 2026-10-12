@@ -10,6 +10,8 @@ public interface MeetingUserSelectionRepository {
 
     <S extends MeetingUserSelection> S save(S entity);
 
+    void delete(MeetingUserSelection entity);
+
     Optional<MeetingUserSelection> findByMeetingIdAndUserId(Long meetingId, Long userId);
 
     List<MeetingUserSelection> findAllByMeetingId(Long meetingId);
