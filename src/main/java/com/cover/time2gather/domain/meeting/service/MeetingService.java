@@ -199,12 +199,13 @@ public class MeetingService {
                 .map(MeetingUserSelection::getUserId)
                 .collect(Collectors.toSet());
 
-        // 한 번에 모든 사용자 정보 조회
-        Map<Long, User> userMap = userRepository.findAllById(participantIds).stream()
+        // 참여자와 방장을 한 번에 조회
+        Set<Long> userIds = new HashSet<>(participantIds);
+        userIds.add(meeting.getHostUserId());
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
 
-        // 방장 정보 조회 (참여자 목록과 별도)
-        User host = userRepository.findById(meeting.getHostUserId())
+        User host = Optional.ofNullable(userMap.get(meeting.getHostUserId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<User> participants = participantIds.stream()

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -34,13 +35,19 @@ public class UserService {
      * - 최근 참여순(updatedAt 기준)으로 정렬
      */
     public List<Meeting> getParticipatedMeetings(Long userId) {
-        return meetingUserSelectionRepository.findAllByUserId(userId)
+        List<Long> meetingIds = meetingUserSelectionRepository.findAllByUserId(userId)
                 .stream()
                 .sorted((s1, s2) -> s2.getUpdatedAt().compareTo(s1.getUpdatedAt())) // 최근 참여순 정렬
-                .map(selection -> meetingRepository.findById(selection.getMeetingId()).orElse(null))
-                .filter(Objects::nonNull)
+                .map(selection -> selection.getMeetingId())
                 .distinct()
+                .toList();
+
+        Map<Long, Meeting> meetingsById = meetingRepository.findAllByIdIn(meetingIds).stream()
+                .collect(Collectors.toMap(Meeting::getId, meeting -> meeting));
+
+        return meetingIds.stream()
+                .map(meetingsById::get)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 }
-

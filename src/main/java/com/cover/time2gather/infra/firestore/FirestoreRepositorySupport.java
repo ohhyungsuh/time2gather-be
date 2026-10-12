@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
@@ -21,8 +22,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -83,11 +87,36 @@ abstract class FirestoreRepositorySupport<T> {
     }
 
     protected List<T> findEntitiesByIds(Iterable<Long> ids) {
-        List<T> result = new ArrayList<>();
+        LinkedHashSet<Long> requestedIds = new LinkedHashSet<>();
         for (Long id : ids) {
-            findEntityById(id).ifPresent(result::add);
+            if (id != null) {
+                requestedIds.add(id);
+            }
         }
-        return result;
+        if (requestedIds.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            DocumentReference[] references = requestedIds.stream()
+                    .map(id -> collection.document(id.toString()))
+                    .toArray(DocumentReference[]::new);
+            Map<Long, T> entitiesById = new HashMap<>();
+            for (DocumentSnapshot document : collection.getFirestore().getAll(references)
+                    .get(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                if (document.exists()) {
+                    T entity = fromDocument(document);
+                    entitiesById.put(readLongField(entity, "id"), entity);
+                }
+            }
+
+            return requestedIds.stream()
+                    .map(entitiesById::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+        } catch (Exception e) {
+            throw persistenceFailure("batch read", e);
+        }
     }
 
     protected List<T> allEntities() {
