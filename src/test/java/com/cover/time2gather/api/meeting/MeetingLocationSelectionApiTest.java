@@ -100,6 +100,32 @@ class MeetingLocationSelectionApiTest {
         }
 
         @Test
+        @DisplayName("JavaScript 안전 범위를 넘는 문자열 장소 ID로 투표")
+        void shouldVoteWithStringLocationIdWithoutPrecisionLoss() throws Exception {
+            Long userId = 1L;
+            setAuthentication(userId, "user@test.com");
+
+            String meetingCode = "mtg_test123";
+            long unsafeJavaScriptId = 1_812_727_673_302_634_031L;
+            Map<String, Object> request = Map.of(
+                "locationIds",
+                List.of(Long.toString(unsafeJavaScriptId))
+            );
+
+            mockMvc.perform(put("/api/v1/meetings/{code}/location-selections", meetingCode)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+            verify(locationService).voteLocations(
+                eq(meetingCode),
+                eq(userId),
+                eq(List.of(unsafeJavaScriptId))
+            );
+        }
+
+        @Test
         @DisplayName("빈 배열로 투표하면 기존 투표 삭제 (스킵)")
         void shouldClearVotesWhenEmptyArray() throws Exception {
             // Given
@@ -167,23 +193,24 @@ class MeetingLocationSelectionApiTest {
     class GetMyLocationSelections {
 
         @Test
-        @DisplayName("사용자의 장소 투표를 조회하면 성공")
+        @DisplayName("사용자의 장소 투표를 정밀도 손실 없는 문자열 ID로 조회")
         void shouldGetMyLocationSelectionsSuccessfully() throws Exception {
             // Given
             Long userId = 1L;
             setAuthentication(userId, "user@test.com");
 
             String meetingCode = "mtg_test123";
+            long unsafeJavaScriptId = 1_812_727_673_302_634_031L;
 
             when(locationService.selectUserLocationIds(eq(meetingCode), eq(userId)))
-                .thenReturn(List.of(1L, 2L));
+                .thenReturn(List.of(unsafeJavaScriptId, 2L));
 
             // When & Then
             mockMvc.perform(get("/api/v1/meetings/{code}/location-selections", meetingCode))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.locationIds[0]").value(1))
-                .andExpect(jsonPath("$.data.locationIds[1]").value(2));
+                .andExpect(jsonPath("$.data.locationIds[0]").value(Long.toString(unsafeJavaScriptId)))
+                .andExpect(jsonPath("$.data.locationIds[1]").value("2"));
         }
 
         @Test

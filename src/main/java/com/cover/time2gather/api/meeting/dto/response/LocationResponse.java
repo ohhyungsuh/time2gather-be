@@ -1,6 +1,8 @@
 package com.cover.time2gather.api.meeting.dto.response;
 
 import com.cover.time2gather.domain.meeting.MeetingLocation;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,6 +13,7 @@ import lombok.Getter;
 public class LocationResponse {
 
     @Schema(description = "Location ID", example = "1")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @Schema(description = "Location name", example = "Gangnam Station Starbucks")

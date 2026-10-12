@@ -4,6 +4,8 @@ import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.meeting.vo.TimeSlot;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -361,6 +363,7 @@ public class MeetingDetailResponse {
 	@Schema(description = "Location information")
 	public static class LocationInfo {
 		@Schema(description = "Location ID", example = "1")
+		@JsonSerialize(using = ToStringSerializer.class)
 		private Long id;
 
 		@Schema(description = "Location name", example = "Gangnam Station Starbucks")
