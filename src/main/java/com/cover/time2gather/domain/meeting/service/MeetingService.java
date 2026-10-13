@@ -94,14 +94,15 @@ public class MeetingService {
 
         // 장소 후보 저장
         if (enableLocationVote && locations != null) {
+            List<MeetingLocation> meetingLocations = new ArrayList<>(locations.size());
             for (int i = 0; i < locations.size(); i++) {
-                MeetingLocation location = MeetingLocation.create(
+                meetingLocations.add(MeetingLocation.create(
                         savedMeeting.getId(),
                         locations.get(i),
                         i  // displayOrder
-                );
-                locationRepository.save(location);
+                ));
             }
+            locationRepository.saveAll(meetingLocations);
         }
 
         return savedMeeting;

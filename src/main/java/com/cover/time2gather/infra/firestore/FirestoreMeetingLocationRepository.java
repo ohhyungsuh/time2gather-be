@@ -6,7 +6,6 @@ import com.google.cloud.firestore.Firestore;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -27,9 +26,7 @@ public class FirestoreMeetingLocationRepository extends FirestoreRepositorySuppo
 
     @Override
     public <S extends MeetingLocation> List<S> saveAll(Iterable<S> entities) {
-        List<S> saved = new ArrayList<>();
-        entities.forEach(entity -> saved.add(saveEntity(entity)));
-        return saved;
+        return saveEntities(entities);
     }
 
     @Override

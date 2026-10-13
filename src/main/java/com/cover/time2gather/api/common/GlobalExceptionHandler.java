@@ -40,7 +40,9 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(e.getHttpStatus())
-                .body(ApiResponse.error(message));
+                .body(e.hasErrorCode()
+                        ? ApiResponse.error(message, e.getErrorCode().getMessageKey())
+                        : ApiResponse.error(message));
     }
 
     /**

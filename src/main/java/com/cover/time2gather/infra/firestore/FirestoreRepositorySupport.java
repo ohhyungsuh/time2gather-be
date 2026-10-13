@@ -13,6 +13,7 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.WriteBatch;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -66,6 +67,31 @@ abstract class FirestoreRepositorySupport<T> {
             return entity;
         } catch (Exception e) {
             throw persistenceFailure("save", e);
+        }
+    }
+
+    protected <S extends T> List<S> saveEntities(Iterable<S> entities) {
+        List<S> saved = new ArrayList<>();
+        entities.forEach(saved::add);
+        if (saved.isEmpty()) {
+            return saved;
+        }
+
+        try {
+            WriteBatch batch = collection.getFirestore().batch();
+            for (S entity : saved) {
+                Long id = readLongField(entity, "id");
+                if (id == null) {
+                    id = newId();
+                    writeField(entity, "id", id);
+                }
+                touchTimestamps(entity);
+                batch.set(collection.document(id.toString()), mapper.convertValue(entity, MAP_TYPE));
+            }
+            batch.commit().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            return saved;
+        } catch (Exception e) {
+            throw persistenceFailure("batch save", e);
         }
     }
 
