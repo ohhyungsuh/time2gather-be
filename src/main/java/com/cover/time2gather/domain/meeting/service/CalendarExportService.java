@@ -2,7 +2,6 @@ package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.exception.BusinessException;
 import com.cover.time2gather.domain.exception.ErrorCode;
-import com.cover.time2gather.domain.meeting.vo.TimeSlot;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
@@ -19,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -66,8 +66,8 @@ public class CalendarExportService {
                 event = new VEvent(date, date.plusDays(1), meetingTitle);
             } else {
                 // 특정 시간대
-                TimeSlot ts = TimeSlot.fromTimeString(timeSlot, intervalMinutes);
-                ZonedDateTime startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
+                LocalTime startTime = LocalTime.parse(timeSlot);
+                ZonedDateTime startDateTime = date.atTime(startTime).atZone(zoneId);
                 ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
                 event = new VEvent(startDateTime, endDateTime, meetingTitle);
             }

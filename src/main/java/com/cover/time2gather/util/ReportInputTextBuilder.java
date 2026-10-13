@@ -172,7 +172,10 @@ public class ReportInputTextBuilder {
         StringBuilder sb = new StringBuilder();
         String dateWithDayOfWeek = formatDateWithDayOfWeek(confirmedDate.toString());
 
-        if (meeting.getSelectionType() == SelectionType.ALL_DAY) {
+        if (meeting.getConfirmedTime() != null) {
+            sb.append("✅ 확정된 시간: ").append(dateWithDayOfWeek).append(" ")
+                    .append(meeting.getConfirmedTime()).append("\n\n");
+        } else if (meeting.getSelectionType() == SelectionType.ALL_DAY) {
             sb.append("✅ 확정된 날짜: ").append(dateWithDayOfWeek).append("\n\n");
         } else {
             Integer confirmedSlotIndex = meeting.getConfirmedSlotIndex();

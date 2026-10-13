@@ -5,6 +5,8 @@ import com.cover.time2gather.domain.exception.ErrorCode;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.time.LocalTime;
+
 /**
  * 시간 슬롯을 나타내는 값 객체
  * 슬롯 간격(intervalMinutes)에 따라 하루의 슬롯 개수가 결정됨
@@ -114,6 +116,10 @@ public class TimeSlot {
         return String.format("%02d:%02d", hour, minute);
     }
 
+    public LocalTime toLocalTime() {
+        return LocalTime.of(getHour(), getMinute());
+    }
+
     /**
      * 시간 계산
      * @return 시 (0~23)
@@ -178,4 +184,3 @@ public class TimeSlot {
         return toTimeString();
     }
 }
-

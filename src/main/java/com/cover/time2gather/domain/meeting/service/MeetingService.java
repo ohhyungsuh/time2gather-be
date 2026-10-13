@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -188,6 +189,12 @@ public class MeetingService {
             meeting.cancelLocationConfirmation();
         }
 
+        meetingRepository.save(meeting);
+    }
+
+    @Transactional
+    public void updateConfirmedTime(Meeting meeting, LocalTime time) {
+        meeting.updateConfirmedTime(time);
         meetingRepository.save(meeting);
     }
 

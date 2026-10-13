@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -125,6 +126,27 @@ class MeetingServiceConfirmationTest {
         assertThat(meeting.isConfirmed()).isFalse();
         assertThat(meeting.isLocationConfirmed()).isFalse();
         verify(meetingRepository, org.mockito.Mockito.times(2)).save(meeting);
+    }
+
+    @Test
+    void shouldSetExactTimeAfterConfirmingDateOnlyMeeting() {
+        Meeting meeting = Meeting.create(
+                "mtg_dateonly",
+                "날짜만 정한 미팅",
+                null,
+                1L,
+                "Asia/Seoul",
+                SelectionType.ALL_DAY,
+                60,
+                Map.of("2024-02-15", new int[0]),
+                false
+        );
+        meeting.confirm(CONFIRMED_DATE, null);
+
+        meetingService.updateConfirmedTime(meeting, LocalTime.of(18, 30));
+
+        assertThat(meeting.getConfirmedTime()).isEqualTo(LocalTime.of(18, 30));
+        verify(meetingRepository).save(meeting);
     }
 
     private Meeting createMeeting(boolean locationVoteEnabled) {

@@ -50,11 +50,12 @@ public class MeetingDetailResponse {
 			: null;
 		String confirmedTime = null;
 		if (meeting.getConfirmedDate() != null) {
-			Integer confirmedSlotIndex = meeting.getConfirmedSlotIndex();
-			if (confirmedSlotIndex == null || confirmedSlotIndex == -1) {
+			if (meeting.getConfirmedTime() != null) {
+				confirmedTime = meeting.getConfirmedTime().toString();
+			} else if (meeting.getConfirmedSlotIndex() == null || meeting.getConfirmedSlotIndex() == -1) {
 				confirmedTime = "ALL_DAY";
 			} else {
-				confirmedTime = TimeSlot.fromIndex(confirmedSlotIndex, intervalMinutes).toTimeString();
+				confirmedTime = TimeSlot.fromIndex(meeting.getConfirmedSlotIndex(), intervalMinutes).toTimeString();
 			}
 		}
 

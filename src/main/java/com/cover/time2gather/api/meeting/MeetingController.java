@@ -7,6 +7,7 @@ import com.cover.time2gather.api.meeting.dto.request.ConfirmLocationRequest;
 import com.cover.time2gather.api.meeting.dto.request.CreateMeetingRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpsertUserSelectionRequest;
 import com.cover.time2gather.api.meeting.dto.request.UpdateAvailableDatesRequest;
+import com.cover.time2gather.api.meeting.dto.request.UpdateConfirmedTimeRequest;
 import com.cover.time2gather.api.meeting.dto.request.VoteLocationsRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
 import com.cover.time2gather.api.meeting.dto.response.LocationResponse;
@@ -298,16 +299,25 @@ public class MeetingController {
             targetDate = validateAndParseDate(date, meeting);
             timeString = convertSlotIndexToTimeString(slotIndex, meeting.getIntervalMinutes());
         } else {
-            // 파라미터가 없으면 기존 로직 (bestSlot 첫번째)
-            MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
+            if (meeting.isConfirmed()) {
+                targetDate = meeting.getConfirmedDate().toString();
+                timeString = meeting.getConfirmedTime() != null
+                        ? meeting.getConfirmedTime().toString()
+                        : meeting.getConfirmedSlotIndex() == null
+                                ? "ALL_DAY"
+                                : convertSlotIndexToTimeString(meeting.getConfirmedSlotIndex(), meeting.getIntervalMinutes());
+            } else {
+                // 확정 전에는 가장 많은 참여자가 가능한 첫 번째 후보를 사용한다.
+                MeetingDetailData detailData = meetingService.getMeetingDetailData(meetingCode, null);
 
-            if (detailData.getSummary().getBestSlots().isEmpty()) {
-                throw new BusinessException(ErrorCode.MEETING_NO_PARTICIPANTS);
+                if (detailData.getSummary().getBestSlots().isEmpty()) {
+                    throw new BusinessException(ErrorCode.MEETING_NO_PARTICIPANTS);
+                }
+
+                MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
+                targetDate = bestSlot.getDate();
+                timeString = convertSlotIndexToTimeString(bestSlot.getSlotIndex(), meeting.getIntervalMinutes());
             }
-
-            MeetingDetailData.BestSlot bestSlot = detailData.getSummary().getBestSlots().getFirst();
-            targetDate = bestSlot.getDate();
-            timeString = convertSlotIndexToTimeString(bestSlot.getSlotIndex(), meeting.getIntervalMinutes());
         }
 
         // ICS 파일 생성
@@ -393,6 +403,22 @@ public class MeetingController {
         // 취소 처리 (도메인 메서드에서 검증 수행)
         meetingService.cancelConfirmation(meeting);
 
+        return ApiResponse.success(null);
+    }
+
+    @PutMapping("/{meetingCode}/confirmed-time")
+    @Operation(summary = "Update confirmed meeting time", description = "The host can set or change the exact time after a date has been confirmed.")
+    public ApiResponse<Void> updateConfirmedTime(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody UpdateConfirmedTimeRequest request
+    ) {
+        Meeting meeting = meetingService.getMeetingByCode(meetingCode);
+        if (!meeting.getHostUserId().equals(authentication.getUserId())) {
+            throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
+        }
+
+        meetingService.updateConfirmedTime(meeting, request.getTime());
         return ApiResponse.success(null);
     }
 

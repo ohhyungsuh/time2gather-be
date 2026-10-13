@@ -42,4 +42,20 @@ class CalendarExportServiceTest {
                 .contains("DTSTART;TZID=Asia/Seoul:20261024T183000")
                 .contains("DTEND;TZID=Asia/Seoul:20261024T190000");
     }
+
+    @Test
+    void exactConfirmedTimeDoesNotNeedToAlignWithVotingInterval() {
+        String ics = new String(calendarExportService.createIcsFile(
+                "정확한 시간 약속",
+                null,
+                "2026-10-24",
+                "18:30",
+                "Asia/Seoul",
+                60
+        ), StandardCharsets.UTF_8);
+
+        assertThat(ics)
+                .contains("DTSTART;TZID=Asia/Seoul:20261024T183000")
+                .contains("DTEND;TZID=Asia/Seoul:20261024T193000");
+    }
 }

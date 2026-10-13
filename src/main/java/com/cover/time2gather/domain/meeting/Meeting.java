@@ -13,6 +13,7 @@ import org.hibernate.annotations.Type;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -77,6 +78,9 @@ public class Meeting extends BaseEntity {
 
     @Column(name = "confirmed_slot_index")
     private Integer confirmedSlotIndex;
+
+    @Column(name = "confirmed_time")
+    private LocalTime confirmedTime;
 
     @Column(name = "confirmed_at")
     private LocalDateTime confirmedAt;
@@ -194,13 +198,27 @@ public class Meeting extends BaseEntity {
 
         if (selectionType == SelectionType.TIME) {
             validateSlotIndex(dateString, slotIndex);
+            this.confirmedTime = TimeSlot.fromIndex(slotIndex, intervalMinutes).toLocalTime();
         } else {
             // ALL_DAY 타입인 경우 slotIndex는 무시되거나 null이어야 함
             slotIndex = null;
+            this.confirmedTime = null;
         }
 
         this.confirmedDate = date;
         this.confirmedSlotIndex = slotIndex;
+        this.confirmedAt = LocalDateTime.now();
+    }
+
+    public void updateConfirmedTime(LocalTime time) {
+        if (!isConfirmed()) {
+            throw new BusinessException(ErrorCode.MEETING_NOT_CONFIRMED);
+        }
+        if (time == null) {
+            throw new BusinessException(ErrorCode.MEETING_TIME_REQUIRED);
+        }
+
+        this.confirmedTime = time;
         this.confirmedAt = LocalDateTime.now();
     }
 
@@ -230,6 +248,7 @@ public class Meeting extends BaseEntity {
 
         this.confirmedDate = null;
         this.confirmedSlotIndex = null;
+        this.confirmedTime = null;
         this.confirmedAt = null;
     }
 
