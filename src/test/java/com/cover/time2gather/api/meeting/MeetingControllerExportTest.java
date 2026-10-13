@@ -1,5 +1,6 @@
 package com.cover.time2gather.api.meeting;
 
+import com.cover.time2gather.api.common.GlobalExceptionHandler;
 import com.cover.time2gather.config.JpaAuditingConfig;
 import com.cover.time2gather.domain.auth.jwt.JwtTokenService;
 import com.cover.time2gather.domain.meeting.Meeting;
@@ -11,6 +12,7 @@ import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
 import com.cover.time2gather.domain.meeting.service.MeetingSelectionService;
 import com.cover.time2gather.domain.meeting.service.MeetingService;
 import com.cover.time2gather.domain.user.UserRepository;
+import com.cover.time2gather.util.MessageProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -35,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     excludeAutoConfiguration = JpaAuditingConfig.class
 )
 @AutoConfigureMockMvc(addFilters = false)
+@Import({GlobalExceptionHandler.class, MessageProvider.class})
 class MeetingControllerExportTest {
 
     @Autowired

@@ -59,23 +59,19 @@ public class CalendarExportService {
             LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
             ZoneId zoneId = ZoneId.of(timezone);
 
-            // 시작/종료 시간 계산
-            ZonedDateTime startDateTime;
-            ZonedDateTime endDateTime;
-
+            VEvent event;
             if ("ALL_DAY".equals(timeSlot)) {
-                // 종일 일정
-                startDateTime = date.atStartOfDay(zoneId);
-                endDateTime = date.plusDays(1).atStartOfDay(zoneId);
+                // 종일 일정은 자정 시간대가 아니라 RFC 5545 DATE 값으로 생성해야
+                // iOS/Google Calendar에서 '종일' 일정으로 정확히 인식한다.
+                event = new VEvent(date, date.plusDays(1), meetingTitle);
             } else {
                 // 특정 시간대
                 TimeSlot ts = TimeSlot.fromTimeString(timeSlot, intervalMinutes);
-                startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
-                endDateTime = startDateTime.plusMinutes(intervalMinutes);
+                ZonedDateTime startDateTime = date.atTime(ts.getHour(), ts.getMinute()).atZone(zoneId);
+                ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
+                event = new VEvent(startDateTime, endDateTime, meetingTitle);
             }
 
-            // VEvent 생성
-            VEvent event = new VEvent(startDateTime, endDateTime, meetingTitle);
             event.add(uidGenerator.generateUid());
 
             if (meetingDescription != null && !meetingDescription.isBlank()) {
@@ -116,4 +112,3 @@ public class CalendarExportService {
         }
     }
 }
-
