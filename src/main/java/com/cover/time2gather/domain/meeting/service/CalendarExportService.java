@@ -2,6 +2,7 @@ package com.cover.time2gather.domain.meeting.service;
 
 import com.cover.time2gather.domain.exception.BusinessException;
 import com.cover.time2gather.domain.exception.ErrorCode;
+import com.cover.time2gather.domain.meeting.MeetingTimeZone;
 import lombok.extern.slf4j.Slf4j;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.model.Calendar;
@@ -19,7 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -57,7 +57,7 @@ public class CalendarExportService {
         try {
             // 날짜 파싱
             LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
-            ZoneId zoneId = ZoneId.of(timezone);
+            MeetingTimeZone.zone(timezone);
 
             VEvent event;
             if ("ALL_DAY".equals(timeSlot)) {
@@ -67,9 +67,11 @@ public class CalendarExportService {
             } else {
                 // 특정 시간대
                 LocalTime startTime = LocalTime.parse(timeSlot);
-                ZonedDateTime startDateTime = date.atTime(startTime).atZone(zoneId);
+                ZonedDateTime startDateTime = MeetingTimeZone.resolve(date, startTime, timezone);
                 ZonedDateTime endDateTime = startDateTime.plusMinutes(intervalMinutes);
-                event = new VEvent(startDateTime, endDateTime, meetingTitle);
+                // UTC instants are portable across calendar clients without relying on
+                // an omitted VTIMEZONE component or their local DST database.
+                event = new VEvent(startDateTime.toInstant(), endDateTime.toInstant(), meetingTitle);
             }
 
             event.add(uidGenerator.generateUid());
@@ -89,6 +91,8 @@ public class CalendarExportService {
             // ICS 파일 생성
             return outputCalendar(calendar);
 
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to create ICS file", e);
             throw new BusinessException(ErrorCode.CALENDAR_EXPORT_FAILED, e);

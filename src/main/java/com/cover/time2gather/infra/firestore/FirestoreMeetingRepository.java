@@ -31,13 +31,28 @@ public class FirestoreMeetingRepository extends FirestoreRepositorySupport<Meeti
     }
 
     @Override
+    public <S extends Meeting> S saveWithHostName(S entity, String hostName) {
+        if (entity.getId() != null) throw new IllegalArgumentException("Initial host name requires a new meeting");
+        return saveEntity(entity, (batch, meeting) -> {
+            var root = firestore().collection("meetingNames").document(meeting.getId().toString());
+            batch.set(root, java.util.Map.of("version", System.currentTimeMillis()));
+            batch.set(root.collection("users").document(meeting.getHostUserId().toString()), java.util.Map.of("name", hostName));
+        });
+    }
+
+    @Override
     public Optional<Meeting> findById(Long id) {
         return findEntityById(id);
     }
 
     @Override
     public Page<Meeting> findAll(Pageable pageable) {
-        return page(newestFirst(allEntities()), pageable);
+        return newestPage(pageable);
+    }
+
+    @Override
+    public Page<Meeting> findAll(Pageable pageable, String cursor) {
+        return newestPage(pageable, cursor);
     }
 
     @Override
@@ -82,12 +97,27 @@ public class FirestoreMeetingRepository extends FirestoreRepositorySupport<Meeti
 
     @Override
     public long countByIsActiveTrue() {
-        return countMatching(meeting -> Boolean.TRUE.equals(meeting.getIsActive()));
+        return countEqualTo("isActive", true);
     }
 
     @Override
     public long countByConfirmedDateIsNotNull() {
-        return countMatching(meeting -> meeting.getConfirmedDate() != null);
+        return countNotNull("confirmedDate");
+    }
+
+    @Override
+    public Page<Meeting> findConfirmed(String query, Pageable pageable) {
+        String keyword = normalize(query);
+        // Read only confirmed documents using the existing single-field index.
+        // Sort locally to preserve creation order without requiring a composite index.
+        var matches = queryNotNull("confirmedDate").stream()
+                .filter(meeting -> normalize(meeting.getTitle()).contains(keyword)
+                        || normalize(meeting.getMeetingCode()).contains(keyword))
+                .sorted(Comparator.comparing(Meeting::getCreatedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Meeting::getId, Comparator.reverseOrder()))
+                .toList();
+        return page(matches, pageable);
     }
 
     @Override
@@ -95,11 +125,8 @@ public class FirestoreMeetingRepository extends FirestoreRepositorySupport<Meeti
             String title, String meetingCode, Pageable pageable) {
         String titleQuery = normalize(title);
         String codeQuery = normalize(meetingCode);
-        List<Meeting> matches = newestFirst(allEntities().stream()
-                .filter(meeting -> normalize(meeting.getTitle()).contains(titleQuery)
-                        || normalize(meeting.getMeetingCode()).contains(codeQuery))
-                .toList());
-        return page(matches, pageable);
+        return searchNewest(meeting -> normalize(meeting.getTitle()).contains(titleQuery)
+                || normalize(meeting.getMeetingCode()).contains(codeQuery), pageable);
     }
 
     private List<Meeting> newestFirst(List<Meeting> meetings) {

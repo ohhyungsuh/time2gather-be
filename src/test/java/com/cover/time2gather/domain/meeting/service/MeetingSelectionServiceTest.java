@@ -6,10 +6,8 @@ import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
 import com.cover.time2gather.domain.meeting.SelectionType;
 import com.cover.time2gather.domain.user.UserRepository;
-import com.cover.time2gather.infra.meeting.MeetingReportRepository;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,14 +15,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,12 +37,6 @@ class MeetingSelectionServiceTest {
 
     @Mock
     private MeetingRepository meetingRepository;
-
-    @Mock
-    private MeetingReportRepository reportRepository;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MeetingSelectionService selectionService;
@@ -88,8 +81,12 @@ class MeetingSelectionServiceTest {
             when(meetingRepository.findById(meetingId)).thenReturn(Optional.of(meeting));
             when(selectionRepository.findByMeetingIdAndUserId(meetingId, userId)).thenReturn(Optional.empty());
 
-            // When & Then - 예외 없이 실행되어야 함
+            // Saving a vote must still persist its selected times after retiring AI reports.
             selectionService.upsertUserSelections(meetingId, userId, selections);
+            verify(selectionRepository).saveForCandidates(argThat(saved ->
+                    saved.getMeetingId().equals(meetingId)
+                            && saved.getUserId().equals(userId)
+                            && java.util.Arrays.equals(saved.getSelections().get("2024-02-15"), new int[]{9, 10})), any());
         }
 
         private Meeting createMeeting() {

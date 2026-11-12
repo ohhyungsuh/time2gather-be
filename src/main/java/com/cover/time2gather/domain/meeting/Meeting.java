@@ -42,6 +42,9 @@ public class Meeting extends BaseEntity {
     @Column(name = "host_user_id", nullable = false)
     private Long hostUserId;
 
+    @Column(name = "creator_locale", length = 35, updatable = false)
+    private String creatorLocale;
+
     @Column(length = 50)
     private String timezone = "Asia/Seoul";
 
@@ -120,12 +123,23 @@ public class Meeting extends BaseEntity {
             Map<String, int[]> availableDates,
             Boolean locationVoteEnabled
     ) {
+        return create(meetingCode, title, description, hostUserId, timezone, selectionType,
+                intervalMinutes, availableDates, locationVoteEnabled, null);
+    }
+
+    public static Meeting create(
+            String meetingCode, String title, String description, Long hostUserId, String timezone,
+            SelectionType selectionType, Integer intervalMinutes, Map<String, int[]> availableDates,
+            Boolean locationVoteEnabled, String creatorLocale
+    ) {
         Meeting meeting = new Meeting();
+        meeting.creatorLocale = creatorLocale;
         meeting.meetingCode = meetingCode;
         meeting.title = title;
         meeting.description = description;
         meeting.hostUserId = hostUserId;
         meeting.timezone = timezone != null ? timezone : "Asia/Seoul";
+        MeetingTimeZone.zone(meeting.timezone);
         meeting.selectionType = selectionType != null ? selectionType : SelectionType.TIME;
         meeting.intervalMinutes = intervalMinutes != null ? intervalMinutes : TimeSlot.DEFAULT_INTERVAL_MINUTES;
         meeting.availableDates = availableDates;
@@ -135,6 +149,11 @@ public class Meeting extends BaseEntity {
         // TimeSlot 검증 (타입에 따라)
         if (meeting.selectionType == SelectionType.TIME) {
             meeting.validateTimeSlots();
+            for (var entry : meeting.availableDates.entrySet()) {
+                for (int slot : entry.getValue()) {
+                    MeetingTimeZone.resolve(LocalDate.parse(entry.getKey()), TimeSlot.fromIndex(slot, meeting.intervalMinutes).toLocalTime(), meeting.timezone);
+                }
+            }
         } else {
             meeting.validateAllDayDates();
         }
@@ -198,7 +217,9 @@ public class Meeting extends BaseEntity {
 
         if (selectionType == SelectionType.TIME) {
             validateSlotIndex(dateString, slotIndex);
-            this.confirmedTime = TimeSlot.fromIndex(slotIndex, intervalMinutes).toLocalTime();
+            LocalTime time = TimeSlot.fromIndex(slotIndex, intervalMinutes).toLocalTime();
+            MeetingTimeZone.resolve(date, time, timezone);
+            this.confirmedTime = time;
         } else {
             // ALL_DAY 타입인 경우 slotIndex는 무시되거나 null이어야 함
             slotIndex = null;
@@ -218,6 +239,7 @@ public class Meeting extends BaseEntity {
             throw new BusinessException(ErrorCode.MEETING_TIME_REQUIRED);
         }
 
+        MeetingTimeZone.resolve(confirmedDate, time, timezone);
         this.confirmedTime = time;
         this.confirmedAt = LocalDateTime.now();
     }
@@ -253,6 +275,10 @@ public class Meeting extends BaseEntity {
     }
 
     public void updateAvailableDates(List<String> dates) {
+        updateAvailableDates(dates, null);
+    }
+
+    public void updateAvailableDates(List<String> dates, List<String> times) {
         if (isConfirmed()) {
             throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
         }
@@ -261,6 +287,19 @@ public class Meeting extends BaseEntity {
         }
         if (dates.size() > 31) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        int[] replacementSlots = null;
+        if (times != null) {
+            if (selectionType != SelectionType.TIME || times.isEmpty() || times.size() > 1440) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
+            replacementSlots = times.stream().mapToInt(time -> {
+                if (time == null || !time.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9]")) {
+                    throw new BusinessException(ErrorCode.TIMESLOT_INVALID_FORMAT);
+                }
+                return TimeSlot.fromTimeString(time, intervalMinutes).getSlotIndex();
+            }).distinct().sorted().toArray();
         }
 
         int[] defaultSlots = availableDates.values().stream()
@@ -276,9 +315,14 @@ public class Meeting extends BaseEntity {
                 throw new BusinessException(ErrorCode.MEETING_DATE_FORMAT_INVALID, date);
             }
 
-            int[] slots = availableDates.getOrDefault(date, defaultSlots);
+            int[] slots = replacementSlots != null ? replacementSlots : availableDates.getOrDefault(date, defaultSlots);
             if (slots == null) {
                 slots = new int[0];
+            }
+            if (selectionType == SelectionType.TIME) {
+                for (int slot : slots) {
+                    MeetingTimeZone.resolve(LocalDate.parse(date), TimeSlot.fromIndex(slot, intervalMinutes).toLocalTime(), timezone);
+                }
             }
             updatedDates.put(date, Arrays.copyOf(slots, slots.length));
         }

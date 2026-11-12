@@ -1,0 +1,96 @@
+name: Backend native release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-production-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CLOUDSDK_CORE_PROJECT: time2gather-prod-2026
+      IMAGE_REPOSITORY: asia-northeast3-docker.pkg.dev/time2gather-prod-2026/time2gather/api
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Java 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node for native HTTP verification
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - name: Authenticate to capture current production baseline
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/979736882063/locations/global/workloadIdentityPools/github-actions/providers/github-backend
+          service_account: github-backend-deploy@time2gather-prod-2026.iam.gserviceaccount.com
+      - name: Capture rollout baseline before building
+        run: python3 scripts/release_backend.py capture
+      - name: Check deployment guards
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_*release*.py'
+          python3 -m unittest discover -s scripts -p test_cloud_run_guard.py
+          python3 -m unittest discover -s scripts -p test_cloud_build_guard.py
+      - name: Verify unit tests, real DB integrations, coverage and AOT
+        run: ./gradlew check processAot --no-daemon --console=plain
+      - name: Build native Linux image on the free standard runner
+        run: |
+          started=$(date +%s)
+          docker build --platform linux/amd64 -f Dockerfile.native -t "t2g-api:$GITHUB_SHA" --progress=plain .
+          echo "Native image build: $(( $(date +%s) - started )) seconds" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify native image against disposable Firestore
+        # native_smoke.sh executes node scripts/sanity-api.mjs only on localhost.
+        run: bash scripts/native_smoke.sh "t2g-api:$GITHUB_SHA"
+      - name: Refresh short-lived identity after native build
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/979736882063/locations/global/workloadIdentityPools/github-actions/providers/github-backend
+          service_account: github-backend-deploy@time2gather-prod-2026.iam.gserviceaccount.com
+      - name: Push the tested image and record its immutable digest
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+          target="$IMAGE_REPOSITORY:gha-$GITHUB_SHA-$GITHUB_RUN_ATTEMPT"
+          docker tag "t2g-api:$GITHUB_SHA" "$target"
+          docker push "$target"
+          digest=$(gcloud artifacts docker images describe "$target" --format='value(image_summary.digest)')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "RELEASE_IMAGE=$IMAGE_REPOSITORY@$digest" >> "$GITHUB_ENV"
+      - name: Deploy and verify no-traffic candidate
+        run: python3 scripts/release_backend.py candidate --image "$RELEASE_IMAGE" --suffix "gha-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Promote verified image at 10, 50 and 100 percent
+        run: python3 scripts/release_backend.py promote
+      - name: Save release and verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-release-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            release-state.json
+            native-sanity.log
+            build/reports/tests/
+            build/reports/jacoco/
+            build/test-results/

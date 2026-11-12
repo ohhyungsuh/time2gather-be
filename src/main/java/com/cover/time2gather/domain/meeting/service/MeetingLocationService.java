@@ -105,33 +105,17 @@ public class MeetingLocationService {
         // 장소 투표 활성화 여부 확인
         validateLocationVoteEnabled(meeting);
 
-        // 기존 투표 삭제
-        locationSelectionRepository.deleteByMeetingIdAndUserId(meeting.getId(), userId);
-
-        // 빈 배열이면 투표 스킵 (기존 투표만 삭제)
-        if (locationIds == null || locationIds.isEmpty()) {
-            return;
-        }
-
-        // 유효한 장소 ID 목록 조회
-        List<MeetingLocation> validLocations = locationRepository.selectByMeetingId(meeting.getId());
-        Set<Long> validLocationIds = validLocations.stream()
-                .map(MeetingLocation::getId)
-                .collect(Collectors.toSet());
-
-        // 새로운 투표 저장
-        for (Long locationId : locationIds) {
-            if (!validLocationIds.contains(locationId)) {
-                throw new BusinessException(ErrorCode.LOCATION_NOT_EXIST, locationId);
+        List<Long> requested = locationIds == null ? List.of() : locationIds.stream().distinct().toList();
+        if (!requested.isEmpty()) {
+            Set<Long> validLocationIds = locationRepository.selectByMeetingId(meeting.getId()).stream()
+                    .map(MeetingLocation::getId).collect(Collectors.toSet());
+            for (Long locationId : requested) {
+                if (!validLocationIds.contains(locationId)) {
+                    throw new BusinessException(ErrorCode.LOCATION_NOT_EXIST, locationId);
+                }
             }
-
-            MeetingLocationSelection selection = MeetingLocationSelection.create(
-                    meeting.getId(),
-                    locationId,
-                    userId
-            );
-            locationSelectionRepository.save(selection);
         }
+        locationSelectionRepository.replaceSelections(meeting.getId(), userId, requested);
     }
 
     /**

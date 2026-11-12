@@ -62,6 +62,14 @@ public class CreateMeetingRequest {
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private List<String> locations;
 
+    @Size(max = 100)
+    private String hostName;
+
+    public CreateMeetingRequest(String title, String description, String timezone, Integer intervalMinutes,
+            String selectionType, Map<String, String[]> availableDates, Boolean locationVoteEnabled, List<String> locations) {
+        this(title, description, timezone, intervalMinutes, selectionType, availableDates, locationVoteEnabled, locations, null);
+    }
+
     /**
      * API "HH:mm" → 도메인 slotIndex 변환
      * ALL_DAY 타입인 경우 빈 배열로 변환

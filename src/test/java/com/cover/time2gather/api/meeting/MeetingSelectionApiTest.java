@@ -72,6 +72,9 @@ class MeetingSelectionApiTest {
     private JwtTokenService jwtTokenService;
 
     @MockitoBean
+    private com.cover.time2gather.config.security.AdminIdentityService adminIdentityService;
+
+    @MockitoBean
     private UserRepository userRepository;
 
     private void setAuthentication(Long userId, String username) {

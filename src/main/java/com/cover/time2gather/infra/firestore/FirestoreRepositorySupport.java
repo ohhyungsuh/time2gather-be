@@ -8,6 +8,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.cloud.firestore.CollectionReference;
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.AggregateQuerySnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
@@ -19,6 +22,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.lang.reflect.Field;
+import java.util.Base64;
+import java.nio.charset.StandardCharsets;
+import com.cover.time2gather.domain.common.CursorPage;
+import com.google.cloud.firestore.FieldPath;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +39,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.function.BiConsumer;
 
 abstract class FirestoreRepositorySupport<T> {
 
@@ -54,6 +62,17 @@ abstract class FirestoreRepositorySupport<T> {
     }
 
     protected <S extends T> S saveEntity(S entity) {
+        return saveEntity(entity, (batch, saved) -> { });
+    }
+
+    protected Firestore firestore() { return collection.getFirestore(); }
+
+    protected <S extends T> S saveEntity(S entity, BiConsumer<WriteBatch, S> additionalWrites) {
+        return saveEntityAt(entity, null, additionalWrites);
+    }
+
+    /** Keep the numeric entity ID while allowing a natural key to enforce uniqueness. */
+    protected <S extends T> S saveEntityAt(S entity, String documentId, BiConsumer<WriteBatch, S> additionalWrites) {
         Long id = readLongField(entity, "id");
         if (id == null) {
             id = newId();
@@ -63,7 +82,10 @@ abstract class FirestoreRepositorySupport<T> {
 
         try {
             Map<String, Object> data = mapper.convertValue(entity, MAP_TYPE);
-            collection.document(id.toString()).set(data).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            WriteBatch batch = firestore().batch();
+            batch.set(collection.document(documentId == null ? id.toString() : documentId), data);
+            additionalWrites.accept(batch, entity);
+            batch.commit().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
             return entity;
         } catch (Exception e) {
             throw persistenceFailure("save", e);
@@ -155,8 +177,22 @@ abstract class FirestoreRepositorySupport<T> {
         }
     }
 
+    protected List<T> queryIn(String field, Collection<?> values) {
+        List<?> distinctValues = values.stream().filter(Objects::nonNull).distinct().toList();
+        List<T> results = new ArrayList<>();
+        for (int start = 0; start < distinctValues.size(); start += 10) {
+            results.addAll(query(collection.whereIn(field,
+                    distinctValues.subList(start, Math.min(start + 10, distinctValues.size())))));
+        }
+        return results;
+    }
+
     protected List<T> queryEquals(String field, Object value) {
         return query(collection.whereEqualTo(field, value));
+    }
+
+    protected List<T> queryNotNull(String field) {
+        return query(collection.whereNotEqualTo(field, null));
     }
 
     protected List<T> queryEquals(String firstField, Object firstValue, String secondField, Object secondValue) {
@@ -180,6 +216,16 @@ abstract class FirestoreRepositorySupport<T> {
         }
     }
 
+    protected void deleteEntityDocuments(T entity, Collection<String> documentIds) {
+        try {
+            WriteBatch batch = firestore().batch();
+            for (String id : documentIds) batch.delete(collection.document(id));
+            batch.commit().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw persistenceFailure("delete", e);
+        }
+    }
+
     protected void deleteWhere(String field, Object value) {
         deleteDocuments(collection.whereEqualTo(field, value));
     }
@@ -193,11 +239,106 @@ abstract class FirestoreRepositorySupport<T> {
     }
 
     protected long countAll() {
-        return allEntities().size();
+        return countQuery(collection);
     }
 
-    protected long countMatching(Predicate<T> predicate) {
-        return allEntities().stream().filter(predicate).count();
+    protected long countEqualTo(String field, Object value) {
+        return countQuery(collection.whereEqualTo(field, value));
+    }
+
+    protected long countNotNull(String field) {
+        // The SDK maps a null inequality to Firestore's IS_NOT_NULL unary filter.
+        return countQuery(collection.whereNotEqualTo(field, null));
+    }
+
+    private long countQuery(Query query) {
+        ApiFuture<AggregateQuerySnapshot> read = query.count().get();
+        try {
+            return read.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getCount();
+        } catch (InterruptedException e) {
+            read.cancel(true);
+            Thread.currentThread().interrupt();
+            throw persistenceFailure("count", e);
+        } catch (Exception e) {
+            read.cancel(true);
+            throw persistenceFailure("count", e);
+        }
+    }
+
+    protected Page<T> newestPage(Pageable pageable) {
+        return newestPage(pageable, null);
+    }
+
+    protected Page<T> newestPage(Pageable pageable, String cursor) {
+        String[] anchor = cursor == null ? null : decodeCursor(cursor, pageable);
+        long total = countAll();
+        if (anchor == null && pageable.getOffset() >= total) {
+            return new PageImpl<>(List.of(), pageable, total);
+        }
+        // Include the document ID so equal creation times have a stable boundary.
+        Query query = collection.orderBy("createdAt", Query.Direction.DESCENDING)
+                .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING);
+        if (anchor != null) {
+            // Values survive deletion of the boundary document; no extra document read.
+            query = query.startAfter(anchor[4], collection.document(anchor[5]));
+        } else if (pageable.getOffset() > 0) {
+            // Preserve existing clients and random page-number access.
+            query = query.offset(Math.toIntExact(pageable.getOffset()));
+        }
+        List<QueryDocumentSnapshot> documents = readDocuments(query.limit(pageable.getPageSize()));
+        List<T> content = documents.stream().map(this::fromDocument).toList();
+        var page = new PageImpl<>(content, pageable, total);
+        String nextCursor = null;
+        if (page.hasNext() && !documents.isEmpty()) {
+            var last = documents.getLast();
+            String payload = String.join("\n", "1", collection.getId(),
+                    Integer.toString(pageable.getPageNumber() + 1), Integer.toString(pageable.getPageSize()),
+                    (String) last.getData().get("createdAt"), last.getId());
+            nextCursor = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        }
+        return new CursorPage<>(content, pageable, page.getTotalElements(), nextCursor);
+    }
+
+    private String[] decodeCursor(String cursor, Pageable pageable) {
+        try {
+            if (cursor.length() > 512) throw new IllegalArgumentException();
+            String[] fields = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8).split("\n", -1);
+            if (fields.length != 6 || !fields[0].equals("1") || !fields[1].equals(collection.getId())
+                    || Integer.parseInt(fields[2]) != pageable.getPageNumber()
+                    || Integer.parseInt(fields[3]) != pageable.getPageSize() || pageable.getPageNumber() == 0
+                    || !fields[5].matches("[1-9][0-9]{0,18}") || Long.parseLong(fields[5]) <= 0) {
+                throw new IllegalArgumentException();
+            }
+            LocalDateTime.parse(fields[4]);
+            return fields;
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("Invalid pagination cursor");
+        }
+    }
+
+    protected Page<T> searchNewest(Predicate<T> predicate, Pageable pageable) {
+        // Arbitrary case-insensitive substring search needs a scan, but retain only
+        // one bounded batch and the requested page, rather than every entity.
+        Query ordered = collection.orderBy("createdAt", Query.Direction.DESCENDING);
+        Query next = ordered.limit(100);
+        List<T> page = new ArrayList<>();
+        long matches = 0;
+        while (true) {
+            List<QueryDocumentSnapshot> documents = readDocuments(next);
+            for (QueryDocumentSnapshot document : documents) {
+                T entity = fromDocument(document);
+                if (predicate.test(entity)) {
+                    if (matches >= pageable.getOffset() && page.size() < pageable.getPageSize()) {
+                        page.add(entity);
+                    }
+                    matches++;
+                }
+            }
+            if (documents.size() < 100) break;
+            next = ordered.startAfter(documents.getLast()).limit(100);
+        }
+        return new PageImpl<>(page, pageable, matches);
     }
 
     protected Page<T> page(List<T> values, Pageable pageable) {
@@ -211,11 +352,19 @@ abstract class FirestoreRepositorySupport<T> {
     }
 
     private List<T> query(Query query) {
+        return readDocuments(query).stream().map(this::fromDocument).toList();
+    }
+
+    private List<QueryDocumentSnapshot> readDocuments(Query query) {
+        ApiFuture<QuerySnapshot> read = query.get();
         try {
-            return query.get().get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getDocuments().stream()
-                    .map(this::fromDocument)
-                    .toList();
+            return read.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getDocuments();
+        } catch (InterruptedException e) {
+            read.cancel(true);
+            Thread.currentThread().interrupt();
+            throw persistenceFailure("query", e);
         } catch (Exception e) {
+            read.cancel(true);
             throw persistenceFailure("query", e);
         }
     }
@@ -228,6 +377,10 @@ abstract class FirestoreRepositorySupport<T> {
         } catch (Exception e) {
             throw persistenceFailure("delete query", e);
         }
+    }
+
+    protected <E> E decodeDocument(DocumentSnapshot document, Class<E> type) {
+        return mapper.convertValue(document.getData(), type);
     }
 
     private T fromDocument(DocumentSnapshot document) {

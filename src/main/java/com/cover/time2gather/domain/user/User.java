@@ -82,6 +82,13 @@ public class User {
         this.username = username;
     }
 
+    /** Detached presentation copy; never rename a managed user while rendering a meeting. */
+    public User withDisplayName(String name) {
+        User copy = new User(name, email, profileImageUrl, provider, providerId, role);
+        copy.id = id; copy.createdAt = createdAt; copy.updatedAt = updatedAt;
+        return copy;
+    }
+
     public void promoteToAdmin() {
         this.role = UserRole.ADMIN;
     }

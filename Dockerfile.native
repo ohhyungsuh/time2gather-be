@@ -1,0 +1,26 @@
+FROM eclipse-temurin:21-jdk-jammy AS jdk21
+FROM ghcr.io/graalvm/native-image-community:25 AS build
+ENV GRAALVM_HOME=${JAVA_HOME}
+COPY --from=jdk21 /opt/java/openjdk /opt/jdk21
+ENV JAVA_HOME=/opt/jdk21
+WORKDIR /workspace
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle ./gradle
+RUN chmod +x gradlew
+COPY src ./src
+ENV SPRING_PROFILES_ACTIVE=prod,firestore
+ENV GCP_PROJECT_ID=demo-time2gather-native-poc
+ENV FIRESTORE_EMULATOR_HOST=127.0.0.1:19999
+RUN ./gradlew nativeCompile -x test --no-daemon --console=plain -Dorg.gradle.jvmargs=-Xmx1g
+RUN ldd build/native/nativeCompile/time2gather-native
+
+FROM oraclelinux:9-slim
+RUN microdnf install -y ca-certificates libstdc++ zlib && microdnf clean all
+WORKDIR /app
+COPY --from=build /workspace/build/native/nativeCompile/time2gather-native /app/time2gather-native
+COPY runtime-lib /app/poc-java/lib
+ENV JAVA_HOME=/app/poc-java
+ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=prod,firestore
+EXPOSE 8080
+ENTRYPOINT ["/app/time2gather-native", "-Xmx256m", "-Djava.home=/app/poc-java"]

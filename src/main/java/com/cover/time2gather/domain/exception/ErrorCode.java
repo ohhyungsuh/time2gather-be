@@ -36,7 +36,12 @@ public enum ErrorCode {
     OAUTH_NO_ID_TOKEN("error.oauth.no.id.token", HttpStatus.BAD_GATEWAY),
     OAUTH_NO_USER_INFO("error.oauth.no.user.info", HttpStatus.BAD_GATEWAY),
 
+    COMMENT_RATE_LIMIT("error.comment.rate.limit", HttpStatus.TOO_MANY_REQUESTS),
+
     // ===== Meeting Errors =====
+    MEETING_TIMEZONE_INVALID("error.meeting.timezone.invalid", HttpStatus.BAD_REQUEST),
+    MEETING_TIME_NONEXISTENT("error.meeting.time.nonexistent", HttpStatus.BAD_REQUEST),
+    MEETING_TIME_AMBIGUOUS("error.meeting.time.ambiguous", HttpStatus.BAD_REQUEST),
     MEETING_NOT_FOUND("error.meeting.not.found", HttpStatus.NOT_FOUND),
     MEETING_ID_REQUIRED("error.meeting.id.required", HttpStatus.BAD_REQUEST),
     MEETING_ALREADY_CONFIRMED("error.meeting.already.confirmed", HttpStatus.BAD_REQUEST),
@@ -73,6 +78,7 @@ public enum ErrorCode {
     LOCATION_NOT_EXIST("error.location.not.exist", HttpStatus.NOT_FOUND),
 
     // ===== Selection Validation Errors =====
+    SELECTION_CANDIDATES_CHANGED("error.selection.candidates.changed", HttpStatus.CONFLICT),
     SELECTION_EMPTY("error.selection.empty", HttpStatus.BAD_REQUEST),
     SELECTION_DATE_REQUIRED("error.selection.date.required", HttpStatus.BAD_REQUEST),
     SELECTION_TYPE_REQUIRED("error.selection.type.required", HttpStatus.BAD_REQUEST),

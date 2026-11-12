@@ -40,7 +40,7 @@ class JwtAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
-        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenService);
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenService, mock(AdminIdentityService.class));
     }
 
     @Test

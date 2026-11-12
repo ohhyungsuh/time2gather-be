@@ -63,6 +63,9 @@ class MeetingControllerExportTest {
     private JwtTokenService jwtTokenService;
 
     @MockitoBean
+    private com.cover.time2gather.config.security.AdminIdentityService adminIdentityService;
+
+    @MockitoBean
     private UserRepository userRepository;
 
     @Nested

@@ -12,7 +12,6 @@ import com.cover.time2gather.api.meeting.dto.request.VoteLocationsRequest;
 import com.cover.time2gather.api.meeting.dto.response.CreateMeetingResponse;
 import com.cover.time2gather.api.meeting.dto.response.LocationResponse;
 import com.cover.time2gather.api.meeting.dto.response.MeetingDetailResponse;
-import com.cover.time2gather.api.meeting.dto.response.MeetingReportResponse;
 import com.cover.time2gather.api.meeting.dto.response.UserLocationSelectionsResponse;
 import com.cover.time2gather.api.meeting.dto.response.UserSelectionResponse;
 import com.cover.time2gather.config.security.JwtAuthentication;
@@ -21,7 +20,6 @@ import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
 import com.cover.time2gather.domain.meeting.MeetingDetailData;
 import com.cover.time2gather.domain.meeting.MeetingLocation;
-import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.service.MeetingFacadeService;
 import com.cover.time2gather.domain.meeting.service.CalendarExportService;
 import com.cover.time2gather.domain.meeting.service.MeetingLocationService;
@@ -70,7 +68,8 @@ public class MeetingController {
                 request.getIntervalMinutes(),
                 request.toSlotIndexes(),  // DTO에서 변환
                 request.isLocationVoteEnabled(),
-                request.getLocations()
+                request.getLocations(),
+                request.getHostName()
         );
 
         // 도메인 → DTO 변환
@@ -91,17 +90,26 @@ public class MeetingController {
         return ApiResponse.success(MeetingDetailResponse.from(detailData));
     }
 
+    @PutMapping("/{meetingCode}/candidates")
+    @Operation(summary = "Update shared schedule and location candidates atomically")
+    public ApiResponse<Void> updateCandidates(
+            @AuthenticationPrincipal JwtAuthentication authentication, @PathVariable String meetingCode,
+            @Valid @RequestBody com.cover.time2gather.api.meeting.dto.request.UpdateCandidatesRequest request) {
+        meetingService.updateCandidates(meetingCode, authentication.getUserId(), request.edit());
+        return ApiResponse.success(null);
+    }
+
     @PutMapping("/{meetingCode}/available-dates")
     @Operation(
-        summary = "Update voting dates",
-        description = "Only the meeting host can update voting dates before confirmation. Votes for removed dates are discarded."
+        summary = "Update voting dates and times",
+        description = "Only the meeting host can update voting dates and optional times before confirmation. Votes for retained candidates are preserved."
     )
     public ApiResponse<Void> updateAvailableDates(
             @AuthenticationPrincipal JwtAuthentication authentication,
             @PathVariable String meetingCode,
             @Valid @RequestBody UpdateAvailableDatesRequest request
     ) {
-        meetingService.updateAvailableDates(meetingCode, authentication.getUserId(), request.getDates());
+        meetingService.updateAvailableDates(meetingCode, authentication.getUserId(), request.getDates(), request.getTimes());
         return ApiResponse.success(null);
     }
 
@@ -252,20 +260,21 @@ public class MeetingController {
         return ApiResponse.success(null);
     }
 
-    @GetMapping("/{meetingCode}/report")
-    @Operation(summary = "Get meeting report", description = "Retrieves AI-generated meeting summary report. (No authentication required)")
-    public ApiResponse<MeetingReportResponse> getMeetingReport(
-            @PathVariable String meetingCode
-    ) {
+    @PutMapping("/{meetingCode}/unavailable")
+    @Operation(summary = "Respond that none of the current candidate dates/times work")
+    public ApiResponse<Void> markUnavailable(
+            @AuthenticationPrincipal JwtAuthentication authentication,
+            @PathVariable String meetingCode,
+            @Valid @RequestBody UnavailableRequest request) {
         Meeting meeting = meetingService.getMeetingByCode(meetingCode);
-        MeetingReport report = selectionService.getMeetingReport(meeting.getId());
-
-        if (report == null) {
-            return ApiResponse.success(null);
-        }
-
-        return ApiResponse.success(MeetingReportResponse.from(report));
+        selectionService.markUnavailable(meeting.getId(), authentication.getUserId(), request.candidateDates());
+        return ApiResponse.success(null);
     }
+
+    public record UnavailableRequest(
+            @jakarta.validation.constraints.NotEmpty
+            @jakarta.validation.constraints.Size(max = 31)
+            java.util.List<@jakarta.validation.constraints.NotBlank String> candidateDates) { }
 
     @GetMapping("/{meetingCode}/export")
     @Operation(

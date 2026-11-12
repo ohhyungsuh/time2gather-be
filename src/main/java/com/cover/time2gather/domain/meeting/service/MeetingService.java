@@ -14,6 +14,7 @@ import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import com.cover.time2gather.domain.user.User;
 import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +34,13 @@ public class MeetingService {
     private static final String CODE_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
     private final MeetingRepository meetingRepository;
+    private final com.cover.time2gather.infra.meeting.MeetingCandidateStore candidateStore;
     private final MeetingLocationRepository locationRepository;
     private final MeetingLocationSelectionRepository locationSelectionRepository;
     private final UserRepository userRepository;
     private final MeetingUserSelectionRepository selectionRepository;
     private final BestSlotBuilder bestSlotBuilder;
+    private final com.cover.time2gather.infra.identity.MeetingNameStore meetingNames;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -66,6 +69,15 @@ public class MeetingService {
             Boolean locationVoteEnabled,
             List<String> locations
     ) {
+        return createMeeting(hostUserId, title, description, timezone, selectionType, intervalMinutes,
+                availableDates, locationVoteEnabled, locations, null);
+    }
+
+    @Transactional
+    public Meeting createMeeting(Long hostUserId, String title, String description, String timezone,
+            com.cover.time2gather.domain.meeting.SelectionType selectionType, Integer intervalMinutes,
+            Map<String, int[]> availableDates, Boolean locationVoteEnabled, List<String> locations, String hostName) {
+        String name = hostName == null ? null : com.cover.time2gather.domain.identity.MeetingNameService.validate(hostName);
         // 사용자가 존재하는지 검증
         if (!userRepository.existsById(hostUserId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -88,10 +100,13 @@ public class MeetingService {
                 selectionType,
                 intervalMinutes,
                 availableDates,
-                enableLocationVote
+                enableLocationVote,
+                LocaleContextHolder.getLocale().toLanguageTag()
         );
 
-        Meeting savedMeeting = meetingRepository.save(meeting);
+        Meeting savedMeeting = name == null ? meetingRepository.save(meeting) : meetingRepository.saveWithHostName(meeting, name);
+        // Firestore already persisted this atomically; JPA joins the enclosing transaction.
+        if (name != null) meetingNames.save(savedMeeting.getId(), savedMeeting.getMeetingCode(), hostUserId, name, true);
 
         // 장소 후보 저장
         if (enableLocationVote && locations != null) {
@@ -129,25 +144,54 @@ public class MeetingService {
     }
 
     @Transactional
+    public void updateCandidates(String code, Long user, com.cover.time2gather.domain.meeting.MeetingCandidates.Edit edit) {
+        candidateStore.update(code,user,edit);
+    }
+
+    @Transactional
     public void updateAvailableDates(String meetingCode, Long userId, List<String> dates) {
+        updateAvailableDates(meetingCode, userId, dates, null);
+    }
+
+    @Transactional
+    public void updateAvailableDates(String meetingCode, Long userId, List<String> dates, List<String> times) {
         Meeting meeting = getMeetingByCode(meetingCode);
         if (!meeting.getHostUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.MEETING_HOST_ONLY);
         }
 
-        meeting.updateAvailableDates(dates);
-        Set<String> retainedDates = meeting.getAvailableDates().keySet();
+        Map<String, int[]> previousDates = meeting.getAvailableDates();
+        meeting.updateAvailableDates(dates, times);
+        Map<String, int[]> candidates = meeting.getAvailableDates();
+        Set<String> retainedDates = candidates.keySet();
 
         for (MeetingUserSelection selection : selectionRepository.findAllByMeetingId(meeting.getId())) {
+            if (selection.getUnavailableDates() != null) {
+                // A previous "none" response does not cover newly offered times.
+                List<String> stillUnavailable = selection.getUnavailableDates().stream()
+                        .filter(date -> previousDates.containsKey(date) && candidates.containsKey(date))
+                        .filter(date -> Arrays.stream(candidates.get(date)).allMatch(slot ->
+                                Arrays.stream(previousDates.get(date)).anyMatch(previous -> previous == slot)))
+                        .toList();
+                selection.markUnavailable(stillUnavailable);
+                selectionRepository.save(selection);
+                continue;
+            }
             Map<String, int[]> retainedSelections = selection.getSelections().entrySet().stream()
                     .filter(entry -> retainedDates.contains(entry.getKey()))
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
-                            entry -> Arrays.copyOf(entry.getValue(), entry.getValue().length),
+                            entry -> meeting.getSelectionType() == com.cover.time2gather.domain.meeting.SelectionType.TIME
+                                    ? Arrays.stream(entry.getValue()).filter(slot ->
+                                            Arrays.stream(candidates.get(entry.getKey())).anyMatch(candidate -> candidate == slot)).toArray()
+                                    : Arrays.copyOf(entry.getValue(), entry.getValue().length),
                             (first, second) -> first,
                             LinkedHashMap::new
                     ));
 
+            if (meeting.getSelectionType() == com.cover.time2gather.domain.meeting.SelectionType.TIME) {
+                retainedSelections.entrySet().removeIf(entry -> entry.getValue().length == 0);
+            }
             if (retainedSelections.isEmpty()) {
                 selectionRepository.delete(selection);
             } else {
@@ -241,7 +285,11 @@ public class MeetingService {
         // 참여자와 방장을 한 번에 조회
         Set<Long> userIds = new HashSet<>(participantIds);
         userIds.add(meeting.getHostUserId());
+        // Include location-only voters in the same batch, without counting them as schedule participants.
+        locationSelectionRepository.selectByMeetingId(meeting.getId()).forEach(vote -> userIds.add(vote.getUserId()));
+        Map<Long, String> displayNames = meetingNames.names(meeting.getId());
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .map(user -> user.withDisplayName(displayNames.getOrDefault(user.getId(), user.getUsername())))
                 .collect(Collectors.toMap(User::getId, user -> user));
 
         User host = Optional.ofNullable(userMap.get(meeting.getHostUserId()))

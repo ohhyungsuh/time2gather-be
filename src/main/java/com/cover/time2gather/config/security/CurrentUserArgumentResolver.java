@@ -1,6 +1,8 @@
 package com.cover.time2gather.config.security;
 
 import com.cover.time2gather.domain.user.User;
+import com.cover.time2gather.domain.exception.BusinessException;
+import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
@@ -36,17 +38,17 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("인증되지 않은 사용자입니다.");
+            throw new BusinessException(ErrorCode.AUTH_REQUIRED_LOGIN);
         }
 
         if (!(authentication instanceof JwtAuthentication jwtAuth)) {
-            throw new IllegalStateException("JWT 인증 정보가 아닙니다.");
+            throw new BusinessException(ErrorCode.AUTH_REQUIRED_LOGIN);
         }
 
         Long userId = jwtAuth.getUserId();
 
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 }
 

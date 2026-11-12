@@ -7,15 +7,8 @@ spring:
   application:
     name: time2gather
 
-  # Spring AI Configuration
+  # MCP server configuration
   ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:dummy-key}
-      base-url: ${OPENAI_API_BASE:https://api.openai.com}
-      chat:
-        options:
-          model: ${OPENAI_MODEL:gpt-4}
-          temperature: 0.7
     mcp:
       server:
         name: time2gather
@@ -57,6 +50,13 @@ jwt:
   secret: ${JWT_SECRET:local-development-secret-must-be-at-least-256-bits-long}
   expiration-ms: ${JWT_EXPIRATION_MS:31536000000}
 
+# Independent administrator identity (disabled until configured)
+admin:
+  google:
+    client-id: ${ADMIN_GOOGLE_CLIENT_ID:}
+  allowed-emails: ${ADMIN_ALLOWED_EMAILS:}
+  allowed-subjects: ${ADMIN_ALLOWED_SUBJECTS:}
+
 # Swagger
 springdoc:
   api-docs:
@@ -70,17 +70,6 @@ springdoc:
     csrf:
       enabled: false
     tryItOutEnabled: true
-
-# AI Provider Configuration
-ai:
-  provider: ${AI_PROVIDER:openai}  # openai, anthropic, ollama
-
-
-# Legacy OpenAI Config (for backward compatibility)
-openai:
-  api-key: ${OPENAI_API_KEY:dummy-key}
-  api-base: ${OPENAI_API_BASE:https://api.openai.com}
-  model: ${OPENAI_MODEL:gpt-4}
 
 # Actuator (Health Check)
 management:

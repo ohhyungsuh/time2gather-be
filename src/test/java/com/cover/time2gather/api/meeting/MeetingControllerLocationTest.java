@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     excludeAutoConfiguration = JpaAuditingConfig.class
 )
 @AutoConfigureMockMvc(addFilters = false)
+@org.springframework.context.annotation.Import(com.cover.time2gather.util.MessageProvider.class)
 class MeetingControllerLocationTest {
 
     @Autowired
@@ -70,6 +72,9 @@ class MeetingControllerLocationTest {
 
     @MockitoBean
     private JwtTokenService jwtTokenService;
+
+    @MockitoBean
+    private com.cover.time2gather.config.security.AdminIdentityService adminIdentityService;
 
     @MockitoBean
     private UserRepository userRepository;
@@ -122,7 +127,8 @@ class MeetingControllerLocationTest {
                 anyInt(),
                 anyMap(),
                 anyBoolean(),
-                anyList()
+                anyList(),
+                isNull()
             )).thenReturn(meeting);
 
             // When & Then
@@ -244,7 +250,8 @@ class MeetingControllerLocationTest {
                 anyInt(),
                 anyMap(),
                 anyBoolean(),
-                any()
+                any(),
+                isNull()
             )).thenReturn(meeting);
 
             // When & Then
@@ -317,7 +324,8 @@ class MeetingControllerLocationTest {
                 anyInt(),
                 anyMap(),
                 anyBoolean(),
-                anyList()
+                anyList(),
+                isNull()
             )).thenReturn(meeting);
 
             // When & Then

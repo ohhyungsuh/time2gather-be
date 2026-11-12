@@ -23,6 +23,10 @@ public interface UserRepository {
 
     Page<User> findAll(Pageable pageable);
 
+    default Page<User> findAll(Pageable pageable, String cursor) {
+        return findAll(pageable);
+    }
+
     long count();
 
     Optional<User> findByProviderAndProviderId(User.AuthProvider provider, String providerId);

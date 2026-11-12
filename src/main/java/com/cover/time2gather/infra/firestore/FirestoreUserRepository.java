@@ -9,7 +9,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -54,7 +53,12 @@ public class FirestoreUserRepository extends FirestoreRepositorySupport<User> im
 
     @Override
     public Page<User> findAll(Pageable pageable) {
-        return page(newestFirst(allEntities()), pageable);
+        return newestPage(pageable);
+    }
+
+    @Override
+    public Page<User> findAll(Pageable pageable, String cursor) {
+        return newestPage(pageable, cursor);
     }
 
     @Override
@@ -80,17 +84,18 @@ public class FirestoreUserRepository extends FirestoreRepositorySupport<User> im
 
     @Override
     public long countByProvider(User.AuthProvider provider) {
-        return countMatching(user -> user.getProvider() == provider);
+        return countEqualTo("provider", provider.name());
     }
 
     @Override
     public long countByProviderNot(User.AuthProvider provider) {
-        return countMatching(user -> user.getProvider() != provider);
+        // Preserve the previous Java predicate, which also includes missing/null providers.
+        return countAll() - countByProvider(provider);
     }
 
     @Override
     public long countByRole(UserRole role) {
-        return countMatching(user -> user.getRole() == role);
+        return countEqualTo("role", role.name());
     }
 
     @Override
@@ -98,16 +103,8 @@ public class FirestoreUserRepository extends FirestoreRepositorySupport<User> im
             String username, String email, Pageable pageable) {
         String usernameQuery = normalize(username);
         String emailQuery = normalize(email);
-        List<User> matches = newestFirst(allEntities().stream()
-                .filter(user -> normalize(user.getUsername()).contains(usernameQuery)
-                        || normalize(user.getEmail()).contains(emailQuery))
-                .toList());
-        return page(matches, pageable);
-    }
-
-    private List<User> newestFirst(List<User> users) {
-        return sorted(users, Comparator.comparing(User::getCreatedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())));
+        return searchNewest(user -> normalize(user.getUsername()).contains(usernameQuery)
+                || normalize(user.getEmail()).contains(emailQuery), pageable);
     }
 
     private String normalize(String value) {
