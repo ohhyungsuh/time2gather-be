@@ -10,7 +10,8 @@ public record AdminPageResponse<T>(
         int page,
         int size,
         long totalElements,
-        int totalPages
+        int totalPages,
+        String nextCursor
 ) {
     public static <S, T> AdminPageResponse<T> from(AdminPage<S> source, Function<S, T> mapper) {
         return new AdminPageResponse<>(
@@ -18,7 +19,8 @@ public record AdminPageResponse<T>(
                 source.page(),
                 source.size(),
                 source.totalElements(),
-                source.totalPages()
+                source.totalPages(),
+                source.nextCursor()
         );
     }
 }

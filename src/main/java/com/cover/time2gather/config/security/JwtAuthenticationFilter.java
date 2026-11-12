@@ -24,6 +24,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
+    private final AdminIdentityService adminIdentityService;
 
     @Override
     protected void doFilterInternal(
@@ -31,6 +32,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+
+        String path = request.getServletPath();
+        if (path == null || path.isEmpty()) {
+            path = request.getRequestURI();
+        }
+        if (path == null) path = "";
+        if (path.equals("/api/v1/admin") || path.startsWith("/api/v1/admin/")) {
+            // Never accept an anonymous/legacy ADMIN cookie as admin authentication.
+            SecurityContextHolder.clearContext();
+            response.setHeader("Cache-Control", "no-store");
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null && authorization.startsWith("Bearer ")) {
+                try {
+                    SecurityContextHolder.getContext().setAuthentication(
+                            adminIdentityService.authenticate(authorization.substring(7)));
+                } catch (org.springframework.security.core.AuthenticationException ex) {
+                    // The security entry point returns a generic 401, without disclosing the allowlist.
+                }
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
             String jwtToken = extractTokenFromCookie(request);

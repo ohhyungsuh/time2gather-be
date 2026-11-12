@@ -28,7 +28,7 @@ class CalendarExportServiceTest {
     }
 
     @Test
-    void timedEventKeepsMeetingTimezoneAndInterval() {
+    void timedEventResolvesMeetingTimezoneAndIntervalToUtc() {
         String ics = new String(calendarExportService.createIcsFile(
                 "저녁 약속",
                 null,
@@ -39,8 +39,8 @@ class CalendarExportServiceTest {
         ), StandardCharsets.UTF_8);
 
         assertThat(ics)
-                .contains("DTSTART;TZID=Asia/Seoul:20261024T183000")
-                .contains("DTEND;TZID=Asia/Seoul:20261024T190000");
+                .contains("DTSTART:20261024T093000Z")
+                .contains("DTEND:20261024T100000Z");
     }
 
     @Test
@@ -55,7 +55,17 @@ class CalendarExportServiceTest {
         ), StandardCharsets.UTF_8);
 
         assertThat(ics)
-                .contains("DTSTART;TZID=Asia/Seoul:20261024T183000")
-                .contains("DTEND;TZID=Asia/Seoul:20261024T193000");
+                .contains("DTSTART:20261024T093000Z")
+                .contains("DTEND:20261024T103000Z");
+    }
+
+    @Test
+    void exportedInstantsFollowSeasonalOffsetsAndCrossDateBoundaries() {
+        String winter = new String(calendarExportService.createIcsFile("Winter", null, "2026-01-15", "12:00", "America/New_York", 60), StandardCharsets.UTF_8);
+        String summer = new String(calendarExportService.createIcsFile("Summer", null, "2026-07-15", "12:00", "America/New_York", 60), StandardCharsets.UTF_8);
+        String fractional = new String(calendarExportService.createIcsFile("Midnight", null, "2026-01-01", "00:15", "Asia/Kathmandu", 30), StandardCharsets.UTF_8);
+        assertThat(winter).contains("DTSTART:20260115T170000Z");
+        assertThat(summer).contains("DTSTART:20260715T160000Z");
+        assertThat(fractional).contains("DTSTART:20251231T183000Z", "DTEND:20251231T190000Z");
     }
 }

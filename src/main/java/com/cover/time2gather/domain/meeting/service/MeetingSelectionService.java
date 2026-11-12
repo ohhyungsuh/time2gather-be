@@ -3,16 +3,11 @@ package com.cover.time2gather.domain.meeting.service;
 import com.cover.time2gather.domain.exception.BusinessException;
 import com.cover.time2gather.domain.exception.ErrorCode;
 import com.cover.time2gather.domain.meeting.Meeting;
-import com.cover.time2gather.domain.meeting.MeetingReport;
 import com.cover.time2gather.domain.meeting.MeetingUserSelection;
-import com.cover.time2gather.domain.meeting.event.ReportGenerateEvent;
 import com.cover.time2gather.domain.user.UserRepository;
-import com.cover.time2gather.infra.meeting.MeetingReportRepository;
 import com.cover.time2gather.infra.meeting.MeetingRepository;
 import com.cover.time2gather.infra.meeting.MeetingUserSelectionRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +17,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-@Slf4j
 public class MeetingSelectionService {
 
     private final MeetingUserSelectionRepository selectionRepository;
     private final UserRepository userRepository;
     private final MeetingRepository meetingRepository;
-    private final MeetingReportRepository reportRepository;
-    private final ApplicationEventPublisher eventPublisher;
 
     public Map<String, int[]> getUserSelections(Long meetingId, Long userId) {
         return selectionRepository.findByMeetingIdAndUserId(meetingId, userId)
@@ -65,18 +57,27 @@ public class MeetingSelectionService {
                     meeting.getIntervalMinutes(),
                     selections
             );
-            selectionRepository.save(selection);
+            selectionRepository.saveForCandidates(selection, meeting);
         } else {
             selection.updateSelections(selections);
             // JPA used dirty checking here; explicit persistence is required by Firestore.
-            selectionRepository.save(selection);
+            selectionRepository.saveForCandidates(selection, meeting);
         }
+    }
 
-        try {
-            eventPublisher.publishEvent(ReportGenerateEvent.of(meetingId));
-        } catch (Exception e) {
-            log.error("Failed to publish report generate event. meetingId={}", meetingId, e);
+    @Transactional
+    public void markUnavailable(Long meetingId, Long userId, List<String> candidateDates) {
+        if (!userRepository.existsById(userId)) throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEETING_NOT_FOUND));
+        if (meeting.isConfirmed()) throw new BusinessException(ErrorCode.MEETING_ALREADY_CONFIRMED);
+        if (candidateDates == null || !new HashSet<>(candidateDates).equals(meeting.getAvailableDates().keySet())) {
+            throw new BusinessException(ErrorCode.SELECTION_CANDIDATES_CHANGED);
         }
+        MeetingUserSelection selection = selectionRepository.findByMeetingIdAndUserId(meetingId, userId)
+                .orElseGet(() -> MeetingUserSelection.unavailable(meeting, userId, candidateDates));
+        selection.markUnavailable(candidateDates);
+        selectionRepository.saveForCandidates(selection, meeting);
     }
 
     private void validateSelections(Meeting meeting, Map<String, int[]> selections) {
@@ -122,10 +123,5 @@ public class MeetingSelectionService {
 
     public List<MeetingUserSelection> getAllSelections(Long meetingId) {
         return selectionRepository.findAllByMeetingId(meetingId);
-    }
-
-    public MeetingReport getMeetingReport(Long meetingId) {
-        return reportRepository.findByMeetingId(meetingId)
-                .orElse(null);
     }
 }

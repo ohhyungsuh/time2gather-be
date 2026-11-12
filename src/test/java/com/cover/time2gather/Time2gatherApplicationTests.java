@@ -5,8 +5,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@ActiveProfiles("test")
-class Time2gatherApplicationTests {
+
+class Time2gatherApplicationTests extends com.cover.time2gather.support.FirestoreIntegrationTest {
 
     @Test
     void contextLoads() {

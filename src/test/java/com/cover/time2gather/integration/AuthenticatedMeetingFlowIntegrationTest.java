@@ -23,9 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
-@ActiveProfiles("test")
-class AuthenticatedMeetingFlowIntegrationTest {
+
+
+class AuthenticatedMeetingFlowIntegrationTest extends com.cover.time2gather.support.FirestoreIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -39,6 +39,7 @@ class AuthenticatedMeetingFlowIntegrationTest {
                 .andExpect(jsonPath("$.data.username").value("회귀 테스트 사용자"));
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/meetings")
+                .header("Accept-Language", "ja")
                         .cookie(sessionCookie)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -59,8 +60,9 @@ class AuthenticatedMeetingFlowIntegrationTest {
         JsonNode createData = responseData(createResult);
         String meetingCode = createData.get("meetingCode").asText();
 
-        MvcResult detailResult = mockMvc.perform(get("/api/v1/meetings/{code}", meetingCode))
+        MvcResult detailResult = mockMvc.perform(get("/api/v1/meetings/{code}", meetingCode).header("Accept-Language", "fr"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.meeting.creatorLocale").value("ja"))
                 .andExpect(jsonPath("$.data.meeting.code").value(meetingCode))
                 .andExpect(jsonPath("$.data.locationVote.locations.length()").value(2))
                 .andReturn();
@@ -105,6 +107,15 @@ class AuthenticatedMeetingFlowIntegrationTest {
                 .andExpect(jsonPath("$.data.meeting.confirmedDate").value("2026-10-20"))
                 .andExpect(jsonPath("$.data.meeting.confirmedTime").value("09:00"))
                 .andExpect(jsonPath("$.data.locationVote.confirmedLocation.id").value(locationId));
+
+        mockMvc.perform(put("/api/v1/meetings/{code}/confirmed-time", meetingCode)
+                        .cookie(sessionCookie).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"time\":\"09:15\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/meetings/{code}", meetingCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.meeting.confirmedTime").value("09:15"))
+                .andExpect(jsonPath("$.data.meeting.confirmedSlotIndex").value(9));
 
         mockMvc.perform(get("/api/v1/meetings/{code}/export", meetingCode)
                         .queryParam("date", "2026-10-20")

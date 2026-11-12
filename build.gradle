@@ -1,11 +1,14 @@
 plugins {
     id 'java'
+    id 'jacoco'
+    id 'org.graalvm.buildtools.native' version '0.10.6'
     id 'org.springframework.boot' version '3.5.7'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
 ext {
     springAiVersion = '1.1.2'
+    set('testcontainers.version', '2.0.5')
 }
 
 group = 'com.cover'
@@ -32,6 +35,7 @@ repositories {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+        mavenBom 'org.testcontainers:testcontainers-bom:2.0.5'
     }
 }
 
@@ -43,16 +47,16 @@ dependencies {
     // actuator for health check
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    // Spring AI
-    implementation "org.springframework.ai:spring-ai-starter-model-openai"
-
     // Spring AI MCP Server (WebMVC + Streamable HTTP)
     implementation "org.springframework.ai:spring-ai-starter-mcp-server-webmvc"
 
     // db
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'
-    testRuntimeOnly 'com.h2database:h2'
+    testImplementation enforcedPlatform('org.testcontainers:testcontainers-bom:2.0.5')
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-gcloud'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
 
     // Firestore production persistence (version alignment follows Google's BOM)
     implementation platform('com.google.cloud:libraries-bom:26.90.0')
@@ -63,6 +67,7 @@ dependencies {
 
     // security
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.security:spring-security-oauth2-jose'
     testImplementation 'org.springframework.security:spring-security-test'
 
     // validation
@@ -94,5 +99,77 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags 'firestore', 'mysql' }
+}
+
+jacoco { toolVersion = '0.8.13' }
+
+['firestore': 'firestoreTest', 'mysql': 'mysqlTest'].each { tag, taskName ->
+    tasks.register(taskName, Test) {
+        description = "Runs ${tag} integration tests with Testcontainers. Docker is required."
+        group = 'verification'
+        testClassesDirs = sourceSets.test.output.classesDirs
+        classpath = sourceSets.test.runtimeClasspath
+        useJUnitPlatform { includeTags tag }
+        maxParallelForks = 1
+        outputs.upToDateWhen { false }
+        outputs.doNotCacheIf('Integration tests require a fresh database execution') { true }
+        shouldRunAfter tasks.named('test')
+        afterSuite { descriptor, result ->
+            if (!descriptor.parent && (result.testCount == 0 || result.skippedTestCount != 0)) {
+                throw new GradleException("${taskName} must run tests without skips; total=${result.testCount}, skipped=${result.skippedTestCount}")
+            }
+        }
+    }
+}
+tasks.named('mysqlTest') { shouldRunAfter tasks.named('firestoreTest') }
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test'), tasks.named('firestoreTest'), tasks.named('mysqlTest')
+    executionData.setFrom(files('build/jacoco/test.exec', 'build/jacoco/firestoreTest.exec', 'build/jacoco/mysqlTest.exec'))
+    reports { xml.required = true; html.required = true }
+}
+tasks.named('jacocoTestCoverageVerification') {
+    executionData.setFrom(files('build/jacoco/test.exec', 'build/jacoco/firestoreTest.exec', 'build/jacoco/mysqlTest.exec'))
+    mustRunAfter tasks.named('jacocoTestReport')
+    violationRules {
+        rule {
+            limit { counter = 'LINE'; minimum = 0.80 }
+            limit { counter = 'BRANCH'; minimum = 0.70 }
+        }
+        rule {
+            element = 'CLASS'
+            includes = ['com.cover.time2gather.domain.meeting.service.MeetingLocationService']
+            limit { counter = 'LINE'; minimum = 0.95 }
+            limit { counter = 'BRANCH'; minimum = 0.90 }
+        }
+    }
+}
+tasks.register('testCoverageGuard', Exec) {
+    group = 'verification'
+    commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_backend_coverage.py'
+}
+tasks.register('verifyLayerCoverage', Exec) {
+    group = 'verification'
+    dependsOn tasks.named('jacocoTestReport'), tasks.named('testCoverageGuard')
+    commandLine 'python3', 'scripts/check_backend_coverage.py', 'build/reports/jacoco/test/jacocoTestReport.xml',
+            '--output', 'build/reports/jacoco/layer-coverage.json'
+}
+tasks.named('check') {
+    dependsOn tasks.named('firestoreTest'), tasks.named('mysqlTest'), tasks.named('jacocoTestReport'), tasks.named('jacocoTestCoverageVerification'), tasks.named('verifyLayerCoverage')
+}
+
+// Native Image uses Java 21 application bytecode with the GraalVM builder.
+tasks.withType(JavaCompile).configureEach { options.release = 21 }
+tasks.withType(org.springframework.boot.gradle.tasks.aot.ProcessAot).configureEach {
+    args '--spring.profiles.active=prod,firestore'
+}
+graalvmNative {
+    toolchainDetection = false
+    binaries {
+        main {
+            imageName = 'time2gather-native'
+            buildArgs.addAll(['-J-Xmx10g', '-J-Xlog:gc=info', '--parallelism=4', '-H:+ReportExceptionStackTraces', '-H:IncludeLocales=all', '-march=compatibility', '--initialize-at-run-time=java.time.zone.ZoneRulesProvider'])
+        }
+    }
+    metadataRepository { enabled = true }
 }

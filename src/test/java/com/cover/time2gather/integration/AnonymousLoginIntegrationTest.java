@@ -27,9 +27,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
-@ActiveProfiles("test")
-class AnonymousLoginIntegrationTest {
+
+
+class AnonymousLoginIntegrationTest extends com.cover.time2gather.support.FirestoreIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;

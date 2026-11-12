@@ -14,9 +14,18 @@ public interface MeetingRepository {
 
     <S extends Meeting> S save(S entity);
 
+    /** JPA relies on the service transaction; Firestore commits the initial name in the same batch. */
+    default <S extends Meeting> S saveWithHostName(S entity, String hostName) {
+        return save(entity);
+    }
+
     Optional<Meeting> findById(Long id);
 
     Page<Meeting> findAll(Pageable pageable);
+
+    default Page<Meeting> findAll(Pageable pageable, String cursor) {
+        return findAll(pageable);
+    }
 
     long count();
 
@@ -37,6 +46,8 @@ public interface MeetingRepository {
     long countByIsActiveTrue();
 
     long countByConfirmedDateIsNotNull();
+
+    Page<Meeting> findConfirmed(String query, Pageable pageable);
 
     Page<Meeting> findByTitleContainingIgnoreCaseOrMeetingCodeContainingIgnoreCase(
             String title,

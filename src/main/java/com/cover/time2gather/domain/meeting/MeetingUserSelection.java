@@ -62,6 +62,30 @@ public class MeetingUserSelection extends BaseEntity {
     @Column(name = "selections", columnDefinition = "json", nullable = false)
     private Map<String, int[]> selections;
 
+    @Type(JsonType.class)
+    @Column(name = "unavailable_dates", columnDefinition = "json")
+    private java.util.List<String> unavailableDates;
+
+    public String availabilityResponse(Meeting meeting) {
+        if (unavailableDates == null) return null;
+        return unavailableDates.containsAll(meeting.getAvailableDates().keySet()) ? "NONE" : "NEEDS_RESPONSE";
+    }
+
+    public static MeetingUserSelection unavailable(Meeting meeting, Long userId, java.util.List<String> dates) {
+        MeetingUserSelection selection = new MeetingUserSelection();
+        selection.meetingId = meeting.getId();
+        selection.userId = userId;
+        selection.selectionType = meeting.getSelectionType();
+        selection.intervalMinutes = meeting.getIntervalMinutes();
+        selection.markUnavailable(dates);
+        return selection;
+    }
+
+    public void markUnavailable(java.util.List<String> dates) {
+        this.unavailableDates = java.util.List.copyOf(dates);
+        this.selections = new java.util.HashMap<>();
+    }
+
     /**
      * 기본 간격(60분)으로 선택 생성
      */
@@ -99,6 +123,7 @@ public class MeetingUserSelection extends BaseEntity {
     }
 
     public void updateSelections(Map<String, int[]> selections) {
+        this.unavailableDates = null;
         this.selections = selections;
 
         // TimeSlot 검증 (타입에 따라)

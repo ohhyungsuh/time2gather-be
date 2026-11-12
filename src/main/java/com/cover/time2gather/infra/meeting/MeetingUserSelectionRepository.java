@@ -1,5 +1,6 @@
 package com.cover.time2gather.infra.meeting;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +11,10 @@ public interface MeetingUserSelectionRepository {
 
     <S extends MeetingUserSelection> S save(S entity);
 
+    default <S extends MeetingUserSelection> S saveForCandidates(S entity, com.cover.time2gather.domain.meeting.Meeting expected) {
+        return save(entity);
+    }
+
     void delete(MeetingUserSelection entity);
 
     Optional<MeetingUserSelection> findByMeetingIdAndUserId(Long meetingId, Long userId);
@@ -17,4 +22,8 @@ public interface MeetingUserSelectionRepository {
     List<MeetingUserSelection> findAllByMeetingId(Long meetingId);
 
     List<MeetingUserSelection> findAllByUserId(Long userId);
+
+    List<MeetingUserSelection> findAllByUserIdIn(Collection<Long> userIds);
+
+    List<MeetingUserSelection> findAllByMeetingIdIn(Collection<Long> meetingIds);
 }

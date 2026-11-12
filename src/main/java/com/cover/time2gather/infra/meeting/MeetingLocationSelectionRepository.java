@@ -8,6 +8,14 @@ public interface MeetingLocationSelectionRepository {
 
     <S extends MeetingLocationSelection> S save(S entity);
 
+    /** JPA runs this inside the service transaction; Firestore overrides with one atomic SDK batch. */
+    default void replaceSelections(Long meetingId, Long userId, List<Long> locationIds) {
+        deleteByMeetingIdAndUserId(meetingId, userId);
+        for (Long locationId : new java.util.LinkedHashSet<>(locationIds)) {
+            save(MeetingLocationSelection.create(meetingId, locationId, userId));
+        }
+    }
+
     List<MeetingLocationSelection> selectByMeetingIdAndUserId(Long meetingId, Long userId);
 
     List<MeetingLocationSelection> selectByMeetingId(Long meetingId);

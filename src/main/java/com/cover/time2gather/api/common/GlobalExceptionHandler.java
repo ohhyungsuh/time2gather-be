@@ -92,7 +92,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("Illegal argument exception: {}", e.getMessage());
-        String detailMessage = e.getMessage() != null ? e.getMessage() : "";
+        String detailMessage = "";
         String message = MessageProvider.getMessage(ErrorCode.INVALID_REQUEST.getMessageKey(), detailMessage);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
@@ -105,9 +105,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException e) {
         log.warn("Illegal state exception: {}", e.getMessage());
-        String message = e.getMessage() != null 
-                ? e.getMessage() 
-                : MessageProvider.getMessage(ErrorCode.INVALID_STATE.getMessageKey());
+        String message = MessageProvider.getMessage(ErrorCode.INVALID_STATE.getMessageKey());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(message));
@@ -163,6 +161,6 @@ public class GlobalExceptionHandler {
     }
 
     private String formatFieldError(FieldError fieldError) {
-        return String.format("%s: %s", fieldError.getField(), fieldError.getDefaultMessage());
+        return fieldError.getDefaultMessage();
     }
 }

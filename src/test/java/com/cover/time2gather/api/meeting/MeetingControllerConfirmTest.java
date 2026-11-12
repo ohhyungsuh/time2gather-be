@@ -44,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     excludeAutoConfiguration = JpaAuditingConfig.class
 )
 @AutoConfigureMockMvc(addFilters = false)
+@org.springframework.context.annotation.Import(com.cover.time2gather.util.MessageProvider.class)
 class MeetingControllerConfirmTest {
 
     @Autowired
@@ -69,6 +70,9 @@ class MeetingControllerConfirmTest {
 
     @MockitoBean
     private JwtTokenService jwtTokenService;
+
+    @MockitoBean
+    private com.cover.time2gather.config.security.AdminIdentityService adminIdentityService;
 
     @MockitoBean
     private UserRepository userRepository;

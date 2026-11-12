@@ -35,6 +35,8 @@ public class MeetingDetailResponse {
 
 	@Schema(description = "Location vote information (null if location voting is disabled)")
 	private LocationVoteInfo locationVote;
+	private String candidateVersion;
+
 
 	/**
 	 * 도메인 모델로부터 DTO 생성
@@ -70,11 +72,13 @@ public class MeetingDetailResponse {
 				host.getProfileImageUrl()
 			),
 			meeting.getTimezone(),
+			meeting.getCreatorLocale(),
 			meeting.getSelectionType().name(),
 			intervalMinutes,
 			convertSlotIndexesToTimeStrings(meeting.getAvailableDates(), intervalMinutes),
 			confirmedDate,
-			confirmedTime
+			confirmedTime,
+			meeting.getConfirmedSlotIndex()
 		);
 
 		// 참여자 정보 변환
@@ -101,7 +105,15 @@ public class MeetingDetailResponse {
 		// 장소 투표 정보 변환
 		LocationVoteInfo locationVote = convertLocationDataToResponse(detailData.getLocationData());
 
-		return new MeetingDetailResponse(meetingInfo, participants, schedule, summary, detailData.isParticipated(), locationVote);
+        participants.forEach(participant -> {
+            participant.availabilityResponse = detailData.getSelections().stream()
+                    .filter(selection -> selection.getUserId().equals(participant.userId))
+                    .findFirst().map(selection -> selection.availabilityResponse(meeting)).orElse(null);
+        });
+        return new MeetingDetailResponse(meetingInfo, participants, schedule, summary, detailData.isParticipated(), locationVote,
+            com.cover.time2gather.domain.meeting.MeetingCandidates.version(meeting, detailData.getLocationData()==null ? List.of() : detailData.getLocationData().getLocations().stream()
+                .sorted(Comparator.comparing(com.cover.time2gather.domain.meeting.MeetingDetailData.LocationInfo::getDisplayOrder))
+                .map(p -> new com.cover.time2gather.domain.meeting.MeetingCandidates.Location(p.getId(),p.getName())).toList()));
 	}
 
 	/**
@@ -202,7 +214,7 @@ public class MeetingDetailResponse {
 		}
 
 		// 연속 슬롯인 경우: 종료 시간은 endSlotIndex + 1의 시작 시간
-		String endTime = TimeSlot.fromIndex(slot.getEndSlotIndex() + 1, intervalMinutes).toTimeString();
+		String endTime = TimeSlot.fromIndex((slot.getEndSlotIndex() + 1) % (1440 / intervalMinutes), intervalMinutes).toTimeString();
 		return startTime + " ~ " + endTime;
 	}
 
@@ -252,6 +264,9 @@ public class MeetingDetailResponse {
 		@Schema(description = "Timezone", example = "Asia/Seoul")
 		private String timezone;
 
+		@Schema(description = "Creator interface language at creation, absent for older meetings", example = "ko")
+		private String creatorLocale;
+
 		@Schema(description = "Selection type (TIME: time-slot based, ALL_DAY: full-day based)", example = "TIME")
 		private String selectionType;
 
@@ -267,6 +282,9 @@ public class MeetingDetailResponse {
 
 		@Schema(description = "Confirmed time (null if not confirmed, 'ALL_DAY' for ALL_DAY type)", example = "09:00")
 		private String confirmedTime;
+
+		@Schema(description = "Original confirmed voting slot; independent of an edited exact meeting time")
+		private Integer confirmedSlotIndex;
 	}
 
 	@Getter
@@ -287,6 +305,13 @@ public class MeetingDetailResponse {
 	@AllArgsConstructor
 	@Schema(description = "Participant information")
 	public static class ParticipantInfo {
+        public ParticipantInfo(Long userId, String username, String profileImageUrl) {
+            this.userId = userId;
+            this.username = username;
+            this.profileImageUrl = profileImageUrl;
+        }
+        private String availabilityResponse;
+
 		@Schema(description = "User ID", example = "1")
 		private Long userId;
 
