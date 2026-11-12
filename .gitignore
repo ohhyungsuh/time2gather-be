@@ -50,3 +50,12 @@ docker-compose.override.yml
 ### Logs ###
 *.log
 logs/
+
+# Local release evidence and short-lived OIDC credentials
+__pycache__/
+*.py[cod]
+gha-creds-*.json
+/release-state.json
+/native-sanity.log
+/work/
+/artifacts/

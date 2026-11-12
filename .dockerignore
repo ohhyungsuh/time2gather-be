@@ -1,0 +1,11 @@
+.git
+.github
+.gradle
+build
+.env
+.env.*
+gha-creds-*.json
+release-state.json
+*.log
+work
+artifacts
