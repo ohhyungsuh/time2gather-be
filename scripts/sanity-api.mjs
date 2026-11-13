@@ -49,6 +49,14 @@ await request(`/v1/meetings/${night}/selections`,{method:'PUT',cookie:host,body:
 const nightDetail=(await request(`/v1/meetings/${night}`)).data.data
 assert.equal(nightDetail.summary.bestSlots[0].time,'22:00 ~ 00:00')
 assert.match((await request(`/v1/meetings/${night}/export?date=2027-01-02&slotIndex=23`)).data,/DTEND:20270103T000000Z/)
+const half=await create({title:'Half hour sanity',timezone:'UTC',selectionType:'TIME',intervalMinutes:30,availableDates:{'2027-01-02':['09:00','09:30','22:30','23:30']}})
+await request(`/v1/meetings/${half}/selections`,{method:'PUT',cookie:host,body:{selections:[{date:'2027-01-02',type:'TIME',times:['09:30','22:30','23:30']}]}})
+assert.deepEqual((await request(`/v1/meetings/${half}/selections`,{cookie:host})).data.data.selections['2027-01-02'],['09:30','22:30','23:30'])
+assert.equal((await request(`/v1/meetings/${half}`)).data.data.meeting.intervalMinutes,30)
+await request(`/v1/meetings/${half}/confirm`,{method:'PUT',cookie:host,body:{date:'2027-01-02',slotIndex:47}})
+const halfIcs=(await request(`/v1/meetings/${half}/export`)).data
+assert.match(halfIcs,/DTSTART:20270102T233000Z/)
+assert.match(halfIcs,/DTEND:20270103T000000Z/)
 const mine=(await request('/v1/auth/me',{cookie:host})).data.data;assert.ok(mine.createdMeetings.some(meeting=>meeting.code===code))
 await request('/v1/admin/summary',{cookie:member,status:401})
 console.log(`Local API sanity passed: ${checks} HTTP checks; TIME/ALL_DAY, sessions, votes, location, confirmation/edit/cancel, ICS, dates, 22 locale errors, DST and authorization. UI fixture code: ${code}`)

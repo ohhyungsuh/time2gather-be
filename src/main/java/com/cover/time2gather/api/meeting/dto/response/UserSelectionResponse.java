@@ -21,13 +21,13 @@ public class UserSelectionResponse {
     /**
      * 도메인 slotIndex → API "HH:mm" 변환
      */
-    public static UserSelectionResponse from(Map<String, int[]> slotIndexes) {
+    public static UserSelectionResponse from(Map<String, int[]> slotIndexes, int intervalMinutes) {
         Map<String, String[]> result = new HashMap<>();
         for (Map.Entry<String, int[]> entry : slotIndexes.entrySet()) {
             String date = entry.getKey();
             int[] slots = entry.getValue();
             String[] times = Arrays.stream(slots)
-                    .mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex).toTimeString())
+                    .mapToObj(slotIndex -> TimeSlot.fromIndex(slotIndex, intervalMinutes).toTimeString())
                     .toArray(String[]::new);
             result.put(date, times);
         }
