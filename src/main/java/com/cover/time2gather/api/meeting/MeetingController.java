@@ -125,7 +125,7 @@ public class MeetingController {
         Map<String, int[]> selections = selectionService.getUserSelections(meeting.getId(), authentication.getUserId());
 
         // 도메인 → DTO 변환
-        return ApiResponse.success(UserSelectionResponse.from(selections));
+        return ApiResponse.success(UserSelectionResponse.from(selections, meeting.getIntervalMinutes()));
     }
 
     @PutMapping("/{meetingCode}/selections")

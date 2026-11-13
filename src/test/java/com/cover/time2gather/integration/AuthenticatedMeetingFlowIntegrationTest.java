@@ -125,6 +125,53 @@ class AuthenticatedMeetingFlowIntegrationTest extends com.cover.time2gather.supp
     }
 
     @Test
+    void halfHourCandidatesPersistVotesAndExportThirtyMinutes() throws Exception {
+        Cookie host = login("Half hour host");
+        MvcResult created = mockMvc.perform(post("/api/v1/meetings").cookie(host)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"title":"Half hour poll","timezone":"Asia/Seoul","selectionType":"TIME",
+                         "intervalMinutes":30,"availableDates":{"2026-11-15":["09:00","09:30","10:00","10:30"]}}
+                        """))
+                .andExpect(status().isOk()).andReturn();
+        String code = responseData(created).get("meetingCode").asText();
+        mockMvc.perform(put("/api/v1/meetings/{code}/selections", code).cookie(host)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"selections":[{"date":"2026-11-15","type":"TIME","times":["09:30"]}]}
+                        """))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/meetings/{code}/selections", code).cookie(host))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.selections['2026-11-15'].length()").value(1))
+                .andExpect(jsonPath("$.data.selections['2026-11-15'][0]").value("09:30"));
+        mockMvc.perform(get("/api/v1/meetings/{code}", code))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.meeting.intervalMinutes").value(30))
+                .andExpect(jsonPath("$.data.meeting.availableDates['2026-11-15'].length()").value(4))
+                .andExpect(jsonPath("$.data.schedule['2026-11-15']['09:30'].count").value(1));
+        // A time outside the registered half-hours must not erase the saved vote.
+        mockMvc.perform(put("/api/v1/meetings/{code}/selections", code).cookie(host)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"selections":[{"date":"2026-11-15","type":"TIME","times":["09:15"]}]}
+                        """))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(get("/api/v1/meetings/{code}/selections", code).cookie(host))
+                .andExpect(jsonPath("$.data.selections['2026-11-15'][0]").value("09:30"));
+        mockMvc.perform(put("/api/v1/meetings/{code}/confirm", code).cookie(host)
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"date":"2026-11-15","slotIndex":19}
+                        """))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/meetings/{code}", code))
+                .andExpect(jsonPath("$.data.meeting.confirmedTime").value("09:30"))
+                .andExpect(jsonPath("$.data.meeting.confirmedSlotIndex").value(19));
+        String calendar = mockMvc.perform(get("/api/v1/meetings/{code}/export", code)
+                        .queryParam("date", "2026-11-15").queryParam("slotIndex", "19"))
+                .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("text/calendar"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(calendar).contains("DTSTART:20261115T003000Z", "DTEND:20261115T010000Z");
+    }
+
+    @Test
     void legacyAccessTokenCookieStillAuthenticatesExistingClients() throws Exception {
         Cookie issuedCookie = login("레거시 쿠키 사용자");
         Cookie legacyCookie = new Cookie("accessToken", issuedCookie.getValue());
