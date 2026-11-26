@@ -59,12 +59,15 @@ public class CommentService {
                 u.getProfileImageUrl(), u.getId().equals(m.getHostUserId())));
         return result;
     }
-    private Map<Long, Person> commentPeople(Meeting m, List<MeetingComment> all) {
+    private Map<Long, Person> commentPeople(Meeting m, List<MeetingComment> all, List<MeetingComment> visible) {
+        if (visible.isEmpty()) return Map.of();
         Set<Long> ids = new LinkedHashSet<>();
-        all.forEach(c -> {
-            ids.add(c.getAuthorId());
-            if (c.active()) c.getReactions().values().forEach(ids::addAll);
-        });
+        for (MeetingComment comment : visible) {
+            ids.add(comment.getAuthorId());
+            if (comment.getReplyToId() != null)
+                ids.add(find(all, comment.getReplyToId()).getAuthorId());
+            if (comment.active()) comment.getReactions().values().forEach(ids::addAll);
+        }
         return people(m, ids);
     }
     public List<Person> candidates(String code) {
@@ -114,13 +117,14 @@ public class CommentService {
                 .filter(c -> boundary == null || comparator.compare(c, boundary) > 0).sorted(order).limit(rootId == null ? 11 : 21).toList();
         int limit = rootId == null ? 10 : 20;
         List<MeetingComment> slice = selected.subList(0, Math.min(limit, selected.size()));
-        Map<Long, Person> people = commentPeople(m, all);
+        Map<Long, Person> people = commentPeople(m, all, slice);
         return new Page(slice.stream().map(c -> view(c, all, people, m, actor)).toList(),
                 selected.size() > limit ? slice.getLast().getId() : null);
     }
     public View one(String code, Long actor, String id) {
         Meeting m = meeting(code); List<MeetingComment> all = store.list(m.getId());
-        return view(find(all, id), all, commentPeople(m, all), m, actor);
+        MeetingComment comment = find(all, id);
+        return view(comment, all, commentPeople(m, all, List.of(comment)), m, actor);
     }
     public View react(String code, Long actor, String id, ReactionWrite input) {
         authenticated(actor); Meeting m = meeting(code);
