@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class AnonymousLoginRequest {
 
     @NotBlank(message = "{validation.username.required}")
-    @Size(max = 100)
+    @Size(max = 30)
     @Schema(description = "Display name (not unique)", example = "John", required = true)
     private String username;
 }

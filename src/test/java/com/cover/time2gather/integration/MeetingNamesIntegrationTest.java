@@ -146,4 +146,32 @@ class MeetingNamesIntegrationTest extends com.cover.time2gather.support.Firestor
         mvc.perform(put(path("missing")+"/profile").cookie(host.cookie()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"Name\"}")).andExpect(status().isNotFound());
     }
+    @Test void displayNamesAcceptThirtyAndRejectThirtyOneWithoutChangingStoredName() throws Exception {
+        var host = login("Host"); var code = meeting(host, null);
+        String valid = "가".repeat(30);
+        rename(code, host, valid);
+        mvc.perform(put(path(code)+"/profile").cookie(host.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", "가".repeat(31)))))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(path(code)+"/profile").cookie(host.cookie()))
+                .andExpect(jsonPath("$.data.username").value(valid));
+        mvc.perform(post("/api/v1/auth/anonymous").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", "x".repeat(31)))))
+                .andExpect(status().isBadRequest());
+    }
+    @Test void existingLongNameRemainsUsableButCannotBeReplacedWithAnotherLongName() throws Exception {
+        var host = login("Host"); var code = meeting(host, null);
+        String legacy = "가".repeat(50);
+        var user = users.findById(host.id()).orElseThrow();
+        user.updateUsername(legacy);
+        users.save(user);
+        mvc.perform(put(path(code)+"/profile").cookie(host.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", legacy))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.username").value(legacy));
+        mvc.perform(put(path(code)+"/profile").cookie(host.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", "나".repeat(50)))))
+                .andExpect(status().isBadRequest());
+        vote(code, host);
+        assertThat(detail(code).at("/participants/0/username").asText()).isEqualTo(legacy);
+    }
 }

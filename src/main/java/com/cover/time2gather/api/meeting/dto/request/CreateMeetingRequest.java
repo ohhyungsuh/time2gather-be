@@ -62,7 +62,7 @@ public class CreateMeetingRequest {
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private List<String> locations;
 
-    @Size(max = 100)
+    @Size(max = 30)
     private String hostName;
 
     public CreateMeetingRequest(String title, String description, String timezone, Integer intervalMinutes,

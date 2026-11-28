@@ -23,6 +23,11 @@ public class MeetingNameService {
     }
     public String save(String code, User user, String name, boolean onlyIfAbsent) {
         Meeting meeting = meeting(code);
+        if (name != null && name.length() > 30) {
+            String current = names.name(meeting.getId(), user.getId()).orElse(user.getUsername());
+            if (onlyIfAbsent || name.equals(current)) return current;
+            throw new BusinessException(ErrorCode.VALIDATION_USERNAME_REQUIRED);
+        }
         return names.save(meeting.getId(), code, user.getId(), validate(name), onlyIfAbsent);
     }
     public static String validate(String name) {
